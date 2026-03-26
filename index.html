@@ -804,7 +804,12 @@ tr:last-child td{border-bottom:none;}
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-mix-novo')">+ Novo Mix</button>
         </div>
       </div>
-      <div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap" id="cliente-chips">
+      <div id="mix-rede-selector" style="margin-bottom:14px">
+        <div id="cliente-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0"></div>
+        <div id="mix-filial-row" style="display:none;background:#f8f8f8;border-radius:8px;padding:10px 14px;border:1px solid #e8e6e0;margin-top:8px">
+          <div style="font-size:10px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Filial — <span id="mix-rede-label"></span></div>
+          <div id="mix-filiais-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        </div>
       </div>
       <div class="mix-cliente-header" style="display:flex;align-items:center;gap:16px;padding:14px 16px;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:10px;margin-bottom:14px">
         <div id="mix-avatar" style="width:44px;height:44px;border-radius:50%;background:var(--amarelo);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#000;flex-shrink:0">—</div>
@@ -836,7 +841,6 @@ tr:last-child td{border-bottom:none;}
       <div class="section-bar">
         <div><div class="section-title">Clientes</div><div class="section-sub">Cadastro e gestão completa de clientes</div></div>
         <div class="export-btns">
-          <button class="btn btn-outline btn-sm" onclick="importarCadastro('clientes')">📥 Importar Excel/PDF</button>
           <button class="btn btn-info btn-sm" onclick="exportarClientesExcel()">📤 Exportar</button>
           <button class="btn btn-primary btn-sm" onclick="novoCliente()">+ Novo Cliente</button>
         </div>
@@ -867,7 +871,6 @@ tr:last-child td{border-bottom:none;}
       <div class="section-bar">
         <div><div class="section-title">Indústrias</div><div class="section-sub">Cadastro e gestão completa de indústrias parceiras</div></div>
         <div class="export-btns">
-          <button class="btn btn-outline btn-sm" onclick="importarCadastro('industrias')">📥 Importar Excel/PDF</button>
           <button class="btn btn-info btn-sm" onclick="exportarIndustriasExcel()">📤 Exportar</button>
           <button class="btn btn-primary btn-sm" onclick="novaIndustria()">+ Nova Indústria</button>
         </div>
@@ -1402,31 +1405,90 @@ tr:last-child td{border-bottom:none;}
 
 <!-- Modal Import Arquivo -->
 <div class="modal-bg" id="modal-import">
-  <div class="modal" style="width:780px">
+  <div class="modal" style="max-width:820px">
     <div class="modal-title">
       <span id="import-modal-titulo">Importar Dados</span>
       <button class="close-btn" onclick="closeModal('modal-import')">✕</button>
     </div>
-    <div id="import-template-info" style="margin-bottom:12px"></div>
-    <div class="import-zone" id="import-dropzone" onclick="document.getElementById('import-file').click()"
-         style="margin-bottom:14px"
-         ondragover="event.preventDefault();this.classList.add('dragover')"
-         ondragleave="this.classList.remove('dragover')"
-         ondrop="event.preventDefault();this.classList.remove('dragover');handleImportFile({files:event.dataTransfer.files})">
-      <input type="file" id="import-file" accept=".xlsx,.xls,.pdf,.csv" style="display:none" onchange="handleImportFile(this)">
-      <div class="import-icon">📂</div>
-      <div class="import-title">Clique para selecionar ou arraste o arquivo</div>
-      <div class="import-sub" id="import-file-name">.xlsx, .xls, .csv, .pdf — máx. 10MB</div>
+    <div style="display:flex;border-bottom:1px solid #e8e6e0;margin-bottom:18px">
+      <button id="imp-tab-xl" onclick="impTab('xl')" style="padding:10px 18px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid #1a1a1a;color:#1a1a1a">📊 Excel / CSV</button>
+      <button id="imp-tab-pdf" onclick="impTab('pdf')" style="padding:10px 18px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:#aaa">📄 PDF (via IA)</button>
     </div>
-    <div id="import-preview" style="display:none">
-      <div class="alert" id="import-preview-msg" style="margin-bottom:10px">Arquivo lido!</div>
-      <div id="import-preview-table" style="overflow-x:auto;max-height:220px;overflow-y:auto;border:1px solid var(--cinza-medio);border-radius:6px"></div>
-      <div id="import-mapeamento" style="margin-top:12px"></div>
+    <!-- EXCEL -->
+    <div id="imp-panel-xl">
+      <div style="background:#f8f9fa;border-radius:8px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div><div style="font-size:13px;font-weight:700;margin-bottom:2px">① Baixe o modelo Excel</div><div style="font-size:11px;color:#666">Cabeçalhos definidos. Não altere a primeira linha.</div></div>
+        <button onclick="impModelo()" style="background:#217346;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer">⬇ Baixar Modelo (.xlsx)</button>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">② Selecione o arquivo preenchido</div>
+      <div class="import-zone" id="import-dropzone"
+        ondragover="event.preventDefault();this.style.borderColor='#1a1a1a'"
+        ondragleave="this.style.borderColor=''"
+        ondrop="impDrop(event)"
+        onclick="document.getElementById('import-file').click()" style="margin-bottom:14px">
+        <input type="file" id="import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportFile(this)">
+        <div class="import-icon">📂</div>
+        <div class="import-title">Clique para selecionar ou arraste o arquivo</div>
+        <div class="import-sub" id="import-file-name">.xlsx, .xls, .csv</div>
+      </div>
+      <div id="import-preview" style="display:none">
+        <div id="imp-map-warn" style="margin-bottom:10px"></div>
+        <div id="imp-manual-wrap" style="display:none;background:#fff8e1;border-radius:8px;padding:12px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:#795548;margin-bottom:8px">⚠️ Selecione as colunas obrigatórias que não foram encontradas:</div>
+          <div id="imp-manual-selects" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+        <div style="border:1px solid #e8e6e0;border-radius:8px;overflow:hidden;margin-bottom:14px">
+          <div id="import-preview-msg" style="background:#f4f3ef;padding:7px 12px;font-size:11px;font-weight:700;color:#555;font-family:monospace"></div>
+          <div style="overflow-x:auto;max-height:220px;overflow-y:auto"><div id="import-preview-table"></div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <button onclick="impReset()" style="background:#f0f0f0;color:#555;border:none;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer">← Trocar arquivo</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" onclick="closeModal('modal-import')">Cancelar</button>
+            <button class="btn btn-primary" onclick="confirmarImport()">💾 Salvar Dados</button>
+          </div>
+        </div>
+      </div>
+      <div id="imp-xl-footer" style="display:flex;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closeModal('modal-import')">Cancelar</button>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-      <button class="btn btn-outline" onclick="closeModal('modal-import')">Cancelar</button>
-      <button class="btn btn-success btn-sm" id="import-modelo-btn" onclick="baixarModeloImport()" style="display:none">📥 Baixar Modelo</button>
-      <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmarImport()" style="display:none">✅ Confirmar Importação</button>
+    <!-- PDF -->
+    <div id="imp-panel-pdf" style="display:none">
+      <div style="background:#e8f4fd;border-radius:8px;padding:14px 18px;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:3px">📄 Importar via PDF com Inteligência Artificial</div>
+        <div style="font-size:12px;color:#555">Envie qualquer PDF (lista, tabela, layout livre). A IA extrai os dados automaticamente.</div>
+      </div>
+      <div class="import-zone" id="imp-pdf-drop"
+        ondragover="event.preventDefault();this.style.borderColor='#1a1a1a'"
+        ondragleave="this.style.borderColor=''"
+        ondrop="impPdfDrop(event)"
+        onclick="document.getElementById('imp-pdf-file').click()" style="margin-bottom:14px">
+        <input type="file" id="imp-pdf-file" accept=".pdf" style="display:none" onchange="impLerPDF(this.files[0])">
+        <div class="import-icon">📄</div>
+        <div id="imp-pdf-label" class="import-title">Clique ou arraste o PDF aqui</div>
+        <div class="import-sub">Apenas .pdf</div>
+      </div>
+      <div id="imp-pdf-loading" style="display:none;text-align:center;padding:20px">
+        <div style="font-size:22px;margin-bottom:6px">⏳</div>
+        <div style="font-size:13px;font-weight:600;color:#555">Lendo com IA...</div>
+      </div>
+      <div id="imp-pdf-result" style="display:none">
+        <div style="border:1px solid #e8e6e0;border-radius:8px;overflow:hidden;margin-bottom:14px">
+          <div id="imp-pdf-status" style="background:#f4f3ef;padding:7px 12px;font-size:11px;font-weight:700;color:#555;font-family:monospace"></div>
+          <div style="overflow-x:auto;max-height:220px;overflow-y:auto"><table id="imp-pdf-table" style="width:100%;border-collapse:collapse;font-size:12px"></table></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <button onclick="impPdfReset()" style="background:#f0f0f0;color:#555;border:none;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer">← Trocar PDF</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" onclick="closeModal('modal-import')">Cancelar</button>
+            <button class="btn btn-primary" onclick="impSalvarPDF()">💾 Salvar Dados</button>
+          </div>
+        </div>
+      </div>
+      <div id="imp-pdf-footer" style="display:flex;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closeModal('modal-import')">Cancelar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1478,6 +1540,7 @@ tr:last-child td{border-bottom:none;}
     <div class="modal-title"><span id="cli-modal-titulo">Novo Cliente</span><button class="close-btn" onclick="closeModal('modal-cliente')">✕</button></div>
     <div class="form-grid">
       <div class="form-group full"><label>Razão Social *</label><input id="c-nome" placeholder="Nome da empresa"></div>
+      <div class="form-group"><label>Rede / Grupo <span style="font-size:10px;color:#aaa;font-weight:400">(agrupa filiais — Ex: LOJAS REDE)</span></label><input id="c-rede" placeholder="Ex: LOJAS REDE" style="text-transform:uppercase" list="c-rede-list"><datalist id="c-rede-list"></datalist></div>
       <div class="form-group"><label>CNPJ</label><input id="c-cnpj" placeholder="00.000.000/0001-00"></div>
       <div class="form-group"><label>Segmento *</label>
         <select id="c-segmento"><option value="">Selecione...</option><option>Varejo</option><option>Distribuidor</option><option>Atacado</option></select>
@@ -1990,7 +2053,8 @@ function ciclarNivel(userId, modKey) {
   const u = usuarios.find(x=>x.id===userId);
   addAudit(usuarioLogado?.login||'admin',
     `Permissão "${modKey}" → "${novo}" para ${u?.login||userId}`, '🔐');
-  renderConfiguracoes(); // re-render to update all cells
+  renderConfiguracoes();
+  syncAutoSaveHook(); // salva permissão imediatamente
   const labels = {editar:'✏️ Editar', ver:'👁️ Ver', nenhum:'🚫 Sem acesso'};
   toast(`${u?.nome.split(' ')[0]||userId} — ${panelTitles[modKey]||modKey}: ${labels[novo]}`);
 }
@@ -3230,13 +3294,7 @@ function renderMix() {
   // Atualiza chips de clientes dinamicamente
   const chips = el('cliente-chips');
   if(chips && chips.children.length === 0 && clientes.length > 0) {
-    chips.innerHTML = clientes.filter(c=>c.status==='Ativo').map((c,i)=>
-      `<button class="btn ${i===0?'btn-primary':'btn-outline'} btn-sm" onclick="selectCliente('${esc(c.nome)}',this)">${esc(c.nome)}</button>`
-    ).join('');
-    if(clientes.length > 0 && !clienteAtual) {
-      clienteAtual = clientes[0].nome;
-      selectCliente(clienteAtual, chips.children[0]);
-    }
+    redeRenderChips();
   }
 
   const busca=(el('mix-busca')||{}).value?.toLowerCase()||'';
@@ -3520,120 +3578,13 @@ function exportarProdutosExcel() {
 }
 
 /* ══════════════════════════
-   IMPORTAÇÃO — CLIENTES, INDÚSTRIAS, PRODUTOS, PEDIDOS
+   IMPORTAÇÃO
 ══════════════════════════ */
-
-// Colunas esperadas por tipo
-const IMPORT_COLS = {
-  clientes: [
-    {key:'nome',     label:'Nome / Razão Social', req:true},
-    {key:'cnpj',     label:'CNPJ',                req:false},
-    {key:'segmento', label:'Segmento',            req:false, hint:'Varejo / Distribuidor / Atacado'},
-    {key:'cidade',   label:'Cidade / UF',         req:false},
-    {key:'prazo',    label:'Prazo Pgto',          req:false, hint:'Ex: 28D, 30/60D'},
-    {key:'contato',  label:'Contato',             req:false},
-    {key:'email',    label:'E-mail',              req:false},
-    {key:'telefone', label:'Telefone',            req:false},
-    {key:'status',   label:'Status',              req:false, hint:'Ativo / Inativo'},
-    {key:'obs',      label:'Observações',         req:false},
-  ],
-  industrias: [
-    {key:'nome',    label:'Nome / Marca',       req:true},
-    {key:'razao',   label:'Razão Social',       req:false},
-    {key:'cnpj',    label:'CNPJ',               req:false},
-    {key:'pct',     label:'% Comissão Padrão',  req:false, hint:'Ex: 7 (número)'},
-    {key:'tipoCom', label:'Tipo Comissão',      req:false, hint:'Faturamento / Liquidez'},
-    {key:'contato', label:'Contato',            req:false},
-    {key:'email',   label:'E-mail',             req:false},
-    {key:'telefone',label:'Telefone',           req:false},
-    {key:'status',  label:'Status',             req:false, hint:'Ativo / Inativo'},
-    {key:'obs',     label:'Observações',        req:false},
-  ],
-  produtos: [
-    {key:'cod',   label:'Código',        req:true},
-    {key:'desc',  label:'Descrição',     req:true},
-    {key:'ind',   label:'Indústria',     req:true},
-    {key:'cat',   label:'Categoria',     req:false},
-    {key:'preco', label:'Preço Tabela',  req:false, hint:'Número ex: 29.90'},
-    {key:'unid',  label:'Unidade',       req:false, hint:'UN, CX, KG...'},
-    {key:'status',label:'Status',        req:false},
-    {key:'obs',   label:'Observação',    req:false},
-  ],
-  pedido: [
-    {key:'cliente',  label:'Cliente',   req:true},
-    {key:'industria',label:'Indústria', req:true},
-    {key:'data',     label:'Data',      req:false},
-    {key:'cond',     label:'Condição',  req:false},
-    {key:'status',   label:'Status',    req:false},
-  ],
-};
-
-// Mapeamento automático de cabeçalhos para chaves internas
-const HEADER_MAP = {
-  // Clientes
-  'nome':'nome','razão social':'nome','razao social':'nome','empresa':'nome','cliente':'nome',
-  'cnpj':'cnpj','cpf/cnpj':'cnpj',
-  'segmento':'segmento','perfil':'segmento','tipo cliente':'segmento',
-  'cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade',
-  'prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','condição':'prazo',
-  'contato':'contato','responsável':'contato','responsavel':'contato',
-  'email':'email','e-mail':'email',
-  'telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone',
-  'status':'status','situação':'status','situacao':'status',
-  'obs':'obs','observações':'obs','observacoes':'obs','notas':'obs',
-  // Indústrias
-  'marca':'nome','indústria':'nome','industria':'nome','fabricante':'nome',
-  'razão social':'razao','razao social completa':'razao',
-  '% comissão':'pct','% comissao':'pct','comissão %':'pct','comissao %':'pct',
-  'pct':'pct','percentual':'pct',
-  'tipo comissão':'tipoCom','tipo comissao':'tipoCom','tipo com':'tipoCom',
-  // Produtos
-  'código':'cod','codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referência':'cod',
-  'descrição':'desc','descricao':'desc','produto':'desc','item':'desc',
-  'preço':'preco','preco':'preco','preço tabela':'preco','valor':'preco',
-  'unidade':'unid','unid':'unid','un':'unid',
-  'categoria':'cat','cat':'cat',
-};
-
-function normHeader(h) {
-  return String(h||'').toLowerCase().trim().replace(/[^a-záéíóúãõâêôàç%./]/g,' ').replace(/\s+/g,' ').trim();
-}
-
-function mapearColunas(headers) {
-  return headers.map(h => HEADER_MAP[normHeader(h)] || null);
-}
-
 function importarCadastro(tipo) {
-  importTipo = tipo;
-  const titulos = {clientes:'Clientes',industrias:'Indústrias',produtos:'Produtos',pedido:'Pedidos',orcamento:'Orçamentos'};
-  el('import-modal-titulo').textContent = 'Importar ' + (titulos[tipo]||tipo);
-  el('import-preview').style.display = 'none';
-  el('import-file-name').textContent = '.xlsx, .xls, .csv, .pdf — máx. 10MB';
-  el('import-confirm-btn').style.display = 'none';
-  el('import-modelo-btn').style.display = 'inline-flex';
-  importDados = [];
-
-  // Mostrar informações das colunas esperadas
-  const cols = IMPORT_COLS[tipo];
-  const tpl = el('import-template-info');
-  if(cols && tpl) {
-    const colsHtml = cols.map(c=>
-      `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;background:${c.req?'#1a1a1a':'var(--cinza)'};color:${c.req?'var(--amarelo)':'#555'}">
-        ${c.label}${c.req?' *':''}
-        ${c.hint?`<span style="font-weight:400;color:${c.req?'#ccc':'#999'}"> — ${c.hint}</span>`:''}
-      </span>`
-    ).join('');
-    tpl.innerHTML = `<div class="alert alert-info" style="font-size:11px">
-      <strong>Colunas reconhecidas:</strong><br><div style="margin-top:6px;line-height:2">${colsHtml}</div>
-      <div style="margin-top:6px;color:#555">* obrigatório · o sistema reconhece cabeçalhos automaticamente · a primeira linha da planilha deve ser o cabeçalho</div>
-    </div>`;
-  } else if(tpl) {
-    tpl.innerHTML = `<div class="alert alert-info">Selecione um arquivo Excel (.xlsx, .xls, .csv) ou PDF para importar.</div>`;
-  }
-
-  // Reset file input
-  const fi = el('import-file');
-  if(fi) fi.value = '';
+  importTipo=tipo;
+  el('import-modal-titulo').textContent='Importar '+{clientes:'Clientes',industrias:'Indústrias',produtos:'Produtos',pedido:'Pedidos',orcamento:'Orçamentos'}[tipo];
+  el('import-preview').style.display='none';
+  el('import-file-name').textContent='.xlsx, .xls, .pdf — máx. 10MB';
   openModal('modal-import');
 }
 
@@ -3642,284 +3593,252 @@ function importarNF(){
   importTipo='nf';
   el('import-modal-titulo').textContent='Importar Nota Fiscal (PDF/XML)';
   el('import-preview').style.display='none';
-  const tpl = el('import-template-info');
-  if(tpl) tpl.innerHTML = `<div class="alert alert-info">Selecione um arquivo PDF ou XML de nota fiscal para importar.</div>`;
-  el('import-confirm-btn').style.display = 'none';
-  el('import-modelo-btn').style.display = 'none';
   openModal('modal-import');
 }
 
-function handleImportFile(input) {
-  const file = input.files[0]; if(!file) return;
-  el('import-file-name').textContent = `✓ ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-  el('import-preview').style.display = 'none';
-  el('import-confirm-btn').style.display = 'none';
-  importDados = [];
 
-  const ext = file.name.split('.').pop().toLowerCase();
+// ═══════════════════════════════════════════════════
+// CAMPOS POR TIPO DE IMPORTAÇÃO
+// ═══════════════════════════════════════════════════
+const IMP_CAMPOS = {
+  clientes:[
+    {k:'nome',    lb:'Nome / Razão Social',  ob:true,  al:['nome','razão social','razao social','cliente','empresa','razao']},
+    {k:'cnpj',    lb:'CNPJ',                 ob:false, al:['cnpj','cpf/cnpj','cpf']},
+    {k:'segmento',lb:'Segmento / Canal',     ob:false, al:['segmento','canal','tipo','categoria','ramo']},
+    {k:'cidade',  lb:'Cidade / UF',          ob:false, al:['cidade','municipio','município','uf','estado']},
+    {k:'prazo',   lb:'Prazo de Pagamento',   ob:false, al:['prazo','prazo padrão','dias','condição','pagamento']},
+    {k:'contato', lb:'Contato',              ob:false, al:['contato','responsavel','responsável']},
+    {k:'email',   lb:'E-mail',               ob:false, al:['email','e-mail','mail']},
+    {k:'telefone',lb:'Telefone',             ob:false, al:['telefone','tel','fone','celular','whatsapp']},
+    {k:'status',  lb:'Status',               ob:false, al:['status','ativo','situacao']},
+    {k:'obs',     lb:'Observações',          ob:false, al:['obs','observacoes','observações','nota']},
+  ],
+  industrias:[
+    {k:'nome',   lb:'Nome / Marca',      ob:true,  al:['nome','marca','industria','indústria','fabricante','fornecedor']},
+    {k:'razao',  lb:'Razão Social',      ob:false, al:['razão social','razao social','razao','empresa']},
+    {k:'cnpj',   lb:'CNPJ',             ob:false, al:['cnpj','cpf/cnpj']},
+    {k:'pct',    lb:'% Comissão',       ob:false, al:['%','pct','comissao','comissão','percentual','taxa']},
+    {k:'tipoCom',lb:'Tipo Comissão',    ob:false, al:['tipo','tipocom','tipo comissao','faturamento','liquidez']},
+    {k:'contato',lb:'Contato',          ob:false, al:['contato','responsavel','responsável']},
+    {k:'email',  lb:'E-mail',           ob:false, al:['email','e-mail','mail']},
+    {k:'telefone',lb:'Telefone',        ob:false, al:['telefone','tel','fone','celular']},
+    {k:'status', lb:'Status',           ob:false, al:['status','ativo','situacao']},
+    {k:'obs',    lb:'Observações',      ob:false, al:['obs','observacoes','observações']},
+  ],
+  produtos:[
+    {k:'codigo',   lb:'Código / SKU',   ob:true,  al:['codigo','código','sku','cod','ref','referencia']},
+    {k:'nome',     lb:'Descrição',      ob:true,  al:['nome','descricao','descrição','desc','produto']},
+    {k:'industria',lb:'Indústria',      ob:false, al:['industria','indústria','marca','fabricante']},
+    {k:'preco',    lb:'Preço Tabela',   ob:false, al:['preco','preço','valor','price','tabela']},
+    {k:'unidade',  lb:'Unidade',        ob:false, al:['unidade','un','und','unit']},
+    {k:'categoria',lb:'Categoria',      ob:false, al:['categoria','cat','grupo','linha']},
+  ],
+};
+let _impMap={}, _impPDFRows=[];
 
-  if(ext === 'pdf') {
-    _handlePDFImport(file);
-    return;
-  }
-
-  if(['xlsx','xls','csv'].includes(ext)) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const wb = XLSX.read(e.target.result, {type:'binary'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-        if(!data || data.length < 2) {
-          _importPreviewMsg('⚠️ Arquivo vazio ou sem dados.', 'warning'); return;
-        }
-        _processarDadosImport(data);
-      } catch(err) {
-        _importPreviewMsg('❌ Erro ao ler arquivo: ' + err.message, 'danger');
-      }
-    };
-    reader.readAsBinaryString(file);
-    return;
-  }
-
-  _importPreviewMsg('⚠️ Formato não suportado. Use .xlsx, .xls, .csv ou .pdf', 'warning');
+function impTab(t){
+  ['xl','pdf'].forEach(x=>{
+    el('imp-panel-'+x).style.display=x===t?'':'none';
+    el('imp-tab-'+x).style.borderBottomColor=x===t?'#1a1a1a':'transparent';
+    el('imp-tab-'+x).style.color=x===t?'#1a1a1a':'#aaa';
+  });
 }
-
-function _processarDadosImport(data) {
-  // Detectar linha de cabeçalho (pode ter linhas em branco no topo)
-  let headerRow = 0;
-  for(let i=0; i<Math.min(5,data.length); i++) {
-    if(data[i].some(c => String(c||'').trim() !== '')) { headerRow = i; break; }
-  }
-  const headers = data[headerRow].map(h => String(h||'').trim());
-  const mapeamento = mapearColunas(headers);
-  const rows = data.slice(headerRow + 1).filter(r => r.some(c => String(c||'').trim() !== ''));
-
-  importDados = rows.map(row => {
-    const obj = {};
-    mapeamento.forEach((key, i) => {
-      if(key) obj[key] = String(row[i]||'').trim();
-    });
-    // Adicionar campo não mapeado como extra, caso seja útil
-    headers.forEach((h, i) => {
-      if(!mapeamento[i] && String(row[i]||'').trim()) {
-        obj['_extra_'+h] = String(row[i]||'').trim();
-      }
-    });
-    return obj;
-  }).filter(o => Object.keys(o).length > 0);
-
-  // Preview table
-  const previewRows = data.slice(headerRow, Math.min(headerRow+7, data.length));
-  const previewHtml = `<table style="font-size:11px;border-collapse:collapse;min-width:100%">
-    ${previewRows.map((row,i)=>`<tr>${row.map((c,ci)=>`<td style="border:1px solid #e8e6e0;padding:4px 8px;background:${i===0?'#f4f3ef':'#fff'};font-weight:${i===0?700:400};white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">
-      ${i===0 && mapeamento[ci] ? `<span title="${esc(String(c||''))}" style="color:var(--verde)">✓ ${esc(String(c||''))}</span>` :
-        i===0 && !mapeamento[ci] && String(c||'').trim() ? `<span title="Não mapeada" style="color:#bbb">${esc(String(c||''))}</span>` :
-        esc(String(c||'').substring(0,30))
-      }
-    </td>`).join('')}</tr>`).join('')}
-  </table>`;
-  el('import-preview-table').innerHTML = previewHtml;
-
-  // Colunas mapeadas vs não mapeadas
-  const mapped = mapeamento.filter(Boolean);
-  const unmapped = headers.filter((h,i)=>!mapeamento[i]&&String(h||'').trim());
-  const reqCols = (IMPORT_COLS[importTipo]||[]).filter(c=>c.req).map(c=>c.key);
-  const hasReq = reqCols.length===0 || reqCols.every(k => mapped.includes(k));
-
-  const mapHtml = `<div style="font-size:11px;line-height:1.8">
-    ${mapped.length>0 ? `<span style="color:var(--verde);font-weight:600">✓ Colunas mapeadas (${mapped.length}):</span> ${mapped.map(k=>`<span class="pill" style="margin:1px">${k}</span>`).join('')}<br>` : ''}
-    ${unmapped.length>0 ? `<span style="color:#aaa">⚬ Não reconhecidas (ignoradas): ${unmapped.map(h=>`<em>${h}</em>`).join(', ')}</span><br>` : ''}
-    <span style="font-weight:600">${importDados.length} registro${importDados.length!==1?'s':''} encontrado${importDados.length!==1?'s':''} para importação</span>
-  </div>`;
-  el('import-mapeamento').innerHTML = mapHtml;
-
-  if(!hasReq) {
-    _importPreviewMsg(`⚠️ Coluna obrigatória "${reqCols.find(k=>!mapped.includes(k))}" não encontrada. Verifique o cabeçalho da planilha.`, 'warning');
-    el('import-confirm-btn').style.display = 'none';
-  } else if(importDados.length === 0) {
-    _importPreviewMsg('⚠️ Nenhum registro encontrado no arquivo.', 'warning');
-    el('import-confirm-btn').style.display = 'none';
-  } else {
-    _importPreviewMsg(`✅ ${importDados.length} registro${importDados.length!==1?'s':''} pronto${importDados.length!==1?'s':''} para importar.`, 'success');
-    el('import-confirm-btn').style.display = 'inline-flex';
-  }
-  el('import-preview').style.display = 'block';
+function impReset(){
+  el('import-preview').style.display='none';
+  el('import-file-name').textContent='.xlsx, .xls, .csv';
+  el('import-file').value=''; importDados=[];_impMap={};
+  el('imp-xl-footer').style.display='flex';
 }
-
-function _handlePDFImport(file) {
-  // Para PDF, tentar extrair texto e parsear como tabela
-  el('import-preview').style.display = 'block';
-  el('import-mapeamento').innerHTML = '';
-  _importPreviewMsg('📄 PDF detectado. Tentando extrair tabela...', 'info');
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    // Sem pdfjsLib, usamos heurística básica via texto
-    try {
-      // Tenta ler como texto bruto (funciona para PDFs simples não-escaneados)
-      const bytes = new Uint8Array(e.target.result);
-      let text = '';
-      for(let i=0;i<bytes.length;i++) {
-        const c = bytes[i];
-        if(c>=32&&c<127) text += String.fromCharCode(c);
-        else if(c===10||c===13) text += '\n';
-      }
-      // Procurar linhas que parecem dados tabulares
-      const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
-
-      if(lines.length<2) {
-        _importPreviewMsg('⚠️ Não foi possível extrair tabela do PDF. Use o formato Excel (.xlsx) para melhores resultados.', 'warning');
-        el('import-preview-table').innerHTML = `<div style="padding:12px;font-size:12px;color:#666">
-          <strong>Dica:</strong> Para importar via PDF, certifique-se que o arquivo não é uma imagem escaneada.<br>
-          Recomendamos usar o Excel (.xlsx) — você pode baixar o modelo clicando em "📥 Baixar Modelo".
-        </div>`;
-        return;
-      }
-
-      // Heurística: detectar separador (tab, ponto-e-vírgula, vírgula ou espaços múltiplos)
-      const sample = lines.slice(0,3).join('\n');
-      const sep = sample.includes('\t') ? '\t' : sample.includes(';') ? ';' : sample.includes(',') ? ',' : /  +/.test(sample) ? '  +' : null;
-
-      if(!sep) {
-        _importPreviewMsg('⚠️ Estrutura de tabela não detectada no PDF. Use Excel para importação.', 'warning');
-        return;
-      }
-
-      const data = lines.map(l => sep === '  +' ? l.split(/  +/) : l.split(new RegExp(sep)));
-      _processarDadosImport(data);
-    } catch(err) {
-      _importPreviewMsg('❌ Não foi possível processar o PDF. Use Excel (.xlsx).', 'danger');
-    }
+function impModelo(){
+  const campos=(IMP_CAMPOS[importTipo]||[]);
+  const header=campos.map(c=>c.lb);
+  const ex={
+    clientes:[['Farmácia São João','12.345.678/0001-99','Farmácia','Belo Horizonte / MG','30 dias','João Silva','joao@farm.com','(31) 99999-9999','Ativo','']],
+    industrias:[['LABOTRAT','Labotrat Dist. Ltda','41.535.890/0001-13','7','Faturamento','Maria','maria@lab.com','(11) 99999-9999','Ativo','']],
+    produtos:[['LAB-001','Shampoo Tratamento 300ml','LABOTRAT','45.90','UN','Shampoo']],
   };
-  reader.readAsArrayBuffer(file);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([header,...(ex[importTipo]||[])]);
+  ws['!cols']=header.map((_,i)=>({wch:i<=1?30:18}));
+  XLSX.utils.book_append_sheet(wb,ws,{clientes:'Clientes',industrias:'Industrias',produtos:'Produtos'}[importTipo]||'Dados');
+  XLSX.writeFile(wb,`Modelo_${importTipo}.xlsx`);
 }
-
-function _importPreviewMsg(msg, tipo='success') {
-  const cls = {success:'alert-success',info:'alert-info',warning:'alert-warning',danger:'alert-danger'}[tipo]||'alert-info';
-  const el2 = el('import-preview-msg');
-  el2.className = 'alert ' + cls;
-  el2.innerHTML = msg;
-}
-
-function confirmarImport() {
-  if(!importDados || importDados.length === 0) {
-    toast('Nenhum dado para importar.','error'); return;
-  }
-
-  let adicionados = 0, atualizados = 0, ignorados = 0;
-
-  if(importTipo === 'clientes') {
-    importDados.forEach(row => {
-      const nome = (row.nome||'').trim();
-      if(!nome) { ignorados++; return; }
-      const existente = clientes.find(c => c.nome.toLowerCase() === nome.toLowerCase() ||
-        (row.cnpj && c.cnpj && row.cnpj.replace(/\D/g,'') === c.cnpj.replace(/\D/g,'')));
-      const obj = {
-        id: existente ? existente.id : ('CLI-' + String(Date.now()+adicionados).slice(-5)),
-        nome,
-        cnpj:     row.cnpj     || (existente?.cnpj||''),
-        segmento: row.segmento || (existente?.segmento||''),
-        cidade:   row.cidade   || (existente?.cidade||''),
-        prazo:    row.prazo    || (existente?.prazo||''),
-        contato:  row.contato  || (existente?.contato||''),
-        email:    row.email    || (existente?.email||''),
-        telefone: row.telefone || (existente?.telefone||''),
-        status:   row.status && ['Ativo','Inativo'].includes(row.status) ? row.status : (existente?.status||'Ativo'),
-        obs:      row.obs      || (existente?.obs||''),
-      };
-      if(existente) { clientes = clientes.map(c=>c.id===existente.id?obj:c); atualizados++; }
-      else          { clientes.push(obj); adicionados++; }
-    });
-    closeModal('modal-import');
-    renderClientes();
-    popularSelectsDinamicos();
-    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} clientes novos, ${atualizados} atualizados`, '📥');
-    toast(`✅ Clientes importados: ${adicionados} novo${adicionados!==1?'s':''}, ${atualizados} atualizado${atualizados!==1?'s':''}${ignorados?' ('+ignorados+' ignorado'+( ignorados!==1?'s':'')+')'  :''}`);
-    syncAutoSaveHook();
-
-  } else if(importTipo === 'industrias') {
-    importDados.forEach(row => {
-      const nome = (row.nome||'').trim().toUpperCase();
-      if(!nome) { ignorados++; return; }
-      const existente = industrias.find(i => i.nome.toUpperCase() === nome ||
-        (row.cnpj && i.cnpj && row.cnpj.replace(/\D/g,'') === i.cnpj.replace(/\D/g,'')));
-      const pct = parseFloat((row.pct||'0').toString().replace(',','.')) || (existente?.pct||0);
-      const obj = {
-        id:      existente ? existente.id : ('IND-' + String(Date.now()+adicionados).slice(-5)),
-        nome,
-        razao:   row.razao   || (existente?.razao||''),
-        cnpj:    row.cnpj    || (existente?.cnpj||''),
-        pct,
-        tipoCom: row.tipoCom && ['Faturamento','Liquidez'].includes(row.tipoCom) ? row.tipoCom : (existente?.tipoCom||'Faturamento'),
-        contato: row.contato || (existente?.contato||''),
-        email:   row.email   || (existente?.email||''),
-        telefone:row.telefone|| (existente?.telefone||''),
-        status:  row.status && ['Ativo','Inativo'].includes(row.status) ? row.status : (existente?.status||'Ativo'),
-        obs:     row.obs     || (existente?.obs||''),
-      };
-      if(existente) { industrias = industrias.map(i=>i.id===existente.id?obj:i); atualizados++; }
-      else          { industrias.push(obj); adicionados++; }
-    });
-    closeModal('modal-import');
-    renderIndustrias();
-    popularSelectsDinamicos();
-    _popularSelectsIndustriaTodos();
-    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} indústrias novas, ${atualizados} atualizadas`, '📥');
-    toast(`✅ Indústrias importadas: ${adicionados} nova${adicionados!==1?'s':''}, ${atualizados} atualizada${atualizados!==1?'s':''}${ignorados?' ('+ignorados+' ignorada'+( ignorados!==1?'s':'')+')'  :''}`);
-    syncAutoSaveHook();
-
-  } else if(importTipo === 'produtos') {
-    importDados.forEach(row => {
-      const cod = (row.cod||'').trim().toUpperCase();
-      if(!cod || !row.desc) { ignorados++; return; }
-      const preco = parseFloat((row.preco||'0').toString().replace('R$','').replace(',','.').trim()) || 0;
-      PRODUTOS_CAT[cod] = {
-        desc: row.desc||'',
-        ind:  (row.ind||'').toUpperCase(),
-        cat:  row.cat||'',
-        preco,
-        unid: row.unid||'UN',
-        status: row.status||'Ativo',
-        obs: row.obs||'',
-      };
-      adicionados++;
-    });
-    closeModal('modal-import');
-    renderProdutos();
-    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} produtos`, '📥');
-    toast(`✅ ${adicionados} produto${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}`);
-    syncAutoSaveHook();
-
-  } else {
-    // Tipos genéricos (pedido, nf, etc.)
-    toast(`Importação concluída! ${importDados.length||1} registro(s) processado(s).`);
-    closeModal('modal-import');
-  }
-
-  importDados = [];
-}
-
-function baixarModeloImport() {
-  const cols = IMPORT_COLS[importTipo];
-  if(!cols) { toast('Modelo não disponível para este tipo.','error'); return; }
-  const titulos = {clientes:'Clientes',industrias:'Industrias',produtos:'Produtos',pedido:'Pedidos'};
-  const wb = XLSX.utils.book_new();
-  const header = cols.map(c => c.label + (c.req?' *':''));
-  const exemplo = {
-    clientes: ['Farmácia Central', '12.345.678/0001-90', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
-    industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
-    produtos: ['LAB-001', 'Shampoo Tratamento 300ml', 'LABOTRAT', 'Higiene', '29.90', 'UN', 'Ativo', ''],
-    pedido: ['Farmácia Central', 'LABOTRAT', '2026-03-01', '28D', 'Recebido'],
+function impDrop(e){e.preventDefault();el('import-dropzone').style.borderColor='';const f=e.dataTransfer?.files[0];if(f)impProcessXL(f);}
+function handleImportFile(input){const f=input.files[0];if(f)impProcessXL(f);}
+function impProcessXL(file){
+  el('import-file-name').textContent=`✓ ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  el('imp-xl-footer').style.display='none';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    importDados=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}).filter(r=>r.some(c=>String(c||'').trim()!==''));
+    impAutoMap(); impRenderPrev(); el('import-preview').style.display='';
   };
-  const rows = [header];
-  if(exemplo[importTipo]) rows.push(exemplo[importTipo]);
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = cols.map(()=>({wch:22}));
-  XLSX.utils.book_append_sheet(wb, ws, titulos[importTipo]||'Modelo');
-  XLSX.writeFile(wb, `Modelo_Importacao_${titulos[importTipo]||importTipo}.xlsx`);
-  toast('Modelo Excel baixado!');
+  reader.readAsBinaryString(file);
 }
+function impAutoMap(){
+  const campos=(IMP_CAMPOS[importTipo]||[]);
+  const hdrs=(importDados[0]||[]).map(h=>String(h||'').toLowerCase().trim());
+  _impMap={};
+  campos.forEach(c=>{
+    const i=hdrs.findIndex(h=>c.al.some(a=>h===a||h.includes(a)||a.includes(h)));
+    if(i>=0)_impMap[c.k]=i;
+  });
+}
+function impRenderPrev(){
+  const campos=(IMP_CAMPOS[importTipo]||[]);
+  const hdrs=(importDados[0]||[]).map(h=>String(h||'').trim());
+  const rows=importDados.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+  const mapeados=campos.filter(c=>_impMap[c.k]!==undefined);
+  const faltam=campos.filter(c=>c.ob&&_impMap[c.k]===undefined);
+  const ignoradas=hdrs.filter((_,i)=>!Object.values(_impMap).includes(i));
+  el('imp-map-warn').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:${faltam.length?'8px':'0'}">${mapeados.map(c=>`<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700">✓ ${c.lb}</span>`).join('')}${ignoradas.map(h=>`<span style="background:#f5f5f5;color:#aaa;border:1px solid #e0e0e0;border-radius:4px;padding:2px 7px;font-size:10px">${h}</span>`).join('')}</div>${faltam.length?`<div style="background:#fff3e0;border-left:3px solid #ff9800;padding:8px 12px;font-size:12px;color:#e65100;border-radius:4px;margin-bottom:4px">⚠️ ${faltam.map(c=>`Coluna obrigatória <strong>"${c.lb}"</strong> não encontrada`).join(' · ')}</div>`:''}`;
+  if(faltam.length){
+    el('imp-manual-wrap').style.display='';
+    el('imp-manual-selects').innerHTML=faltam.map(c=>`<div><label style="font-size:11px;font-weight:700;color:#795548;display:block;margin-bottom:3px">${c.lb} *</label><select id="ims-${c.k}" onchange="impMapMan()" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:5px;font-size:12px"><option value="">— selecionar —</option>${hdrs.map((h,i)=>`<option value="${i}">${h||'Col '+(i+1)}</option>`).join('')}</select></div>`).join('');
+  } else el('imp-manual-wrap').style.display='none';
+  const cols=mapeados.length?mapeados:campos.slice(0,5);
+  el('import-preview-msg').textContent=`${rows.length} registro(s) · ${mapeados.length} coluna(s)${faltam.length?' · ⚠️ '+faltam.length+' obrigatória(s) faltando':' · ✓ pronto para salvar'}`;
+  el('import-preview-table').innerHTML=`<table style="width:100%;border-collapse:collapse"><thead><tr>${cols.map(c=>`<th style="background:#f4f3ef;padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:#666;border-bottom:1px solid #e8e6e0;white-space:nowrap">${c.lb}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,8).map(r=>`<tr style="border-bottom:1px solid #f5f5f5">${cols.map(c=>`<td style="padding:5px 10px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_impMap[c.k]!==undefined?esc(String(r[_impMap[c.k]]||'')):'<span style="color:#ddd">—</span>'}</td>`).join('')}</tr>`).join('')}${rows.length>8?`<tr><td colspan="${cols.length}" style="padding:5px 10px;color:#aaa;font-size:10px">… mais ${rows.length-8}</td></tr>`:''}</tbody></table>`;
+}
+function impMapMan(){
+  (IMP_CAMPOS[importTipo]||[]).filter(c=>c.ob).forEach(c=>{const s=el('ims-'+c.k);if(s&&s.value!=='')_impMap[c.k]=parseInt(s.value);});
+  impRenderPrev();
+}
+function confirmarImport(){
+  const campos=(IMP_CAMPOS[importTipo]||[]);
+  const falt=campos.filter(c=>c.ob&&_impMap[c.k]===undefined);
+  if(falt.length){toast('Selecione: '+falt.map(c=>c.lb).join(', '),'erro');return;}
+  const rows=importDados.slice(1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+  let ok=0,ign=0;
+  const g=(r,k)=>_impMap[k]!==undefined?String(r[_impMap[k]]||'').trim():'';
+  if(importTipo==='clientes'){
+    rows.forEach(r=>{const nome=g(r,'nome');if(!nome){ign++;return;}
+      const obj={id:'CLI-'+Date.now()+Math.random().toString(36).slice(2,5),nome,
+        rede:(nome?redeDetectar(nome):''),cnpj:g(r,'cnpj'),segmento:g(r,'segmento'),cidade:g(r,'cidade'),
+        prazo:g(r,'prazo'),contato:g(r,'contato'),email:g(r,'email'),telefone:g(r,'telefone'),
+        status:g(r,'status').includes('Inat')?'Inativo':'Ativo',obs:g(r,'obs')};
+      const idx=clientes.findIndex(c=>c.nome.toLowerCase()===nome.toLowerCase());
+      if(idx>=0)clientes[idx]={...clientes[idx],...obj,id:clientes[idx].id};else clientes.push(obj);ok++;});
+    renderClientes();popularSelectsDinamicos();
+  } else if(importTipo==='industrias'){
+    rows.forEach(r=>{const nome=g(r,'nome').toUpperCase();if(!nome){ign++;return;}
+      const rawT=g(r,'tipoCom').toUpperCase();
+      const obj={id:'IND-'+Date.now()+Math.random().toString(36).slice(2,5),nome,
+        razao:g(r,'razao'),cnpj:g(r,'cnpj'),pct:parseFloat(g(r,'pct').replace('%','').replace(',','.'))||0,
+        tipoCom:rawT.includes('LIQ')?'Liquidez':'Faturamento',contato:g(r,'contato'),
+        email:g(r,'email'),telefone:g(r,'telefone'),status:g(r,'status').includes('Inat')?'Inativo':'Ativo',obs:g(r,'obs')};
+      const idx=industrias.findIndex(x=>x.nome===nome);
+      if(idx>=0)industrias[idx]={...industrias[idx],...obj,id:industrias[idx].id};else industrias.push(obj);ok++;});
+    renderIndustrias();popularSelectsDinamicos();try{_popularSelectsIndustriaTodos();}catch(e){}
+  } else if(importTipo==='produtos'){
+    rows.forEach(r=>{const cod=g(r,'codigo').toUpperCase(),nome=g(r,'nome');if(!cod&&!nome){ign++;return;}
+      PRODUTOS_CAT[cod]={desc:nome,ind:g(r,'industria').toUpperCase(),
+        preco:parseFloat(g(r,'preco').replace('R$','').replace('.','').replace(',','.'))||0,
+        un:g(r,'unidade')||'UN',cat:g(r,'categoria')};ok++;});
+    try{renderProdutos();}catch(e){}
+  }
+  try{addAudit(usuarioLogado?.login||'admin',`Importação Excel ${importTipo}: ${ok}`,'📥');}catch(e){}
+  try{syncAutoSaveHook();}catch(e){}
+  closeModal('modal-import');importDados=[];_impMap={};
+  toast(`✅ ${ok} registro(s) importado(s)${ign?` · ${ign} ignorado(s)`:''}`);
+}
+// ── PDF via IA ──
+function impPdfDrop(e){e.preventDefault();el('imp-pdf-drop').style.borderColor='';const f=e.dataTransfer?.files[0];if(f)impLerPDF(f);}
+function impPdfReset(){el('imp-pdf-result').style.display='none';el('imp-pdf-label').textContent='Clique ou arraste o PDF aqui';el('imp-pdf-file').value='';_impPDFRows=[];el('imp-pdf-footer').style.display='flex';}
+async function impLerPDF(file){
+  if(!file||!file.name.toLowerCase().endsWith('.pdf')){alert('Selecione um .pdf');return;}
+  el('imp-pdf-label').textContent='✓ '+file.name;
+  el('imp-pdf-loading').style.display='';el('imp-pdf-result').style.display='none';el('imp-pdf-footer').style.display='none';
+  const base64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=()=>rej(new Error('Erro'));r.readAsDataURL(file);});
+  const campos=(IMP_CAMPOS[importTipo]||[]);
+  const prompt=`Leia este PDF e extraia TODOS os registros de ${importTipo==='clientes'?'clientes/empresas':importTipo==='industrias'?'indústrias/fornecedores':'produtos'}.\nRetorne APENAS um array JSON válido, sem markdown.\nChaves: ${campos.map(c=>c.k).join(', ')}.\nPara tipoCom use "Faturamento" ou "Liquidez". Status: "Ativo" ou "Inativo". Campos ausentes: "".\nComece com [ e termine com ].`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
+        messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:prompt}]}]})});
+    const data=await resp.json();
+    const text=(data.content||[]).map(b=>b.text||'').join('');
+    _impPDFRows=JSON.parse(text.replace(/```json|```/g,'').trim());
+    el('imp-pdf-loading').style.display='none';el('imp-pdf-result').style.display='';
+    const cols=campos.slice(0,5);
+    el('imp-pdf-status').textContent=`${_impPDFRows.length} registro(s) extraído(s) · pronto para salvar`;
+    el('imp-pdf-table').innerHTML=`<thead><tr>${cols.map(c=>`<th style="background:#f4f3ef;padding:6px 10px;font-size:10px;font-weight:700;color:#666;border-bottom:1px solid #e8e6e0;text-align:left;white-space:nowrap">${c.lb}</th>`).join('')}</tr></thead><tbody>${_impPDFRows.slice(0,8).map(r=>`<tr style="border-bottom:1px solid #f5f5f5">${cols.map(c=>`<td style="padding:5px 10px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(String(r[c.k]||''))}</td>`).join('')}</tr>`).join('')}${_impPDFRows.length>8?`<tr><td colspan="${cols.length}" style="padding:5px 10px;color:#aaa;font-size:10px">… mais ${_impPDFRows.length-8}</td></tr>`:''}</tbody>`;
+  }catch(err){el('imp-pdf-loading').style.display='none';el('imp-pdf-footer').style.display='flex';alert('Erro ao ler PDF: '+err.message);}
+}
+function impSalvarPDF(){
+  if(!_impPDFRows.length){alert('Nenhum dado.');return;}
+  let ok=0,ign=0;
+  if(importTipo==='clientes'){_impPDFRows.forEach(r=>{const nome=String(r.nome||'').trim();if(!nome){ign++;return;}const obj={id:'CLI-'+Date.now()+Math.random().toString(36).slice(2,5),nome,rede:redeDetectar(nome),cnpj:r.cnpj||'',segmento:r.segmento||'',cidade:r.cidade||'',prazo:r.prazo||'',contato:r.contato||'',email:r.email||'',telefone:r.telefone||'',status:String(r.status||'Ativo').includes('Inat')?'Inativo':'Ativo',obs:r.obs||''};const idx=clientes.findIndex(c=>c.nome.toLowerCase()===nome.toLowerCase());if(idx>=0)clientes[idx]={...clientes[idx],...obj,id:clientes[idx].id};else clientes.push(obj);ok++;});renderClientes();popularSelectsDinamicos();}
+  else if(importTipo==='industrias'){_impPDFRows.forEach(r=>{const nome=String(r.nome||'').trim().toUpperCase();if(!nome){ign++;return;}const obj={id:'IND-'+Date.now()+Math.random().toString(36).slice(2,5),nome,razao:r.razao||'',cnpj:r.cnpj||'',pct:parseFloat(String(r.pct||'').replace('%',''))||0,tipoCom:String(r.tipoCom||'').includes('Liq')?'Liquidez':'Faturamento',contato:r.contato||'',email:r.email||'',telefone:r.telefone||'',status:String(r.status||'Ativo').includes('Inat')?'Inativo':'Ativo',obs:r.obs||''};const idx=industrias.findIndex(x=>x.nome===nome);if(idx>=0)industrias[idx]={...industrias[idx],...obj,id:industrias[idx].id};else industrias.push(obj);ok++;});renderIndustrias();popularSelectsDinamicos();try{_popularSelectsIndustriaTodos();}catch(e){}}
+  try{addAudit(usuarioLogado?.login||'admin',`Importação PDF ${importTipo}: ${ok}`,'📥');}catch(e){}
+  try{syncAutoSaveHook();}catch(e){}
+  closeModal('modal-import');_impPDFRows=[];
+  toast(`✅ ${ok} registro(s) importado(s) via PDF${ign?` · ${ign} ignorado(s)`:''}`);
+}
+
+// ═══════════════════════════════════════════════════
+// SISTEMA REDES / HIERARQUIA CLIENTE → FILIAL
+// ═══════════════════════════════════════════════════
+function redeDetectar(nome){
+  if(!nome) return '';
+  const n=nome.toUpperCase().trim();
+  const m1=n.match(/^(.+?)\s*[-–]?\s*FILIAL\s+.+$/);if(m1)return m1[1].trim();
+  const m2=n.match(/^(.+?)\s+\d+\s*$/);if(m2&&m2[1].trim().split(/\s+/).length>=2)return m2[1].trim();
+  return n;
+}
+function redeMigrar(){
+  clientes.forEach(c=>{if(!c.rede)c.rede=redeDetectar(c.nome);});
+  try{syncAutoSaveHook();}catch(e){}
+}
+function redeGetLista(){
+  return [...new Set(clientes.filter(c=>c.status==='Ativo').map(c=>c.rede||redeDetectar(c.nome)))].sort();
+}
+function redeGetFiliais(rede){
+  return clientes.filter(c=>c.status==='Ativo'&&(c.rede||redeDetectar(c.nome))===rede).sort((a,b)=>a.nome.localeCompare(b.nome));
+}
+function redeNomeCurto(nomeFilial,rede){
+  const n=nomeFilial.toUpperCase(),r=rede.toUpperCase();
+  if(n.startsWith(r))return nomeFilial.substring(r.length).trim().replace(/^[-–\s]+/,'')||nomeFilial;
+  const i=n.indexOf('FILIAL');if(i>=0)return nomeFilial.substring(i).trim();
+  return nomeFilial;
+}
+let _redeAtiva='';
+function redeRenderChips(){
+  const chips=el('cliente-chips');if(!chips)return;
+  const redes=redeGetLista();
+  if(!redes.length){chips.innerHTML='<span style="color:#aaa;font-size:12px">Nenhum cliente cadastrado</span>';return;}
+  chips.innerHTML=redes.map(r=>{
+    const fs=redeGetFiliais(r);const temF=fs.length>1;
+    return `<button class="btn btn-outline btn-sm" id="cr-${CSS.escape(r)}" onclick="redeSelecionarRede('${esc(r)}')" style="white-space:nowrap">${esc(r)}${temF?` <span style="background:#e0e0e0;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:2px">${fs.length}</span>`:''}</button>`;
+  }).join('');
+  const dl=el('c-rede-list');if(dl)dl.innerHTML=redes.map(r=>`<option value="${esc(r)}">`).join('');
+  if(redes.length&&!_redeAtiva)redeSelecionarRede(redes[0]);
+}
+function redeSelecionarRede(rede){
+  _redeAtiva=rede;
+  document.querySelectorAll('#cliente-chips button').forEach(b=>{b.className='btn btn-outline btn-sm';b.style.whiteSpace='nowrap';});
+  const ab=document.getElementById('cr-'+CSS.escape(rede));
+  if(ab){ab.className='btn btn-primary btn-sm';ab.style.whiteSpace='nowrap';}
+  const fs=redeGetFiliais(rede);
+  if(fs.length===1){
+    el('mix-filial-row').style.display='none';
+    selectCliente(fs[0].nome,null);
+  } else {
+    el('mix-filial-row').style.display='';
+    el('mix-rede-label').textContent=rede;
+    el('mix-filiais-chips').innerHTML=fs.map(f=>`<button class="btn btn-outline btn-sm" id="cf-${CSS.escape(f.id)}" onclick="redeSelecionarFilial('${esc(f.nome)}','${esc(f.id)}')" style="white-space:nowrap;font-size:11px">${esc(redeNomeCurto(f.nome,rede))}</button>`).join('');
+    redeSelecionarFilial(fs[0].nome,fs[0].id);
+  }
+}
+function redeSelecionarFilial(nome,id){
+  document.querySelectorAll('#mix-filiais-chips button').forEach(b=>b.className='btn btn-outline btn-sm');
+  const fb=document.getElementById('cf-'+CSS.escape(id));
+  if(fb)fb.className='btn btn-primary btn-sm';
+  selectCliente(nome,null);
+}
+setTimeout(()=>{redeMigrar();redeRenderChips();},300);
 
 /* ══════════════════════════
    MIX MODAL
@@ -3947,6 +3866,8 @@ function salvarProdutosMix(){closeModal('modal-add-produto');renderMix();}
 ══════════════════════════ */
 function popularSelectsDinamicos() {
   const nomesClientes   = clientes.filter(c=>c.status==='Ativo').map(c=>c.nome).sort();
+  // Atualiza datalist de redes
+  const dl=el('c-rede-list');if(dl)dl.innerHTML=redeGetLista().map(r=>`<option value="${esc(r)}">`).join('');
   const nomesIndustrias = industrias.filter(i=>i.status==='Ativo').map(i=>i.nome).sort();
   // fallback: indústrias de produtos cadastrados mas não no cadastro formal
   const indsExtra = [...new Set(Object.values(PRODUTOS_CAT).map(p=>p.ind))]
@@ -4008,7 +3929,7 @@ function popularSelectsDinamicos() {
 function novoCliente() {
   _cliEditId = null;
   el('cli-modal-titulo').textContent = 'Novo Cliente';
-  ['c-nome','c-cnpj','c-cidade','c-prazo','c-contato','c-email','c-telefone','c-obs'].forEach(id=>{ if(el(id)) el(id).value=''; });
+  ['c-nome','c-rede','c-cnpj','c-cidade','c-prazo','c-contato','c-email','c-telefone','c-obs'].forEach(id=>{ if(el(id)) el(id).value=''; });
   if(el('c-segmento')) el('c-segmento').value='';
   if(el('c-status'))   el('c-status').value='Ativo';
   openModal('modal-cliente');
@@ -4019,6 +3940,7 @@ function editarCliente(id) {
   _cliEditId = id;
   el('cli-modal-titulo').textContent = 'Editar Cliente — ' + c.nome;
   el('c-nome').value      = c.nome      || '';
+  if(el('c-rede')) el('c-rede').value = c.rede || '';
   el('c-cnpj').value      = c.cnpj      || '';
   el('c-segmento').value  = c.segmento  || '';
   el('c-cidade').value    = c.cidade    || '';
@@ -4037,6 +3959,7 @@ function salvarCliente() {
   const id = _cliEditId || ('CLI-' + String(Date.now()).slice(-5));
   const obj = {
     id, nome,
+    rede:      (el('c-rede')?el('c-rede').value.trim().toUpperCase():'') || redeDetectar(nome),
     cnpj:      el('c-cnpj').value.trim(),
     segmento:  el('c-segmento').value,
     cidade:    el('c-cidade').value.trim(),
@@ -5909,6 +5832,7 @@ function coletarDadosParaSync() {
     tratativas:     JSON.parse(JSON.stringify(tratativas)),
     PRODUTOS_CAT:   JSON.parse(JSON.stringify(PRODUTOS_CAT)),
     usuarios:       JSON.parse(JSON.stringify(usuarios)),
+    userPerms:      JSON.parse(JSON.stringify(userPerms)),
     _ts:      Date.now(),
     _usuario: usuarioLogado?.login || 'sistema',
   };
@@ -5945,6 +5869,10 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==='object') {
     Object.keys(PRODUTOS_CAT).forEach(k=>delete PRODUTOS_CAT[k]);
     Object.assign(PRODUTOS_CAT, dados.PRODUTOS_CAT);
+  }
+  if(dados.userPerms && typeof dados.userPerms==='object') {
+    Object.keys(userPerms).forEach(k=>delete userPerms[k]);
+    Object.assign(userPerms, dados.userPerms);
   }
 
   // Re-renderiza tudo
