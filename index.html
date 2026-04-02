@@ -3860,10 +3860,10 @@ function renderProdutos() {
   if(el('prod-count')) el('prod-count').textContent =
     `${list.length} exibido${list.length!==1?'s':''} · ${ativos} ativo${ativos!==1?'s':''} de ${total}`;
 
-  // Atualizar select de filtro de indústria
+  // Atualizar select de filtro de indústria (sempre repopular para refletir novos cadastros)
   const selFiltInd = el('prod-ind-filtro');
-  if(selFiltInd && selFiltInd.options.length <= 1) {
-    const inds = [...new Set(Object.values(PRODUTOS_CAT).map(p=>p.ind))].sort();
+  if(selFiltInd) {
+    const inds = [...new Set(Object.values(PRODUTOS_CAT).map(p=>p.ind))].filter(Boolean).sort();
     selFiltInd.innerHTML = '<option value="">Todas as indústrias</option>' +
       inds.map(i=>`<option value="${esc(i)}" ${i===filtInd?'selected':''}>${esc(i)}</option>`).join('');
   }
@@ -4475,7 +4475,7 @@ function popularSelectsDinamicos() {
   // selects de filtro (search bars)
   const filtroCli = ['fat-filtro-cli','saldo-cli','sio-filtro-cli'];
   const filtroInd = ['orc-filtro-ind','ped-filtro-ind','fat-filtro-ind','saldo-ind',
-    'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix'];
+    'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix','prod-ind-filtro'];
 
   filtroCli.forEach(id=>{
     const s=el(id); if(!s) return;
