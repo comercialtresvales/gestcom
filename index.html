@@ -876,9 +876,18 @@ tr:last-child td{border-bottom:none;}
         </select>
         <span id="cli-count" style="font-size:12px;color:#888;white-space:nowrap"></span>
       </div>
+      <!-- Barra de ações em massa -->
+      <div id="cli-bulk-bar" style="display:none;align-items:center;gap:10px;background:#fff3cd;border:1px solid #f0d060;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+        <span id="cli-bulk-count" style="font-size:13px;font-weight:600;color:#7a5800">0 cliente(s) selecionado(s)</span>
+        <button class="btn btn-danger btn-sm" onclick="excluirClientesSelecionados()">🗑️ Excluir Selecionados</button>
+        <button class="btn btn-outline btn-sm" onclick="cliDesmarcarTodos()">✕ Desmarcar todos</button>
+      </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>Razão Social</th><th>CNPJ</th><th>Rede / Grupo</th><th>Cidade / UF</th><th>Segmento</th><th>Prazo</th><th>Contato</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr>
+            <th style="width:36px"><input type="checkbox" id="cli-chk-all" title="Selecionar todos" onchange="cliToggleAll(this.checked)" style="cursor:pointer;width:15px;height:15px;accent-color:var(--amarelo)"></th>
+            <th>Razão Social</th><th>CNPJ</th><th>Rede / Grupo</th><th>Cidade / UF</th><th>Segmento</th><th>Prazo</th><th>Contato</th><th>Status</th><th>Ações</th>
+          </tr></thead>
           <tbody id="cli-tbody"></tbody>
         </table>
       </div>
@@ -4568,8 +4577,77 @@ function excluirCliente(id) {
   renderClientes(); renderDashboard(); toast('Cliente excluído.');
 }
 
+/* ── Seleção em massa de clientes ── */
+function cliToggleAll(checked) {
+  document.querySelectorAll('.cli-chk').forEach(chk => { chk.checked = checked; });
+  cliAtualizarBulkBar();
+}
+
+function cliDesmarcarTodos() {
+  document.querySelectorAll('.cli-chk').forEach(chk => { chk.checked = false; });
+  const chkAll = el('cli-chk-all');
+  if(chkAll) chkAll.checked = false;
+  cliAtualizarBulkBar();
+}
+
+function cliAtualizarBulkBar() {
+  const selecionados = document.querySelectorAll('.cli-chk:checked');
+  const total = document.querySelectorAll('.cli-chk');
+  const bar = el('cli-bulk-bar');
+  const countEl = el('cli-bulk-count');
+  const chkAll = el('cli-chk-all');
+
+  const n = selecionados.length;
+  if(bar) bar.style.display = n > 0 ? 'flex' : 'none';
+  if(countEl) countEl.textContent = `${n} cliente${n!==1?'s':''} selecionado${n!==1?'s':''}`;
+  if(chkAll) {
+    chkAll.indeterminate = n > 0 && n < total.length;
+    chkAll.checked = n > 0 && n === total.length;
+  }
+}
+
+function excluirClientesSelecionados() {
+  if(!hasEditAccess('clientes')) { toast('Sem permissão para excluir clientes.','error'); return; }
+  const selecionados = [...document.querySelectorAll('.cli-chk:checked')].map(chk => chk.dataset.id);
+  if(selecionados.length === 0) { toast('Nenhum cliente selecionado.','error'); return; }
+
+  const emUso = selecionados.filter(id => {
+    const c = clientes.find(x=>x.id===id);
+    return c && (pedidos.some(p=>p.cliente===c.nome) || orcamentos.some(o=>o.cliente===c.nome));
+  });
+
+  let msg = `⚠️ Tem certeza que deseja excluir ${selecionados.length} cliente${selecionados.length!==1?'s':''}?\n\nEsta ação não pode ser desfeita.`;
+  if(emUso.length > 0) {
+    msg += `\n\n⚠️ ${emUso.length} cliente${emUso.length!==1?'s':''} vinculado${emUso.length!==1?'s':''} a pedidos/orçamentos será${emUso.length!==1?'ão':''} marcado${emUso.length!==1?'s':''} como Inativo.`;
+  }
+  if(!confirm(msg)) return;
+
+  selecionados.forEach(id => {
+    const c = clientes.find(x=>x.id===id);
+    if(!c) return;
+    const temVinculo = pedidos.some(p=>p.cliente===c.nome) || orcamentos.some(o=>o.cliente===c.nome);
+    if(temVinculo) {
+      clientes = clientes.map(x=>x.id===id ? {...x,status:'Inativo'} : x);
+      addAudit(usuarioLogado?.login||'admin', `Cliente marcado inativo: ${c.nome}`, '👥');
+    } else {
+      clientes = clientes.filter(x=>x.id!==id);
+      addAudit(usuarioLogado?.login||'admin', `Cliente excluído: ${c.nome}`, '🗑️');
+    }
+  });
+
+  salvarDados();
+  popularSelectsDinamicos();
+  renderClientes();
+  renderDashboard();
+  toast(`🗑️ ${selecionados.length} cliente${selecionados.length!==1?'s':''} processado${selecionados.length!==1?'s':''}!`);
+}
+
 function renderClientes() {
   const tbody = el('cli-tbody'); if(!tbody) return;
+  // Reset bulk bar ao re-renderizar
+  const barCli = el('cli-bulk-bar'); if(barCli) barCli.style.display='none';
+  const chkAllCli = el('cli-chk-all'); if(chkAllCli) { chkAllCli.checked=false; chkAllCli.indeterminate=false; }
+
   const busca    = (el('cli-busca')||{}).value?.toLowerCase()||'';
   const filtSeg  = (el('cli-filtro-seg')||{}).value||'';
   const filtStat = (el('cli-filtro-status')||{}).value||'';
@@ -4591,7 +4669,7 @@ function renderClientes() {
   const podeEditar = hasEditAccess('clientes');
 
   if(list.length===0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:#aaa">
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:#aaa">
       ${total===0
         ? `<div style="font-size:24px;margin-bottom:8px">👥</div><div style="font-weight:600">Nenhum cliente cadastrado</div><div style="font-size:12px;margin-top:4px">Clique em "+ Novo Cliente" para começar</div>`
         : 'Nenhum cliente encontrado para os filtros selecionados'
@@ -4603,6 +4681,9 @@ function renderClientes() {
   tbody.innerHTML = list.map(c=>{
     const redeObj = c.rede ? redes.find(r=>r.nome===c.rede) : null;
     return `<tr>
+    <td style="width:36px"><input type="checkbox" class="cli-chk" data-id="${c.id}"
+      style="cursor:pointer;width:15px;height:15px;accent-color:var(--amarelo)"
+      onchange="cliAtualizarBulkBar()"></td>
     <td>
       <div style="font-weight:600">${esc(c.nome)}</div>
       ${c.obs?`<div style="font-size:10px;color:#aaa">💬 ${esc(c.obs)}</div>`:''}
