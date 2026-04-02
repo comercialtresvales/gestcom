@@ -826,14 +826,37 @@ tr:last-child td{border-bottom:none;}
         <select id="mix-filtro-curva" onchange="renderMix()"><option value="">Curva A+B+C</option><option value="A">Curva A</option><option value="B">Curva B</option><option value="C">Curva C</option></select>
         <span id="mix-count" style="font-size:12px;color:#888;margin-left:4px">14 produtos</span>
       </div>
+      <!-- Seleção rápida por indústria -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:#888;white-space:nowrap;text-transform:uppercase;letter-spacing:.5px">Sel. rápida:</span>
+        <button class="btn btn-outline btn-xs" onclick="mixSelecionarPorIndustria('')" style="font-size:10px">✅ Todos visíveis</button>
+        <div id="mix-industria-sel-chips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        <button class="btn btn-outline btn-xs" onclick="mixDesmarcarTodos()" style="font-size:10px;color:#888">✕ Limpar seleção</button>
+      </div>
+
       <!-- Barra de ações em massa Mix -->
       <div id="mix-bulk-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;background:#fff3cd;border:1px solid #f0d060;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
         <span id="mix-bulk-count" style="font-size:13px;font-weight:600;color:#7a5800;margin-right:4px">0 produto(s) selecionado(s)</span>
+
+        <!-- Desconto % -->
         <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #f0d060;border-radius:6px;padding:4px 8px;">
           <label style="font-size:11px;font-weight:700;color:#7a5800;white-space:nowrap">% Desc.:</label>
           <input id="mix-bulk-desc" type="number" min="0" max="100" placeholder="0" style="width:54px;padding:3px 6px;border:1px solid #d0c060;border-radius:4px;font-size:12px;text-align:center">
           <button class="btn btn-primary btn-xs" onclick="mixBulkSetDesconto()">Aplicar</button>
         </div>
+
+        <!-- Reajuste preço tabela -->
+        <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #f0d060;border-radius:6px;padding:4px 8px;">
+          <label style="font-size:11px;font-weight:700;color:#7a5800;white-space:nowrap">Preço tabela:</label>
+          <select id="mix-bulk-preco-tipo" style="padding:3px 6px;border:1px solid #d0c060;border-radius:4px;font-size:11px;background:#fff">
+            <option value="reajuste">Reajustar %</option>
+            <option value="fixo">Definir valor fixo</option>
+          </select>
+          <input id="mix-bulk-preco-val" type="number" min="0" placeholder="0" step="0.01" style="width:64px;padding:3px 6px;border:1px solid #d0c060;border-radius:4px;font-size:12px;text-align:center">
+          <button class="btn btn-primary btn-xs" onclick="mixBulkSetPreco()">Aplicar</button>
+        </div>
+
+        <!-- Curva -->
         <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #f0d060;border-radius:6px;padding:4px 8px;">
           <label style="font-size:11px;font-weight:700;color:#7a5800;white-space:nowrap">Curva:</label>
           <select id="mix-bulk-curva" style="padding:3px 6px;border:1px solid #d0c060;border-radius:4px;font-size:12px;background:#fff">
@@ -841,6 +864,8 @@ tr:last-child td{border-bottom:none;}
           </select>
           <button class="btn btn-primary btn-xs" onclick="mixBulkSetCurva()">Aplicar</button>
         </div>
+
+        <!-- Status -->
         <button class="btn btn-danger btn-sm" onclick="mixBulkInativar()">🚫 Desativar</button>
         <button class="btn btn-success btn-sm" onclick="mixBulkAtivar()">✅ Ativar</button>
         <button class="btn btn-outline btn-sm" onclick="mixDesmarcarTodos()">✕ Desmarcar</button>
@@ -3520,6 +3545,7 @@ function renderMix() {
       <td><button class="btn btn-outline btn-xs" onclick="abrirEditarMixItem(${i})" title="Editar produto do mix">✏️</button></td>
     </tr>`;
   }).join('')||'<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px">Nenhum produto no mix para este cliente/rede</td></tr>';
+  setTimeout(_mixAtualizarChipsIndustria, 0);
 }
 
 function updateDesconto(idx,val){mixProdutos[idx].desc_pct=parseFloat(val)||0;renderMix();}
@@ -3638,6 +3664,50 @@ function mixBulkAtivar() {
   renderMix();
   syncAutoSaveHook();
   toast(`✅ ${idxs.length} produto(s) ativado(s) no mix.`);
+}
+
+function mixBulkSetPreco() {
+  const idxs = _mixGetIdxsSelecionados();
+  if(!idxs.length) { toast('Selecione ao menos um produto.','error'); return; }
+  const tipo = el('mix-bulk-preco-tipo')?.value || 'reajuste';
+  const val = parseFloat(el('mix-bulk-preco-val')?.value);
+  if(isNaN(val) || val < 0) { toast('Informe um valor válido.','error'); return; }
+  if(tipo === 'reajuste') {
+    if(!confirm(`Reajustar preço tabela em +${val}% para ${idxs.length} produto(s)?`)) return;
+    idxs.forEach(i=>{ mixProdutos[i].tabela = parseFloat((mixProdutos[i].tabela * (1 + val/100)).toFixed(2)); });
+    addAudit(usuarioLogado?.login||'admin', `Mix: preço tabela reajustado +${val}% em ${idxs.length} produto(s)`, '✏️');
+    toast(`✅ Preço reajustado em +${val}% para ${idxs.length} produto(s).`);
+  } else {
+    if(!confirm(`Definir preço tabela fixo de R$ ${val.toFixed(2)} para ${idxs.length} produto(s)?`)) return;
+    idxs.forEach(i=>{ mixProdutos[i].tabela = val; });
+    addAudit(usuarioLogado?.login||'admin', `Mix: preço tabela definido como R$${val} em ${idxs.length} produto(s)`, '✏️');
+    toast(`✅ Preço tabela definido como R$ ${val.toFixed(2)} para ${idxs.length} produto(s).`);
+  }
+  renderMix();
+  syncAutoSaveHook();
+}
+
+function mixSelecionarPorIndustria(ind) {
+  document.querySelectorAll('.mix-chk').forEach(chk => {
+    const idx = parseInt(chk.dataset.idx);
+    const p = mixProdutos[idx];
+    if(!p) return;
+    chk.checked = ind === '' || p.ind === ind;
+  });
+  mixChkChange();
+}
+
+function _mixAtualizarChipsIndustria() {
+  const chipsEl = el('mix-industria-sel-chips');
+  if(!chipsEl) return;
+  const visiveis = [...document.querySelectorAll('.mix-chk')].map(c=>parseInt(c.dataset.idx))
+    .map(i=>mixProdutos[i]).filter(Boolean);
+  const inds = [...new Set(visiveis.map(p=>p.ind))].filter(Boolean).sort();
+  chipsEl.innerHTML = inds.map(ind=>
+    `<button class="btn btn-xs" onclick="mixSelecionarPorIndustria('${ind.replace(/'/g, "\'")}')"
+      style="font-size:10px;background:#1a1a1a;color:var(--amarelo);border:1px solid #444;border-radius:4px;padding:2px 8px;cursor:pointer;"
+      title="Selecionar todos de ${ind}">${ind}</button>`
+  ).join('');
 }
 
 /* ══════════════════════════
