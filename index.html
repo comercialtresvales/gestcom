@@ -826,8 +826,29 @@ tr:last-child td{border-bottom:none;}
         <select id="mix-filtro-curva" onchange="renderMix()"><option value="">Curva A+B+C</option><option value="A">Curva A</option><option value="B">Curva B</option><option value="C">Curva C</option></select>
         <span id="mix-count" style="font-size:12px;color:#888;margin-left:4px">14 produtos</span>
       </div>
+      <!-- Barra de ações em massa Mix -->
+      <div id="mix-bulk-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;background:#fff3cd;border:1px solid #f0d060;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+        <span id="mix-bulk-count" style="font-size:13px;font-weight:600;color:#7a5800;margin-right:4px">0 produto(s) selecionado(s)</span>
+        <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #f0d060;border-radius:6px;padding:4px 8px;">
+          <label style="font-size:11px;font-weight:700;color:#7a5800;white-space:nowrap">% Desc.:</label>
+          <input id="mix-bulk-desc" type="number" min="0" max="100" placeholder="0" style="width:54px;padding:3px 6px;border:1px solid #d0c060;border-radius:4px;font-size:12px;text-align:center">
+          <button class="btn btn-primary btn-xs" onclick="mixBulkSetDesconto()">Aplicar</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #f0d060;border-radius:6px;padding:4px 8px;">
+          <label style="font-size:11px;font-weight:700;color:#7a5800;white-space:nowrap">Curva:</label>
+          <select id="mix-bulk-curva" style="padding:3px 6px;border:1px solid #d0c060;border-radius:4px;font-size:12px;background:#fff">
+            <option value="">—</option><option value="A">A</option><option value="B">B</option><option value="C">C</option>
+          </select>
+          <button class="btn btn-primary btn-xs" onclick="mixBulkSetCurva()">Aplicar</button>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="mixBulkInativar()">🚫 Desativar</button>
+        <button class="btn btn-success btn-sm" onclick="mixBulkAtivar()">✅ Ativar</button>
+        <button class="btn btn-outline btn-sm" onclick="mixDesmarcarTodos()">✕ Desmarcar</button>
+      </div>
       <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Código</th><th>Descrição</th><th>Indústria</th><th>Curva</th><th>Preço Tabela</th><th>% Desconto</th><th>Preço Negociado</th><th>Última Compra</th><th>Mix</th><th>Obs.</th></tr></thead>
+        <table><thead><tr>
+          <th style="width:36px"><input type="checkbox" id="mix-chk-all" title="Selecionar todos" onchange="mixToggleAll(this.checked)" style="cursor:pointer;width:15px;height:15px;accent-color:var(--amarelo)"></th>
+          <th>Código</th><th>Descrição</th><th>Indústria</th><th>Curva</th><th>Preço Tabela</th><th>% Desconto</th><th>Preço Negociado</th><th>Última Compra</th><th>Mix</th><th>Obs.</th><th>Ações</th></tr></thead>
         <tbody id="mix-tbody"></tbody></table>
       </div>
     </div>
@@ -3469,6 +3490,7 @@ function renderMix() {
     const origemTag = p.rede ? `<span class="badge badge-roxo" style="font-size:9px;margin-left:4px">🔗 ${esc(p.rede)}</span>` :
                       p.clienteEspecifico ? `<span class="badge badge-cinza" style="font-size:9px;margin-left:4px">👤 ${esc(p.clienteEspecifico)}</span>` : '';
     return `<tr>
+      <td><input type="checkbox" class="mix-chk" data-idx="${i}" onchange="mixChkChange()" style="cursor:pointer;width:15px;height:15px;accent-color:var(--amarelo)"></td>
       <td class="mono" style="font-size:12px">${p.cod}</td>
       <td>${esc(p.desc)}${!p.ativo?' <span class="badge badge-cinza" style="font-size:9px">inativo</span>':''}${origemTag}</td>
       <td><span class="tag-industria">${p.ind}</span></td>
@@ -3494,13 +3516,129 @@ function renderMix() {
           <span style="font-size:11px;color:#888">${p.ativo?'Ativo':'Inativo'}</span>
         </div>
       </td>
-      <td><input type="text" placeholder="—" style="width:90px;font-size:11px;padding:4px 7px;border:1px solid var(--cinza-medio);border-radius:4px"></td>
+      <td><input type="text" placeholder="—" value="${esc(p.obs||'')}" style="width:90px;font-size:11px;padding:4px 7px;border:1px solid var(--cinza-medio);border-radius:4px" onchange="mixSalvarObs(${i},this.value)"></td>
+      <td><button class="btn btn-outline btn-xs" onclick="abrirEditarMixItem(${i})" title="Editar produto do mix">✏️</button></td>
     </tr>`;
-  }).join('')||'<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum produto no mix para este cliente/rede</td></tr>';
+  }).join('')||'<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px">Nenhum produto no mix para este cliente/rede</td></tr>';
 }
 
 function updateDesconto(idx,val){mixProdutos[idx].desc_pct=parseFloat(val)||0;renderMix();}
 function toggleAtivo(idx){mixProdutos[idx].ativo=!mixProdutos[idx].ativo;renderMix();}
+function mixSalvarObs(idx,val){mixProdutos[idx].obs=val;syncAutoSaveHook();}
+
+// ── Mix: edição individual ──
+function abrirEditarMixItem(idx) {
+  const p = mixProdutos[idx];
+  if(!p) return;
+  el('mix-edit-idx').value = idx;
+  el('mix-edit-cod').textContent   = p.cod;
+  el('mix-edit-desc').value        = p.desc || '';
+  el('mix-edit-ind').value         = p.ind  || '';
+  el('mix-edit-tabela').value      = p.tabela || 0;
+  el('mix-edit-desc-pct').value    = p.desc_pct || 0;
+  el('mix-edit-curva').value       = p.curva || 'B';
+  el('mix-edit-ultima').value      = p.ultima || '';
+  el('mix-edit-obs').value         = p.obs || '';
+  el('mix-edit-ativo').value       = p.ativo ? 'ativo' : 'inativo';
+  mixEditCalcNeg();
+  openModal('modal-mix-edit');
+}
+function mixEditCalcNeg() {
+  const tab = parseFloat(el('mix-edit-tabela')?.value)||0;
+  const pct = parseFloat(el('mix-edit-desc-pct')?.value)||0;
+  const neg = tab*(1-pct/100);
+  const el2 = el('mix-edit-neg-preview');
+  if(el2) el2.textContent = 'Preço negociado: ' + fmt(neg);
+}
+function salvarMixEdit() {
+  const idx = parseInt(el('mix-edit-idx').value);
+  if(isNaN(idx)||!mixProdutos[idx]) return;
+  const tabela   = parseFloat(el('mix-edit-tabela').value)||0;
+  const desc_pct = parseFloat(el('mix-edit-desc-pct').value)||0;
+  mixProdutos[idx] = {
+    ...mixProdutos[idx],
+    desc:    el('mix-edit-desc').value.trim()  || mixProdutos[idx].desc,
+    ind:     el('mix-edit-ind').value.trim().toUpperCase() || mixProdutos[idx].ind,
+    tabela,
+    desc_pct,
+    curva:   el('mix-edit-curva').value || mixProdutos[idx].curva,
+    ultima:  el('mix-edit-ultima').value.trim() || mixProdutos[idx].ultima,
+    obs:     el('mix-edit-obs').value.trim(),
+    ativo:   el('mix-edit-ativo').value === 'ativo',
+  };
+  addAudit(usuarioLogado?.login||'admin', `Mix editado: ${mixProdutos[idx].cod} — desc ${desc_pct}%, preço tabela ${fmt(tabela)}`, '✏️');
+  closeModal('modal-mix-edit');
+  renderMix();
+  syncAutoSaveHook();
+  toast(`✅ Produto "${mixProdutos[idx].cod}" atualizado no mix.`);
+}
+
+// ── Mix: seleção em massa ──
+function mixChkChange() {
+  const chks = document.querySelectorAll('.mix-chk');
+  const selecionados = [...chks].filter(c=>c.checked);
+  const bar = el('mix-bulk-bar');
+  const cnt = el('mix-bulk-count');
+  if(bar) bar.style.display = selecionados.length > 0 ? 'flex' : 'none';
+  if(cnt) cnt.textContent = selecionados.length + ' produto(s) selecionado(s)';
+  const all = el('mix-chk-all');
+  if(all) all.checked = selecionados.length === chks.length && chks.length > 0;
+}
+function mixToggleAll(checked) {
+  document.querySelectorAll('.mix-chk').forEach(c=>c.checked=checked);
+  mixChkChange();
+}
+function mixDesmarcarTodos() {
+  document.querySelectorAll('.mix-chk').forEach(c=>c.checked=false);
+  mixChkChange();
+}
+function _mixGetIdxsSelecionados() {
+  return [...document.querySelectorAll('.mix-chk:checked')].map(c=>parseInt(c.dataset.idx));
+}
+function mixBulkSetDesconto() {
+  const idxs = _mixGetIdxsSelecionados();
+  if(!idxs.length) { toast('Selecione ao menos um produto.','error'); return; }
+  const val = parseFloat(el('mix-bulk-desc')?.value);
+  if(isNaN(val)||val<0||val>100) { toast('Informe um % de desconto válido (0–100).','error'); return; }
+  if(!confirm(`Aplicar ${val}% de desconto em ${idxs.length} produto(s)?`)) return;
+  idxs.forEach(i=>{ mixProdutos[i].desc_pct = val; });
+  addAudit(usuarioLogado?.login||'admin', `Mix: ${idxs.length} produto(s) com desconto alterado para ${val}%`, '✏️');
+  renderMix();
+  syncAutoSaveHook();
+  toast(`✅ Desconto de ${val}% aplicado em ${idxs.length} produto(s).`);
+}
+function mixBulkSetCurva() {
+  const idxs = _mixGetIdxsSelecionados();
+  if(!idxs.length) { toast('Selecione ao menos um produto.','error'); return; }
+  const val = el('mix-bulk-curva')?.value;
+  if(!val) { toast('Selecione uma curva.','error'); return; }
+  if(!confirm(`Alterar curva para "${val}" em ${idxs.length} produto(s)?`)) return;
+  idxs.forEach(i=>{ mixProdutos[i].curva = val; });
+  addAudit(usuarioLogado?.login||'admin', `Mix: curva alterada para ${val} em ${idxs.length} produto(s)`, '✏️');
+  renderMix();
+  syncAutoSaveHook();
+  toast(`✅ Curva "${val}" aplicada em ${idxs.length} produto(s).`);
+}
+function mixBulkInativar() {
+  const idxs = _mixGetIdxsSelecionados();
+  if(!idxs.length) return;
+  if(!confirm(`Desativar ${idxs.length} produto(s) do mix? Os produtos não serão excluídos.`)) return;
+  idxs.forEach(i=>{ mixProdutos[i].ativo = false; });
+  addAudit(usuarioLogado?.login||'admin', `Mix: ${idxs.length} produto(s) desativado(s) em massa`, '🚫');
+  renderMix();
+  syncAutoSaveHook();
+  toast(`🚫 ${idxs.length} produto(s) desativado(s) no mix.`);
+}
+function mixBulkAtivar() {
+  const idxs = _mixGetIdxsSelecionados();
+  if(!idxs.length) return;
+  if(!confirm(`Ativar ${idxs.length} produto(s) do mix?`)) return;
+  idxs.forEach(i=>{ mixProdutos[i].ativo = true; });
+  addAudit(usuarioLogado?.login||'admin', `Mix: ${idxs.length} produto(s) ativado(s) em massa`, '✅');
+  renderMix();
+  syncAutoSaveHook();
+  toast(`✅ ${idxs.length} produto(s) ativado(s) no mix.`);
+}
 
 /* ══════════════════════════
    PRODUTOS
@@ -6741,5 +6879,50 @@ renderRedes();
 popularSelectsDinamicos();
 setTimeout(tentarReconexaoAuto, 800);
 </script>
+<!-- Modal Editar Item do Mix -->
+<div class="modal-bg" id="modal-mix-edit">
+  <div class="modal" style="width:560px">
+    <div class="modal-title">
+      ✏️ Editar Produto do Mix — <span id="mix-edit-cod" style="color:var(--amarelo);font-family:monospace"></span>
+      <button class="close-btn" onclick="closeModal('modal-mix-edit')">✕</button>
+    </div>
+    <input type="hidden" id="mix-edit-idx">
+    <div class="form-grid">
+      <div class="form-group full"><label>Descrição</label><input id="mix-edit-desc" placeholder="Descrição do produto"></div>
+      <div class="form-group"><label>Indústria</label><input id="mix-edit-ind" placeholder="Ex: LABOTRAT"></div>
+      <div class="form-group"><label>Curva ABC</label>
+        <select id="mix-edit-curva">
+          <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Preço Tabela (R$)</label>
+        <input type="number" id="mix-edit-tabela" placeholder="0,00" min="0" step="0.01" oninput="mixEditCalcNeg()">
+      </div>
+      <div class="form-group"><label>% Desconto</label>
+        <input type="number" id="mix-edit-desc-pct" placeholder="0" min="0" max="100" oninput="mixEditCalcNeg()">
+      </div>
+      <div class="form-group"><label>Última Compra</label>
+        <input id="mix-edit-ultima" placeholder="Ex: Jan/26">
+      </div>
+      <div class="form-group"><label>Status no Mix</label>
+        <select id="mix-edit-ativo">
+          <option value="ativo">Ativo</option>
+          <option value="inativo">Inativo</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Observações</label>
+        <input id="mix-edit-obs" placeholder="Condições especiais, restrições...">
+      </div>
+    </div>
+    <div id="mix-edit-neg-preview" style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px 14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--verde);margin-bottom:14px;text-align:center">
+      Preço negociado: R$ 0,00
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeModal('modal-mix-edit')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMixEdit()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
