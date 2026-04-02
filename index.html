@@ -935,7 +935,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>Código</th><th>Descrição / Categoria</th><th>Indústria</th><th>Preço Tabela</th><th>Unid.</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Código</th><th>EAN</th><th>Descrição / Categoria</th><th>Indústria</th><th>Preço Tabela</th><th>Unid.</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="prod-tbody"></tbody>
         </table>
       </div>
@@ -1578,6 +1578,9 @@ tr:last-child td{border-bottom:none;}
     <div class="form-grid">
       <div class="form-group"><label>Código * <span style="font-size:10px;color:#888;font-weight:400">(único por indústria)</span></label>
         <input id="p-cod" placeholder="Ex: LAB-001" class="mono" style="text-transform:uppercase">
+      </div>
+      <div class="form-group"><label>EAN / Código de Barras <span style="font-size:10px;color:#888;font-weight:400">(13 dígitos)</span></label>
+        <input id="p-ean" placeholder="Ex: 7891234567890" maxlength="14" style="font-family:monospace;letter-spacing:.5px">
       </div>
       <div class="form-group"><label>Indústria *</label>
         <select id="p-ind">
@@ -3497,6 +3500,7 @@ function novoProduto() {
   el('p-cat').value  = '';
   el('p-preco').value = '';
   el('p-obs').value  = '';
+  el('p-ean').value    = '';
   el('p-status').value = 'Ativo';
   el('p-unid').value   = 'UN';
   // popular select de indústria
@@ -3512,6 +3516,7 @@ function editarProduto(cod) {
   el('p-cod').value = cod;
   el('p-cod').readOnly = true; // código não pode mudar em edição
   el('p-cod').style.background = '#f4f3ef';
+  el('p-ean').value    = p.ean   || '';
   el('p-desc').value   = p.desc  || '';
   el('p-cat').value    = p.cat   || '';
   el('p-preco').value  = p.preco || '';
@@ -3530,6 +3535,7 @@ function duplicarProduto(cod) {
   el('p-cod').value = cod + '-COPIA';
   el('p-cod').readOnly = false;
   el('p-cod').style.background = '';
+  el('p-ean').value    = p.ean   || '';
   el('p-desc').value   = p.desc  + ' (cópia)';
   el('p-cat').value    = p.cat   || '';
   el('p-preco').value  = p.preco || '';
@@ -3590,6 +3596,7 @@ function salvarProduto() {
     desc,
     ind,
     preco,
+    ean:    el('p-ean').value.trim()   || '',
     unid:   el('p-unid').value   || 'UN',
     cat:    el('p-cat').value.trim()  || '',
     obs:    el('p-obs').value.trim()  || '',
@@ -3614,7 +3621,8 @@ function renderProdutos() {
   const list = Object.entries(PRODUTOS_CAT).filter(([cod,p])=>{
     if(busca && !cod.toLowerCase().includes(busca) &&
        !p.desc.toLowerCase().includes(busca) &&
-       !(p.cat||'').toLowerCase().includes(busca)) return false;
+       !(p.cat||'').toLowerCase().includes(busca) &&
+       !(p.ean||'').toLowerCase().includes(busca)) return false;
     if(filtInd    && p.ind !== filtInd)       return false;
     if(filtStatus && p.status !== filtStatus) return false;
     return true;
@@ -3635,7 +3643,7 @@ function renderProdutos() {
   }
 
   if(list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#aaa">
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:#aaa">
       ${total === 0
         ? `<div style="font-size:24px;margin-bottom:8px">📦</div><div style="font-weight:600">Nenhum produto cadastrado</div><div style="font-size:12px;margin-top:4px">Clique em "+ Novo Produto" para começar</div>`
         : `Nenhum produto encontrado para os filtros selecionados`
@@ -3647,6 +3655,7 @@ function renderProdutos() {
   const podeEditar = hasEditAccess('produtos');
   tbody.innerHTML = list.map(([cod,p])=>`<tr>
     <td class="mono" style="font-weight:700;letter-spacing:.5px">${esc(cod)}</td>
+    <td><span style="font-family:monospace;font-size:11px;color:#555">${p.ean||'—'}</span></td>
     <td>
       <div style="font-weight:600">${esc(p.desc)}</div>
       ${p.cat?`<div style="font-size:11px;color:#888;margin-top:1px">${esc(p.cat)}</div>`:''}
@@ -3700,11 +3709,11 @@ function _popularSelectsIndustriaTodos() {
 
 function exportarProdutosExcel() {
   const wb = XLSX.utils.book_new();
-  const rows = [['Código','Descrição','Indústria','Categoria','Preço Tabela','Unidade','Status','Observação']];
+  const rows = [['Código','EAN','Descrição','Indústria','Categoria','Preço Tabela','Unidade','Status','Observação']];
   Object.entries(PRODUTOS_CAT).forEach(([cod,p])=>
-    rows.push([cod,p.desc,p.ind,p.cat||'',p.preco,p.unid||'UN',p.status||'Ativo',p.obs||'']));
+    rows.push([cod,p.ean||'',p.desc,p.ind,p.cat||'',p.preco,p.unid||'UN',p.status||'Ativo',p.obs||'']));
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:35},{wch:14},{wch:16},{wch:12},{wch:8},{wch:8},{wch:25}];
+  ws['!cols'] = [{wch:12},{wch:15},{wch:35},{wch:14},{wch:16},{wch:12},{wch:8},{wch:8},{wch:25}];
   XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
   XLSX.writeFile(wb,'Produtos_TresVales.xlsx');
   toast('Excel de produtos exportado!');
@@ -3742,6 +3751,7 @@ const IMPORT_COLS = {
   ],
   produtos: [
     {key:'cod',   label:'Código',        req:true},
+    {key:'ean',   label:'EAN',            req:false, hint:'Código de barras 13 dígitos'},
     {key:'desc',  label:'Descrição',     req:true},
     {key:'ind',   label:'Indústria',     req:true},
     {key:'cat',   label:'Categoria',     req:false},
@@ -3780,6 +3790,7 @@ const HEADER_MAP = {
   'tipo comissão':'tipoCom','tipo comissao':'tipoCom','tipo com':'tipoCom',
   // Produtos
   'código':'cod','codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referência':'cod',
+  'ean':'ean','código de barras':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean',
   'descrição':'desc','descricao':'desc','produto':'desc','item':'desc',
   'preço':'preco','preco':'preco','preço tabela':'preco','valor':'preco',
   'unidade':'unid','unid':'unid','un':'unid',
