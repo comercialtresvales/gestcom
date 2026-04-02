@@ -3772,33 +3772,35 @@ const IMPORT_COLS = {
 // Mapeamento automático de cabeçalhos para chaves internas
 const HEADER_MAP = {
   // Clientes
-  'nome':'nome','razão social':'nome','razao social':'nome','empresa':'nome','cliente':'nome',
+  'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome',
   'cnpj':'cnpj','cpf/cnpj':'cnpj',
   'segmento':'segmento','perfil':'segmento','tipo cliente':'segmento',
   'cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade',
-  'prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','condição':'prazo',
-  'contato':'contato','responsável':'contato','responsavel':'contato',
+  'prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','condicao':'prazo',
+  'contato':'contato','responsavel':'contato',
   'email':'email','e-mail':'email',
   'telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone',
-  'status':'status','situação':'status','situacao':'status',
-  'obs':'obs','observações':'obs','observacoes':'obs','notas':'obs',
-  // Indústrias
-  'razão social':'razao','razao social completa':'razao',
-  '% comissão':'pct','% comissao':'pct','comissão %':'pct','comissao %':'pct',
+  'status':'status','situacao':'status',
+  'obs':'obs','observacoes':'obs','observacao':'obs','notas':'obs',
+  // Industrias
+  'razao social completa':'razao',
+  '% comissao':'pct','comissao %':'pct',
   'pct':'pct','percentual':'pct',
-  'tipo comissão':'tipoCom','tipo comissao':'tipoCom','tipo com':'tipoCom',
+  'tipo comissao':'tipoCom','tipo com':'tipoCom',
   // Produtos
-  'código':'cod','codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referência':'cod',
-  'ean':'ean','código de barras':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean',
-  'descrição':'desc','descricao':'desc','produto':'desc','item':'desc',
-  'indústria':'ind','industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','laboratório':'ind','nome industria':'ind','nome indústria':'ind',
-  'preço':'preco','preco':'preco','preço tabela':'preco','valor':'preco',
+  'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod',
+  'ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean',
+  'descricao':'desc','produto':'desc','item':'desc',
+  'industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind',
+  'preco':'preco','preco tabela':'preco','valor':'preco',
   'unidade':'unid','unid':'unid','un':'unid',
   'categoria':'cat','cat':'cat',
 };
 
 function normHeader(h) {
-  return String(h||'').toLowerCase().trim().replace(/[^a-záéíóúãõâêôàç%./]/g,' ').replace(/\s+/g,' ').trim();
+  return String(h||'').toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9%./]/g,' ').replace(/\s+/g,' ').trim();
 }
 
 function mapearColunas(headers) {
