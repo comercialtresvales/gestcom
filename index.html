@@ -1637,50 +1637,110 @@ tr:last-child td{border-bottom:none;}
 
 <!-- Modal Produto -->
 <div class="modal-bg" id="modal-produto">
-  <div class="modal">
+  <div class="modal modal-xl">
     <div class="modal-title"><span id="prod-modal-titulo">Novo Produto</span><button class="close-btn" onclick="closeModal('modal-produto')">✕</button></div>
-    <div class="form-grid">
-      <div class="form-group"><label>Código * <span style="font-size:10px;color:#888;font-weight:400">(único por indústria)</span></label>
-        <input id="p-cod" placeholder="Ex: LAB-001" class="mono" style="text-transform:uppercase">
-      </div>
-      <div class="form-group"><label>EAN / Código de Barras <span style="font-size:10px;color:#888;font-weight:400">(13 dígitos)</span></label>
-        <input id="p-ean" placeholder="Ex: 7891234567890" maxlength="14" style="font-family:monospace;letter-spacing:.5px">
-      </div>
-      <div class="form-group"><label>Indústria *</label>
-        <select id="p-ind">
-          <option value="">Selecione...</option>
-        </select>
-      </div>
-      <div class="form-group full"><label>Descrição *</label>
-        <input id="p-desc" placeholder="Nome completo do produto">
-      </div>
-      <div class="form-group"><label>Categoria</label>
-        <input id="p-cat" placeholder="Ex: Linha A, Premium, Kit...">
-      </div>
-      <div class="form-group"><label>Unidade</label>
-        <select id="p-unid">
-          <option value="UN">UN — Unidade</option>
-          <option value="KIT">KIT — Kit</option>
-          <option value="CX">CX — Caixa</option>
-          <option value="PC">PC — Peça</option>
-          <option value="FD">FD — Fardo</option>
-          <option value="DZ">DZ — Dúzia</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Preço Tabela (R$) *</label>
-        <input type="number" id="p-preco" step="0.01" placeholder="0,00" min="0">
-      </div>
-      <div class="form-group"><label>Status</label>
-        <select id="p-status">
-          <option value="Ativo">Ativo</option>
-          <option value="Inativo">Inativo</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Observação</label>
-        <input id="p-obs" placeholder="Informações adicionais (opcional)">
+
+    <!-- Abas -->
+    <div class="tabs" style="margin-bottom:14px">
+      <div class="tab active" onclick="prodSwitchTab('geral',this)">Geral</div>
+      <div class="tab" onclick="prodSwitchTab('canais',this)">Tabelas por canal</div>
+      <div class="tab" onclick="prodSwitchTab('ufs',this)">Códigos por UF</div>
+      <div class="tab" onclick="prodSwitchTab('disp',this)">Disponibilidade</div>
+    </div>
+
+    <!-- ABA GERAL -->
+    <div id="prod-tab-geral" class="prod-tab-panel">
+      <div class="form-grid">
+        <div class="form-group"><label>Código * <span style="font-size:10px;color:#888;font-weight:400">(único por indústria)</span></label>
+          <input id="p-cod" placeholder="Ex: 0156" class="mono" style="text-transform:uppercase">
+        </div>
+        <div class="form-group"><label>EAN / Código de Barras</label>
+          <input id="p-ean" placeholder="Ex: 7891234567890" maxlength="14" style="font-family:monospace;letter-spacing:.5px">
+        </div>
+        <div class="form-group"><label>Indústria *</label>
+          <select id="p-ind"><option value="">Selecione...</option></select>
+        </div>
+        <div class="form-group full"><label>Descrição *</label>
+          <input id="p-desc" placeholder="Nome completo do produto">
+        </div>
+        <div class="form-group"><label>Categoria</label>
+          <input id="p-cat" placeholder="Ex: Linha A, Premium, Kit...">
+        </div>
+        <div class="form-group"><label>Unidade</label>
+          <select id="p-unid">
+            <option value="UN">UN — Unidade</option><option value="KIT">KIT — Kit</option>
+            <option value="CX">CX — Caixa</option><option value="PC">PC — Peça</option>
+            <option value="FD">FD — Fardo</option><option value="DZ">DZ — Dúzia</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Preço Tabela Base (R$) *</label>
+          <input type="number" id="p-preco" step="0.01" placeholder="0,00" min="0" oninput="prodSincTabelas()">
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="p-status"><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select>
+        </div>
+        <div class="form-group full"><label>Observação</label>
+          <input id="p-obs" placeholder="Informações adicionais (opcional)">
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+
+    <!-- ABA TABELAS POR CANAL -->
+    <div id="prod-tab-canais" class="prod-tab-panel" style="display:none">
+      <div class="alert alert-info" style="margin-bottom:14px">💡 Defina um preço para cada canal de venda. Quando um cliente é do canal <strong>Atacado</strong>, o mix exibirá automaticamente o preço atacado. Se deixar em branco, usa o preço base.</div>
+      <div class="form-grid-3">
+        <div class="form-group">
+          <label>💼 Distribuidor (R$)</label>
+          <input type="number" id="p-preco-dist" step="0.01" placeholder="Preço distribuidor" min="0">
+        </div>
+        <div class="form-group">
+          <label>📦 Atacado (R$)</label>
+          <input type="number" id="p-preco-atac" step="0.01" placeholder="Preço atacado" min="0">
+        </div>
+        <div class="form-group">
+          <label>🏪 Varejo (R$)</label>
+          <input type="number" id="p-preco-var" step="0.01" placeholder="Preço varejo" min="0">
+        </div>
+      </div>
+      <div id="p-tabela-preview" style="background:#f4f3ef;border-radius:6px;padding:12px;font-size:12px;color:#666;margin-top:4px">
+        Preencha os preços acima para ver a comparação entre canais.
+      </div>
+    </div>
+
+    <!-- ABA CÓDIGOS POR UF -->
+    <div id="prod-tab-ufs" class="prod-tab-panel" style="display:none">
+      <div class="alert alert-info" style="margin-bottom:14px">💡 Cadastre o código específico de cada UF. Se a UF do cliente não estiver aqui, o sistema usará o <strong>código base</strong> do campo Geral.</div>
+      <div id="p-uf-list" style="margin-bottom:12px;max-height:220px;overflow-y:auto"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="p-nova-uf" style="padding:6px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;background:#fff">
+          <option value="">+ Selecione a UF</option>
+          <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+          <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+          <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+          <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+          <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+          <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+          <option>SP</option><option>SE</option><option>TO</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="prodAddUF()">+ Adicionar UF</button>
+        <span style="font-size:11px;color:#aaa">UFs sem código específico usarão o código base.</span>
+      </div>
+    </div>
+
+    <!-- ABA DISPONIBILIDADE -->
+    <div id="prod-tab-disp" class="prod-tab-panel" style="display:none">
+      <div class="alert alert-info" style="margin-bottom:14px">💡 Controle em quais canais este produto aparece no mix. Produtos indisponíveis para um canal ficam ocultos automaticamente.</div>
+      <div class="form-group">
+        <label>Canais de venda disponíveis</label>
+        <div id="p-disp-canais" style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" value="distribuidor" checked> 💼 Distribuidor</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" value="atacado" checked> 📦 Atacado</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" value="varejo" checked> 🏪 Varejo</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--cinza-medio)">
       <button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarProduto()">💾 Salvar Produto</button>
     </div>
@@ -1961,6 +2021,11 @@ tr:last-child td{border-bottom:none;}
    DADOS GLOBAIS
 ══════════════════════════ */
 // Catálogo de produtos — editável pelo usuário
+// Estrutura: { cod: { desc, ind, preco, ean, unid, cat, obs, status,
+//   tabelaCanais: { distribuidor, atacado, varejo },   // preços por canal
+//   codigosUF: { MG: '0156mg', SP: '0156sp', ... },    // código por UF
+//   disponibilidade: { canais: ['distribuidor','atacado'], regioes: '' } // restrições
+// }}
 let PRODUTOS_CAT = {};
 
 let orcamentos = [];
@@ -3507,20 +3572,59 @@ function renderMix() {
   });
   if(el('mix-count'))el('mix-count').textContent=list.length+' produto'+(list.length!==1?'s':'');
   const tbody=el('mix-tbody');if(!tbody)return;
+
+  // Resolver cliente atual para contextualizar código/preço
+  const cliObj = _clienteAtualObj();
+  const cidadeUF = cliObj?.cidade || '';
+  const segmento = cliObj?.segmento || '';
+
+  // Mostrar banner contextual se houver cliente com UF/segmento
+  let bannerCtx = el('mix-ctx-banner');
+  if(!bannerCtx) {
+    bannerCtx = document.createElement('div');
+    bannerCtx.id = 'mix-ctx-banner';
+    bannerCtx.style.cssText = 'margin-bottom:8px;font-size:11px;color:#888;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+    const tbl = el('mix-tbody')?.closest('table');
+    tbl?.parentElement?.insertBefore(bannerCtx, tbl);
+  }
+  if(cliObj && (cidadeUF || segmento)) {
+    const ufMatch = cidadeUF.match(/,\s*([A-Z]{2})$/i);
+    const ufLabel = ufMatch ? ufMatch[1].toUpperCase() : '';
+    bannerCtx.innerHTML =
+      `<span style="background:#fff8e1;border:1px solid #f0d060;color:#7a5800;padding:2px 8px;border-radius:4px;font-weight:600;font-size:10px">Código resolvido para UF: ${ufLabel||'—'}</span>
+       <span style="background:#e3f2fd;border:1px solid #bbdefb;color:#1a5fa8;padding:2px 8px;border-radius:4px;font-weight:600;font-size:10px">Preço resolvido para canal: ${segmento||'—'}</span>
+       <span style="color:#bbb">Códigos e preços ajustados automaticamente para este cliente.</span>`;
+  } else {
+    bannerCtx.innerHTML = '';
+  }
+
   tbody.innerHTML=list.map((p)=>{
-    const i=p._idx; // índice real no array mixProdutos
-    const neg=p.tabela*(1-p.desc_pct/100);
+    const i=p._idx;
+    // Resolver código e preço contextualizados
+    const codResolvido = (cliObj && cidadeUF) ? _resolverCodUF(p, cidadeUF) : p.cod;
+    const precoResolvido = (cliObj && segmento) ? _resolverPrecoCanal(p, segmento) : p.tabela;
+    const neg=precoResolvido*(1-p.desc_pct/100);
     const curvaC=p.curva==='A'?'abc-a':p.curva==='B'?'abc-b':'abc-c';
+    const codChanged = codResolvido !== p.cod;
+    const precoChanged = precoResolvido !== p.tabela;
     // Etiqueta de origem (rede ou filial)
     const origemTag = p.rede ? `<span class="badge badge-roxo" style="font-size:9px;margin-left:4px">🔗 ${esc(p.rede)}</span>` :
                       p.clienteEspecifico ? `<span class="badge badge-cinza" style="font-size:9px;margin-left:4px">👤 ${esc(p.clienteEspecifico)}</span>` : '';
     return `<tr>
       <td><input type="checkbox" class="mix-chk" data-idx="${i}" onchange="mixChkChange()" style="cursor:pointer;width:15px;height:15px;accent-color:var(--amarelo)"></td>
-      <td class="mono" style="font-size:12px">${p.cod}</td>
+      <td class="mono" style="font-size:12px">
+        ${codChanged
+          ? `<span style="color:#aaa;text-decoration:line-through;font-size:10px">${p.cod}</span><br><span style="font-weight:700;color:var(--azul)">${codResolvido}</span>`
+          : codResolvido}
+      </td>
       <td>${esc(p.desc)}${!p.ativo?' <span class="badge badge-cinza" style="font-size:9px">inativo</span>':''}${origemTag}</td>
       <td><span class="tag-industria">${p.ind}</span></td>
       <td><span class="${curvaC}">${p.curva}</span></td>
-      <td>${fmt(p.tabela)}</td>
+      <td>
+        ${precoChanged
+          ? `<span style="color:#aaa;text-decoration:line-through;font-size:10px">${fmt(p.tabela)}</span><br><span style="font-weight:600;color:var(--azul)">${fmt(precoResolvido)}</span>`
+          : fmt(precoResolvido)}
+      </td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <input class="mix-inline-input" type="number" value="${p.desc_pct}" min="0" max="100" onchange="updateDesconto(${i},this.value)">
@@ -3530,7 +3634,7 @@ function renderMix() {
       </td>
       <td>
         <div class="preco-negociado">
-          ${p.desc_pct>0?`<span class="preco-original">${fmt(p.tabela)}</span>`:''}
+          ${p.desc_pct>0?`<span class="preco-original">${fmt(precoResolvido)}</span>`:''}
           <span class="preco-final ${p.desc_pct>0?'com-desconto':''}">${fmt(neg)}</span>
         </div>
       </td>
@@ -3716,20 +3820,166 @@ function _mixAtualizarChipsIndustria() {
 /* ── variável de controle de edição ── */
 let _prodEditCod = null; // null = novo produto, string = código sendo editado
 
+/* ── Abas do modal de produto ── */
+function prodSwitchTab(id, el2) {
+  document.querySelectorAll('.prod-tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('#modal-produto .tab').forEach(t => t.classList.remove('active'));
+  const panel = el('prod-tab-'+id);
+  if(panel) panel.style.display = 'block';
+  if(el2) el2.classList.add('active');
+  if(id === 'canais') _atualizarPreviewTabela();
+}
+
+function prodSincTabelas() {
+  const base = parseFloat(el('p-preco')?.value) || 0;
+  if(base > 0) {
+    if(el('p-preco-dist') && !parseFloat(el('p-preco-dist').value)) el('p-preco-dist').value = base.toFixed(2);
+    if(el('p-preco-atac') && !parseFloat(el('p-preco-atac').value)) el('p-preco-atac').value = base.toFixed(2);
+    if(el('p-preco-var')  && !parseFloat(el('p-preco-var').value))  el('p-preco-var').value  = base.toFixed(2);
+  }
+  _atualizarPreviewTabela();
+}
+
+function _atualizarPreviewTabela() {
+  const d = parseFloat(el('p-preco-dist')?.value) || 0;
+  const a = parseFloat(el('p-preco-atac')?.value) || 0;
+  const v = parseFloat(el('p-preco-var')?.value)  || 0;
+  const prev = el('p-tabela-preview');
+  if(!prev) return;
+  if(!d && !a && !v) { prev.innerHTML = 'Preencha os preços acima.'; return; }
+  prev.innerHTML = `<strong>Preço por canal:</strong>
+    &nbsp;💼 Distribuidor: <strong>${fmt(d)}</strong>
+    &nbsp;📦 Atacado: <strong>${fmt(a)}</strong>
+    &nbsp;🏪 Varejo: <strong>${fmt(v)}</strong>`;
+}
+
+/* ── Render lista UF no modal ── */
+function _renderUFList(codigosUF) {
+  const list = el('p-uf-list'); if(!list) return;
+  const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
+  list.innerHTML = Object.entries(codigosUF).map(([uf, c]) =>
+    `<div class="p-uf-row" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)">
+      <span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
+      <input class="p-uf-cod" value="${esc(c)}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
+      <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
+      <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>
+    </div>`
+  ).join('');
+}
+
+function prodAddUF() {
+  const sel = el('p-nova-uf'); if(!sel || !sel.value) return;
+  const uf = sel.value;
+  const codBase = (el('p-cod')?.value || '').toLowerCase();
+  const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
+  const exists = [...document.querySelectorAll('#p-uf-list .p-uf-tag')].some(t => t.textContent.trim() === uf);
+  if(exists) { toast('UF '+uf+' já cadastrada.','error'); return; }
+  const row = document.createElement('div');
+  row.className = 'p-uf-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)';
+  row.innerHTML = `<span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
+    <input class="p-uf-cod" value="${codBase+uf.toLowerCase()}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
+    <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
+    <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>`;
+  el('p-uf-list').appendChild(row);
+  sel.value = '';
+}
+
+/* ── Resolver código/preço contextual no Mix ── */
+function _resolverCodUF(prod, cidadeUFCliente) {
+  if(!prod || !cidadeUFCliente) return prod?.cod || '';
+  const match = cidadeUFCliente.trim().match(/,\s*([A-Z]{2})$/i);
+  const ufFinal = match ? match[1].toUpperCase() : cidadeUFCliente.trim().toUpperCase().substring(0,2);
+  const cat = PRODUTOS_CAT[prod.cod];
+  if(cat?.codigosUF?.[ufFinal]) return cat.codigosUF[ufFinal];
+  return prod.cod;
+}
+
+function _resolverPrecoCanal(prod, segmentoCliente) {
+  const cat = PRODUTOS_CAT[prod.cod];
+  if(!cat?.tabelaCanais) return prod.tabela;
+  const seg = (segmentoCliente||'').toLowerCase();
+  if(seg.includes('distrib')) return cat.tabelaCanais.distribuidor || prod.tabela;
+  if(seg.includes('atac'))    return cat.tabelaCanais.atacado      || prod.tabela;
+  if(seg.includes('varejo'))  return cat.tabelaCanais.varejo       || prod.tabela;
+  return prod.tabela;
+}
+
+function _clienteAtualObj() {
+  const chips = document.querySelectorAll('#cliente-chips .chip');
+  let nomeAtual = '';
+  chips.forEach(c => { if(c.classList.contains('active')) nomeAtual = c.dataset.nome || c.textContent.trim(); });
+  return clientes.find(c => c.nome === nomeAtual) || null;
+}
+
+function _renderUFList(codigosUF) {
+  const list = el('p-uf-list'); if(!list) return;
+  const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
+  list.innerHTML = Object.entries(codigosUF).map(([uf, c]) =>
+    `<div class="p-uf-row" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)">
+      <span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
+      <input class="p-uf-cod" value="${esc(c)}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
+      <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
+      <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>
+    </div>`
+  ).join('');
+}
+
+function prodAddUF() {
+  const sel = el('p-nova-uf'); if(!sel || !sel.value) return;
+  const uf = sel.value;
+  const codBase = el('p-cod')?.value?.toLowerCase() || '';
+  const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
+  // Checar se UF já existe
+  const exists = [...document.querySelectorAll('#p-uf-list .p-uf-tag')].some(t => t.textContent.trim() === uf);
+  if(exists) { toast('UF '+uf+' já cadastrada.','error'); return; }
+  const row = document.createElement('div');
+  row.className = 'p-uf-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)';
+  row.innerHTML = `<span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
+    <input class="p-uf-cod" value="${codBase+uf.toLowerCase()}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
+    <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
+    <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>`;
+  el('p-uf-list').appendChild(row);
+  sel.value = '';
+}
+
+function abrirNovoProduto() {
+  _prodEditCod = null;
+  el('prod-modal-titulo').textContent = 'Novo Produto';
+  el('p-cod').value = '';
+  el('p-cod').readOnly = false;
+  el('p-cod').style.background = '';
+  el('p-desc').value = ''; el('p-cat').value = '';
+  el('p-preco').value = ''; el('p-obs').value = ''; el('p-ean').value = '';
+  el('p-status').value = 'Ativo'; el('p-unid').value = 'UN';
+  if(el('p-preco-dist')) el('p-preco-dist').value = '';
+  if(el('p-preco-atac')) el('p-preco-atac').value = '';
+  if(el('p-preco-var'))  el('p-preco-var').value  = '';
+  _renderUFList({});
+  document.querySelectorAll('#p-disp-canais input[type=checkbox]').forEach(cb => cb.checked = true);
+  _popularSelectIndustria('p-ind', '');
+  openModal('modal-produto');
+}
+
 function novoProduto() {
   _prodEditCod = null;
   el('prod-modal-titulo').textContent = 'Novo Produto';
   el('p-cod').value = '';
   el('p-cod').readOnly = false;
   el('p-cod').style.background = '';
-  el('p-desc').value = '';
-  el('p-cat').value  = '';
-  el('p-preco').value = '';
-  el('p-obs').value  = '';
-  el('p-ean').value    = '';
-  el('p-status').value = 'Ativo';
-  el('p-unid').value   = 'UN';
-  // popular select de indústria
+  el('p-desc').value = ''; el('p-cat').value = '';
+  el('p-preco').value = ''; el('p-obs').value = ''; el('p-ean').value = '';
+  el('p-status').value = 'Ativo'; el('p-unid').value = 'UN';
+  if(el('p-preco-dist')) el('p-preco-dist').value = '';
+  if(el('p-preco-atac')) el('p-preco-atac').value = '';
+  if(el('p-preco-var'))  el('p-preco-var').value  = '';
+  if(typeof _renderUFList === 'function') _renderUFList({});
+  document.querySelectorAll('#p-disp-canais input[type=checkbox]').forEach(cb => cb.checked = true);
+  // reset abas para Geral
+  document.querySelectorAll('.prod-tab-panel').forEach(p => p.style.display = 'none');
+  const g = el('prod-tab-geral'); if(g) g.style.display = 'block';
+  document.querySelectorAll('#modal-produto .tab').forEach((t,i) => t.classList.toggle('active', i===0));
   _popularSelectIndustria('p-ind', '');
   openModal('modal-produto');
 }
@@ -3740,7 +3990,7 @@ function editarProduto(cod) {
   _prodEditCod = cod;
   el('prod-modal-titulo').textContent = 'Editar Produto — ' + cod;
   el('p-cod').value = cod;
-  el('p-cod').readOnly = true; // código não pode mudar em edição
+  el('p-cod').readOnly = true;
   el('p-cod').style.background = '#f4f3ef';
   el('p-ean').value    = p.ean   || '';
   el('p-desc').value   = p.desc  || '';
@@ -3750,6 +4000,23 @@ function editarProduto(cod) {
   el('p-status').value = p.status || 'Ativo';
   el('p-unid').value   = p.unid  || 'UN';
   _popularSelectIndustria('p-ind', p.ind);
+  // Tabelas por canal
+  if(p.tabelaCanais) {
+    if(el('p-preco-dist')) el('p-preco-dist').value = p.tabelaCanais.distribuidor || p.preco || '';
+    if(el('p-preco-atac')) el('p-preco-atac').value = p.tabelaCanais.atacado      || p.preco || '';
+    if(el('p-preco-var'))  el('p-preco-var').value  = p.tabelaCanais.varejo       || p.preco || '';
+  }
+  // Códigos por UF
+  _renderUFList(p.codigosUF || {});
+  // Disponibilidade
+  const canais = p.disponibilidade?.canais || ['distribuidor','atacado','varejo'];
+  document.querySelectorAll('#p-disp-canais input[type=checkbox]').forEach(cb => {
+    cb.checked = canais.includes(cb.value);
+  });
+  // reset abas para Geral
+  document.querySelectorAll('.prod-tab-panel').forEach(t => t.style.display = 'none');
+  const g = el('prod-tab-geral'); if(g) g.style.display = 'block';
+  document.querySelectorAll('#modal-produto .tab').forEach((t,i) => t.classList.toggle('active', i===0));
   openModal('modal-produto');
 }
 
@@ -3818,6 +4085,26 @@ function salvarProduto() {
     if(!confirm(`Já existe um produto com o código "${cod}".\n\nDeseja sobrescrever?`)) return;
   }
 
+  // Coletar tabelas por canal
+  const tabelaCanais = {
+    distribuidor: parseFloat(el('p-preco-dist')?.value) || preco,
+    atacado:      parseFloat(el('p-preco-atac')?.value) || preco,
+    varejo:       parseFloat(el('p-preco-var')?.value)  || preco,
+  };
+
+  // Coletar códigos por UF
+  const codigosUF = {};
+  document.querySelectorAll('#p-uf-list .p-uf-row').forEach(row => {
+    const uf  = row.querySelector('.p-uf-tag')?.textContent?.trim();
+    const cod2 = row.querySelector('.p-uf-cod')?.value?.trim();
+    if(uf && cod2) codigosUF[uf] = cod2;
+  });
+
+  // Coletar disponibilidade por canal
+  const canaisDisp = [];
+  document.querySelectorAll('#p-disp-canais input[type=checkbox]:checked').forEach(cb => canaisDisp.push(cb.value));
+
+  const prev = PRODUTOS_CAT[cod] || {};
   PRODUTOS_CAT[cod] = {
     desc,
     ind,
@@ -3827,6 +4114,9 @@ function salvarProduto() {
     cat:    el('p-cat').value.trim()  || '',
     obs:    el('p-obs').value.trim()  || '',
     status: el('p-status').value || 'Ativo',
+    tabelaCanais,
+    codigosUF: Object.keys(codigosUF).length ? codigosUF : (prev.codigosUF || {}),
+    disponibilidade: { canais: canaisDisp.length ? canaisDisp : ['distribuidor','atacado','varejo'] },
   };
 
   const acao = _prodEditCod ? 'editado' : 'cadastrado';
@@ -4029,15 +4319,27 @@ const IMPORT_COLS = {
     {key:'obs',     label:'Observações',        req:false},
   ],
   produtos: [
-    {key:'cod',   label:'Código',        req:true},
-    {key:'ean',   label:'EAN',            req:false, hint:'Código de barras 13 dígitos'},
-    {key:'desc',  label:'Descrição',     req:true},
-    {key:'ind',   label:'Indústria',     req:true},
-    {key:'cat',   label:'Categoria',     req:false},
-    {key:'preco', label:'Preço Tabela',  req:false, hint:'Número ex: 29.90'},
-    {key:'unid',  label:'Unidade',       req:false, hint:'UN, CX, KG...'},
-    {key:'status',label:'Status',        req:false},
-    {key:'obs',   label:'Observação',    req:false},
+    {key:'cod',             label:'Código',             req:true},
+    {key:'ean',             label:'EAN',                req:false, hint:'Código de barras 13 dígitos'},
+    {key:'desc',            label:'Descrição',          req:true},
+    {key:'ind',             label:'Indústria',          req:true},
+    {key:'cat',             label:'Categoria',          req:false},
+    {key:'preco',           label:'Preço Tabela Base',  req:false, hint:'Número ex: 29.90'},
+    {key:'precoDistribuidor',label:'Preço Distribuidor',req:false, hint:'Deixe em branco = usa base'},
+    {key:'precoAtacado',    label:'Preço Atacado',      req:false, hint:'Deixe em branco = usa base'},
+    {key:'precoVarejo',     label:'Preço Varejo',       req:false, hint:'Deixe em branco = usa base'},
+    {key:'codigoMG',        label:'Código MG',          req:false, hint:'Código específico Minas Gerais'},
+    {key:'codigoSP',        label:'Código SP',          req:false, hint:'Código específico São Paulo'},
+    {key:'codigoBA',        label:'Código BA',          req:false, hint:'Código específico Bahia'},
+    {key:'codigoGO',        label:'Código GO',          req:false, hint:'Código específico Goiás'},
+    {key:'codigoRJ',        label:'Código RJ',          req:false, hint:'Código específico Rio de Janeiro'},
+    {key:'codigoPR',        label:'Código PR',          req:false, hint:'Código específico Paraná'},
+    {key:'codigoSC',        label:'Código SC',          req:false, hint:'Código específico Santa Catarina'},
+    {key:'codigoRS',        label:'Código RS',          req:false, hint:'Código específico Rio Grande do Sul'},
+    {key:'canais',          label:'Canais Disponíveis', req:false, hint:'Ex: distribuidor,atacado,varejo'},
+    {key:'unid',            label:'Unidade',            req:false, hint:'UN, CX, KG...'},
+    {key:'status',          label:'Status',             req:false},
+    {key:'obs',             label:'Observação',         req:false},
   ],
   pedido: [
     {key:'cliente',  label:'Cliente',   req:true},
@@ -4071,9 +4373,24 @@ const HEADER_MAP = {
   'ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean',
   'descricao':'desc','produto':'desc','item':'desc',
   'industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind',
-  'preco':'preco','preco tabela':'preco','valor':'preco',
+  'preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco',
   'unidade':'unid','unid':'unid','un':'unid',
   'categoria':'cat','cat':'cat',
+  // Preços por canal
+  'preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor',
+  'preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado',
+  'preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo',
+  // Códigos regionais (UF)
+  'codigo mg':'codigoMG','cod mg':'codigoMG','mg':'codigoMG',
+  'codigo sp':'codigoSP','cod sp':'codigoSP','sp':'codigoSP',
+  'codigo ba':'codigoBA','cod ba':'codigoBA','ba':'codigoBA',
+  'codigo go':'codigoGO','cod go':'codigoGO','go':'codigoGO',
+  'codigo rj':'codigoRJ','cod rj':'codigoRJ','rj':'codigoRJ',
+  'codigo pr':'codigoPR','cod pr':'codigoPR','pr':'codigoPR',
+  'codigo sc':'codigoSC','cod sc':'codigoSC','sc':'codigoSC',
+  'codigo rs':'codigoRS','cod rs':'codigoRS','rs':'codigoRS',
+  // Disponibilidade
+  'canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais',
 };
 
 function normHeader(h) {
@@ -4359,7 +4676,27 @@ function confirmarImport() {
     importDados.forEach(row => {
       const cod = (row.cod||'').trim().toUpperCase();
       if(!cod || !row.desc) { ignorados++; return; }
-      const preco = parseFloat((row.preco||'0').toString().replace('R$','').replace(',','.').trim()) || 0;
+      const fmtPreco = v => parseFloat((v||'0').toString().replace('R$','').replace(/\./g,'').replace(',','.').trim()) || 0;
+      const preco = fmtPreco(row.preco);
+      // Tabelas por canal — usa base se não informado
+      const tabelaCanais = {
+        distribuidor: fmtPreco(row.precoDistribuidor) || preco,
+        atacado:      fmtPreco(row.precoAtacado)      || preco,
+        varejo:       fmtPreco(row.precoVarejo)       || preco,
+      };
+      // Códigos por UF — só inclui UFs que tenham valor na planilha
+      const codigosUF = {};
+      const ufKeys = {MG:'codigoMG',SP:'codigoSP',BA:'codigoBA',GO:'codigoGO',RJ:'codigoRJ',PR:'codigoPR',SC:'codigoSC',RS:'codigoRS'};
+      Object.entries(ufKeys).forEach(([uf, key]) => {
+        const val = (row[key]||'').toString().trim();
+        if(val) codigosUF[uf] = val;
+      });
+      // Canais disponíveis
+      let canais = ['distribuidor','atacado','varejo'];
+      if(row.canais && row.canais.trim()) {
+        canais = row.canais.split(',').map(c=>c.trim().toLowerCase()).filter(Boolean);
+      }
+      const prev = PRODUTOS_CAT[cod] || {};
       PRODUTOS_CAT[cod] = {
         desc: row.desc||'',
         ind:  (row.ind||'').toUpperCase(),
@@ -4369,6 +4706,9 @@ function confirmarImport() {
         unid: row.unid||'UN',
         status: row.status||'Ativo',
         obs: row.obs||'',
+        tabelaCanais,
+        codigosUF: Object.keys(codigosUF).length ? codigosUF : (prev.codigosUF||{}),
+        disponibilidade: { canais },
       };
       adicionados++;
     });
@@ -4396,7 +4736,7 @@ function baixarModeloImport() {
   const exemplo = {
     clientes: ['Farmácia Central', '12.345.678/0001-90', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
-    produtos: ['LAB-001', '7891234567890', 'Shampoo Tratamento 300ml', 'LABOTRAT', 'Higiene', '29.90', 'UN', 'Ativo', ''],
+    produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
     pedido: ['Farmácia Central', 'LABOTRAT', '2026-03-01', '28D', 'Recebido'],
   };
   const rows = [header];
