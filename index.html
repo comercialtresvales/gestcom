@@ -1709,7 +1709,7 @@ tr:last-child td{border-bottom:none;}
 
     <!-- ABA CÓDIGOS POR UF -->
     <div id="prod-tab-ufs" class="prod-tab-panel" style="display:none">
-      <div class="alert alert-info" style="margin-bottom:14px">💡 Cadastre o código específico de cada UF. Se a UF do cliente não estiver aqui, o sistema usará o <strong>código base</strong> do campo Geral.</div>
+      <div class="alert alert-info" style="margin-bottom:14px">💡 Cadastre o <strong>código</strong> e o <strong>EAN</strong> específicos de cada UF. Exemplo: produto X em MG tem código <code>4555mg</code> e EAN <code>4145963635416</code>, na BA o código é <code>4555</code> e EAN <code>4145963635415</code>. Se a UF não estiver aqui, o sistema usará o <strong>código e EAN base</strong>.</div>
       <div id="p-uf-list" style="margin-bottom:12px;max-height:220px;overflow-y:auto"></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="p-nova-uf" style="padding:6px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;background:#fff">
@@ -3854,38 +3854,27 @@ function _atualizarPreviewTabela() {
 }
 
 /* ── Render lista UF no modal ── */
-function _renderUFList(codigosUF) {
+function _renderUFList(codigosUF, eanUF) {
   const list = el('p-uf-list'); if(!list) return;
+  eanUF = eanUF || {};
   const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
-  list.innerHTML = Object.entries(codigosUF).map(([uf, c]) =>
-    `<div class="p-uf-row" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)">
-      <span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
-      <input class="p-uf-cod" value="${esc(c)}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
-      <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
-      <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>
+  const ufsAll = [...new Set([...Object.keys(codigosUF), ...Object.keys(eanUF)])].sort();
+  list.innerHTML = ufsAll.length === 0 ? '<div style="color:#aaa;font-size:12px;padding:10px 0">Nenhuma UF cadastrada. Use o seletor abaixo para adicionar.</div>' :
+    `<div style="display:grid;grid-template-columns:36px 130px 160px 1fr 28px;gap:6px;align-items:center;padding:4px 0 6px;border-bottom:2px solid var(--cinza-medio);font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">
+      <span>UF</span><span>Código UF</span><span>EAN UF</span><span>Estado</span><span></span>
+    </div>` +
+    ufsAll.map(uf =>
+    `<div class="p-uf-row" style="display:grid;grid-template-columns:36px 130px 160px 1fr 28px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--cinza)">
+      <span class="p-uf-tag" style="font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
+      <input class="p-uf-cod" value="${esc(codigosUF[uf]||'')}" placeholder="Código" style="font-family:monospace;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
+      <input class="p-uf-ean" value="${esc(eanUF[uf]||'')}" placeholder="EAN (opcional)" style="font-family:monospace;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px" maxlength="14">
+      <span style="font-size:11px;color:#aaa">${estadosNome[uf]||uf}</span>
+      <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()" title="Remover UF">✕</button>
     </div>`
   ).join('');
 }
 
-function prodAddUF() {
-  const sel = el('p-nova-uf'); if(!sel || !sel.value) return;
-  const uf = sel.value;
-  const codBase = (el('p-cod')?.value || '').toLowerCase();
-  const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
-  const exists = [...document.querySelectorAll('#p-uf-list .p-uf-tag')].some(t => t.textContent.trim() === uf);
-  if(exists) { toast('UF '+uf+' já cadastrada.','error'); return; }
-  const row = document.createElement('div');
-  row.className = 'p-uf-row';
-  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)';
-  row.innerHTML = `<span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
-    <input class="p-uf-cod" value="${codBase+uf.toLowerCase()}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
-    <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
-    <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>`;
-  el('p-uf-list').appendChild(row);
-  sel.value = '';
-}
-
-/* ── Resolver código/preço contextual no Mix ── */
+/* ── Resolver código/EAN contextual no Mix ── */
 function _resolverCodUF(prod, cidadeUFCliente) {
   if(!prod || !cidadeUFCliente) return prod?.cod || '';
   const match = cidadeUFCliente.trim().match(/,\s*([A-Z]{2})$/i);
@@ -3893,6 +3882,15 @@ function _resolverCodUF(prod, cidadeUFCliente) {
   const cat = PRODUTOS_CAT[prod.cod];
   if(cat?.codigosUF?.[ufFinal]) return cat.codigosUF[ufFinal];
   return prod.cod;
+}
+
+function _resolverEanUF(prod, cidadeUFCliente) {
+  if(!prod || !cidadeUFCliente) return PRODUTOS_CAT[prod?.cod]?.ean || '';
+  const match = cidadeUFCliente.trim().match(/,\s*([A-Z]{2})$/i);
+  const ufFinal = match ? match[1].toUpperCase() : cidadeUFCliente.trim().toUpperCase().substring(0,2);
+  const cat = PRODUTOS_CAT[prod.cod];
+  if(cat?.eanUF?.[ufFinal]) return cat.eanUF[ufFinal];
+  return cat?.ean || '';
 }
 
 function _resolverPrecoCanal(prod, segmentoCliente) {
@@ -3912,36 +3910,26 @@ function _clienteAtualObj() {
   return clientes.find(c => c.nome === nomeAtual) || null;
 }
 
-function _renderUFList(codigosUF) {
-  const list = el('p-uf-list'); if(!list) return;
-  const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
-  list.innerHTML = Object.entries(codigosUF).map(([uf, c]) =>
-    `<div class="p-uf-row" style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)">
-      <span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
-      <input class="p-uf-cod" value="${esc(c)}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
-      <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
-      <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>
-    </div>`
-  ).join('');
-}
-
 function prodAddUF() {
   const sel = el('p-nova-uf'); if(!sel || !sel.value) return;
   const uf = sel.value;
   const codBase = el('p-cod')?.value?.toLowerCase() || '';
   const estadosNome = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
-  // Checar se UF já existe
   const exists = [...document.querySelectorAll('#p-uf-list .p-uf-tag')].some(t => t.textContent.trim() === uf);
   if(exists) { toast('UF '+uf+' já cadastrada.','error'); return; }
-  const row = document.createElement('div');
-  row.className = 'p-uf-row';
-  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--cinza)';
-  row.innerHTML = `<span class="p-uf-tag" style="width:32px;font-weight:700;font-size:11px;color:#888">${esc(uf)}</span>
-    <input class="p-uf-cod" value="${codBase+uf.toLowerCase()}" style="font-family:monospace;width:110px;padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px">
-    <span style="font-size:11px;color:#aaa;flex:1">${estadosNome[uf]||uf}</span>
-    <button class="btn btn-danger btn-xs" onclick="this.closest('.p-uf-row').remove()">✕</button>`;
-  el('p-uf-list').appendChild(row);
+  // Rende via _renderUFList para manter consistência
+  const curCodigosUF = {};
+  const curEanUF = {};
+  document.querySelectorAll('#p-uf-list .p-uf-row').forEach(row => {
+    const u = row.querySelector('.p-uf-tag')?.textContent?.trim();
+    const c = row.querySelector('.p-uf-cod')?.value?.trim();
+    const e = row.querySelector('.p-uf-ean')?.value?.trim();
+    if(u) { if(c) curCodigosUF[u]=c; if(e) curEanUF[u]=e; }
+  });
+  curCodigosUF[uf] = codBase + uf.toLowerCase();
+  _renderUFList(curCodigosUF, curEanUF);
   sel.value = '';
+  toast('UF ' + uf + ' adicionada.', 'success');
 }
 
 function abrirNovoProduto() {
@@ -4006,8 +3994,8 @@ function editarProduto(cod) {
     if(el('p-preco-atac')) el('p-preco-atac').value = p.tabelaCanais.atacado      || p.preco || '';
     if(el('p-preco-var'))  el('p-preco-var').value  = p.tabelaCanais.varejo       || p.preco || '';
   }
-  // Códigos por UF
-  _renderUFList(p.codigosUF || {});
+  // Códigos por UF e EAN por UF
+  _renderUFList(p.codigosUF || {}, p.eanUF || {});
   // Disponibilidade
   const canais = p.disponibilidade?.canais || ['distribuidor','atacado','varejo'];
   document.querySelectorAll('#p-disp-canais input[type=checkbox]').forEach(cb => {
@@ -4092,12 +4080,15 @@ function salvarProduto() {
     varejo:       parseFloat(el('p-preco-var')?.value)  || preco,
   };
 
-  // Coletar códigos por UF
+  // Coletar códigos por UF e EAN por UF
   const codigosUF = {};
+  const eanUF = {};
   document.querySelectorAll('#p-uf-list .p-uf-row').forEach(row => {
-    const uf  = row.querySelector('.p-uf-tag')?.textContent?.trim();
+    const uf   = row.querySelector('.p-uf-tag')?.textContent?.trim();
     const cod2 = row.querySelector('.p-uf-cod')?.value?.trim();
+    const ean2 = row.querySelector('.p-uf-ean')?.value?.trim();
     if(uf && cod2) codigosUF[uf] = cod2;
+    if(uf && ean2) eanUF[uf] = ean2;
   });
 
   // Coletar disponibilidade por canal
@@ -4116,6 +4107,7 @@ function salvarProduto() {
     status: el('p-status').value || 'Ativo',
     tabelaCanais,
     codigosUF: Object.keys(codigosUF).length ? codigosUF : (prev.codigosUF || {}),
+    eanUF: Object.keys(eanUF).length ? eanUF : (prev.eanUF || {}),
     disponibilidade: { canais: canaisDisp.length ? canaisDisp : ['distribuidor','atacado','varejo'] },
   };
 
@@ -4181,7 +4173,7 @@ function renderProdutos() {
         onchange="prodAtualizarBulkBar()">
     </td>
     <td class="mono" style="font-weight:700;letter-spacing:.5px">${esc(cod)}</td>
-    <td><span style="font-family:monospace;font-size:11px;color:#555">${p.ean||'—'}</span></td>
+    <td><span style="font-family:monospace;font-size:11px;color:#555">${p.ean||'—'}${Object.keys(p.eanUF||{}).length>0?` <span title="EAN varia por UF: ${Object.entries(p.eanUF).map(([u,e])=>u+':'+e).join(', ')}" style="cursor:help;background:#e3f2fd;color:#1a5fa8;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700">UF ▾</span>`:''}</span></td>
     <td>
       <div style="font-weight:600">${esc(p.desc)}</div>
       ${p.cat?`<div style="font-size:11px;color:#888;margin-top:1px">${esc(p.cat)}</div>`:''}
@@ -4278,14 +4270,21 @@ function _popularSelectsIndustriaTodos() {
 
 function exportarProdutosExcel() {
   const wb = XLSX.utils.book_new();
-  const rows = [['Código','EAN','Descrição','Indústria','Categoria','Preço Tabela','Unidade','Status','Observação']];
-  Object.entries(PRODUTOS_CAT).forEach(([cod,p])=>
-    rows.push([cod,p.ean||'',p.desc,p.ind,p.cat||'',p.preco,p.unid||'UN',p.status||'Ativo',p.obs||'']));
+  const UFS = ['MG','SP','BA','GO','RJ','PR','SC','RS'];
+  const header = ['Código','EAN','Descrição','Indústria','Categoria','Preço Tabela','Unidade','Status','Observação',
+    ...UFS.map(u=>'Código '+u), ...UFS.map(u=>'EAN '+u)];
+  const rows = [header];
+  Object.entries(PRODUTOS_CAT).forEach(([cod,p])=>{
+    const codUFs = UFS.map(u=>(p.codigosUF||{})[u]||'');
+    const eanUFs = UFS.map(u=>(p.eanUF||{})[u]||'');
+    rows.push([cod,p.ean||'',p.desc,p.ind,p.cat||'',p.preco,p.unid||'UN',p.status||'Ativo',p.obs||'',...codUFs,...eanUFs]);
+  });
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:15},{wch:35},{wch:14},{wch:16},{wch:12},{wch:8},{wch:8},{wch:25}];
+  ws['!cols'] = [{wch:12},{wch:16},{wch:35},{wch:14},{wch:16},{wch:12},{wch:8},{wch:8},{wch:25},
+    ...UFS.map(()=>({wch:12})), ...UFS.map(()=>({wch:16}))];
   XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
   XLSX.writeFile(wb,'Produtos_TresVales.xlsx');
-  toast('Excel de produtos exportado!');
+  toast('Excel de produtos exportado com EANs por UF!');
 }
 
 /* ══════════════════════════
@@ -4336,6 +4335,14 @@ const IMPORT_COLS = {
     {key:'codigoPR',        label:'Código PR',          req:false, hint:'Código específico Paraná'},
     {key:'codigoSC',        label:'Código SC',          req:false, hint:'Código específico Santa Catarina'},
     {key:'codigoRS',        label:'Código RS',          req:false, hint:'Código específico Rio Grande do Sul'},
+    {key:'eanMG',           label:'EAN MG',             req:false, hint:'EAN específico Minas Gerais'},
+    {key:'eanSP',           label:'EAN SP',             req:false, hint:'EAN específico São Paulo'},
+    {key:'eanBA',           label:'EAN BA',             req:false, hint:'EAN específico Bahia'},
+    {key:'eanGO',           label:'EAN GO',             req:false, hint:'EAN específico Goiás'},
+    {key:'eanRJ',           label:'EAN RJ',             req:false, hint:'EAN específico Rio de Janeiro'},
+    {key:'eanPR',           label:'EAN PR',             req:false, hint:'EAN específico Paraná'},
+    {key:'eanSC',           label:'EAN SC',             req:false, hint:'EAN específico Santa Catarina'},
+    {key:'eanRS',           label:'EAN RS',             req:false, hint:'EAN específico Rio Grande do Sul'},
     {key:'canais',          label:'Canais Disponíveis', req:false, hint:'Ex: distribuidor,atacado,varejo'},
     {key:'unid',            label:'Unidade',            req:false, hint:'UN, CX, KG...'},
     {key:'status',          label:'Status',             req:false},
@@ -4389,6 +4396,15 @@ const HEADER_MAP = {
   'codigo pr':'codigoPR','cod pr':'codigoPR','pr':'codigoPR',
   'codigo sc':'codigoSC','cod sc':'codigoSC','sc':'codigoSC',
   'codigo rs':'codigoRS','cod rs':'codigoRS','rs':'codigoRS',
+  // EAN regionais (UF)
+  'ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG',
+  'ean sp':'eanSP','ean sao paulo':'eanSP',
+  'ean ba':'eanBA','ean bahia':'eanBA',
+  'ean go':'eanGO','ean goias':'eanGO',
+  'ean rj':'eanRJ','ean rio de janeiro':'eanRJ',
+  'ean pr':'eanPR','ean parana':'eanPR',
+  'ean sc':'eanSC','ean santa catarina':'eanSC',
+  'ean rs':'eanRS','ean rio grande do sul':'eanRS',
   // Disponibilidade
   'canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais',
 };
@@ -4691,6 +4707,13 @@ function confirmarImport() {
         const val = (row[key]||'').toString().trim();
         if(val) codigosUF[uf] = val;
       });
+      // EAN por UF — só inclui UFs que tenham valor na planilha
+      const eanUF = {};
+      const eanKeys = {MG:'eanMG',SP:'eanSP',BA:'eanBA',GO:'eanGO',RJ:'eanRJ',PR:'eanPR',SC:'eanSC',RS:'eanRS'};
+      Object.entries(eanKeys).forEach(([uf, key]) => {
+        const val = (row[key]||'').toString().trim();
+        if(val) eanUF[uf] = val;
+      });
       // Canais disponíveis
       let canais = ['distribuidor','atacado','varejo'];
       if(row.canais && row.canais.trim()) {
@@ -4708,6 +4731,7 @@ function confirmarImport() {
         obs: row.obs||'',
         tabelaCanais,
         codigosUF: Object.keys(codigosUF).length ? codigosUF : (prev.codigosUF||{}),
+        eanUF: Object.keys(eanUF).length ? eanUF : (prev.eanUF||{}),
         disponibilidade: { canais },
       };
       adicionados++;
@@ -4736,7 +4760,7 @@ function baixarModeloImport() {
   const exemplo = {
     clientes: ['Farmácia Central', '12.345.678/0001-90', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
-    produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
+    produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', '7891234560013', '7891234560012', '7891234560011', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
     pedido: ['Farmácia Central', 'LABOTRAT', '2026-03-01', '28D', 'Recebido'],
   };
   const rows = [header];
