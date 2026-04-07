@@ -4045,6 +4045,7 @@ function excluirProduto(cod) {
   delete PRODUTOS_CAT[cod];
   addAudit(usuarioLogado?.login||'admin', `Produto excluído: ${cod} — ${p.desc}`, '🗑️');
   renderProdutos();
+  syncAutoSaveHook();
   toast('Produto excluído com sucesso.');
 }
 
@@ -4234,10 +4235,14 @@ function excluirProdutosSelecionados() {
 
   if(!confirm(`⚠️ Tem certeza que deseja excluir ${selecionados.length} produto${selecionados.length!==1?'s':''}?\n\nEsta ação não pode ser desfeita.`)) return;
 
-  selecionados.forEach(cod => { delete PRODUTOS_CAT[cod]; });
-  salvarDados();
+  selecionados.forEach(cod => {
+    const p = PRODUTOS_CAT[cod];
+    if(p) addAudit(usuarioLogado?.login||'admin', `Produto excluído: ${cod} — ${p.desc}`, '🗑️');
+    delete PRODUTOS_CAT[cod];
+  });
   popularSelectsDinamicos();
   renderProdutos();
+  syncAutoSaveHook();
   toast(`🗑️ ${selecionados.length} produto${selecionados.length!==1?'s':''} excluído${selecionados.length!==1?'s':''}!`);
 }
 
