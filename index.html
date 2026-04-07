@@ -7105,6 +7105,7 @@ function coletarDadosParaSync() {
     regrasComerciais: JSON.parse(JSON.stringify(regrasComerciais)),
     tratativas:     JSON.parse(JSON.stringify(tratativas)),
     PRODUTOS_CAT:   JSON.parse(JSON.stringify(PRODUTOS_CAT)),
+    mixProdutos:    JSON.parse(JSON.stringify(mixProdutos)),
     usuarios:       JSON.parse(JSON.stringify(usuarios)),
     // BUG FIX: persiste permissões de acesso granulares
     userPerms:      JSON.parse(JSON.stringify(userPerms)),
@@ -7133,6 +7134,7 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(Array.isArray(dados.metasData))        metasData = dados.metasData;
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
   if(Array.isArray(dados.tratativas))       tratativas = dados.tratativas;
+  if(Array.isArray(dados.mixProdutos))      mixProdutos = dados.mixProdutos;
   // BUG FIX: restaura permissões granulares persistidas
   if(dados.userPerms && typeof dados.userPerms==='object') {
     Object.keys(userPerms).forEach(k=>delete userPerms[k]);
