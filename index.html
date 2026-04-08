@@ -1678,7 +1678,7 @@ tr:last-child td{border-bottom:none;}
           </select>
         </div>
         <div class="form-group"><label>Preço Tabela Base (R$) *</label>
-          <input type="number" id="p-preco" step="0.01" placeholder="0,00" min="0" oninput="prodSincTabelas()">
+          <input type="text" inputmode="decimal" id="p-preco" placeholder="0,00" oninput="prodSincTabelas()">
         </div>
         <div class="form-group"><label>Status</label>
           <select id="p-status"><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select>
@@ -1695,15 +1695,15 @@ tr:last-child td{border-bottom:none;}
       <div class="form-grid-3">
         <div class="form-group">
           <label>💼 Distribuidor (R$)</label>
-          <input type="number" id="p-preco-dist" step="0.01" placeholder="Preço distribuidor" min="0">
+          <input type="text" inputmode="decimal" id="p-preco-dist" placeholder="Preço distribuidor">
         </div>
         <div class="form-group">
           <label>📦 Atacado (R$)</label>
-          <input type="number" id="p-preco-atac" step="0.01" placeholder="Preço atacado" min="0">
+          <input type="text" inputmode="decimal" id="p-preco-atac" placeholder="Preço atacado">
         </div>
         <div class="form-group">
           <label>🏪 Varejo (R$)</label>
-          <input type="number" id="p-preco-var" step="0.01" placeholder="Preço varejo" min="0">
+          <input type="text" inputmode="decimal" id="p-preco-var" placeholder="Preço varejo">
         </div>
       </div>
       <div id="p-tabela-preview" style="background:#f4f3ef;border-radius:6px;padding:12px;font-size:12px;color:#666;margin-top:4px">
@@ -2227,6 +2227,17 @@ function ciclarNivel(userId, modKey) {
 ══════════════════════════ */
 const fmt = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtN = n => Number(n||0).toFixed(2).replace('.',',');
+// Aceita vírgula OU ponto como decimal: "1,75" → 1.75 / "1.75" → 1.75 / "1.750,00" → 1750
+const parsePrecoBR = v => {
+  let s = String(v||'').replace(/[R$\s]/g,'').trim();
+  if(!s) return 0;
+  // Formato BR com milhar (ponto) + decimal (vírgula): 1.750,00
+  if(s.includes(',') && s.includes('.')) s = s.replace(/\./g,'').replace(',','.');
+  // Só vírgula → decimal BR: 1,75
+  else if(s.includes(',')) s = s.replace(',','.');
+  // Só ponto → já é decimal internacional: 1.75
+  return parseFloat(s) || 0;
+};
 const today = () => new Date().toISOString().split('T')[0];
 const el = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -3681,7 +3692,7 @@ function abrirEditarMixItem(idx) {
   el('mix-edit-cod').textContent   = p.cod;
   el('mix-edit-desc').value        = p.desc || '';
   el('mix-edit-ind').value         = p.ind  || '';
-  el('mix-edit-tabela').value      = p.tabela || 0;
+  el('mix-edit-tabela').value      = fmtN(p.tabela || 0);
   el('mix-edit-desc-pct').value    = p.desc_pct || 0;
   el('mix-edit-curva').value       = p.curva || 'B';
   el('mix-edit-ultima').value      = p.ultima || '';
@@ -3691,7 +3702,7 @@ function abrirEditarMixItem(idx) {
   openModal('modal-mix-edit');
 }
 function mixEditCalcNeg() {
-  const tab = parseFloat(el('mix-edit-tabela')?.value)||0;
+  const tab = parsePrecoBR(el('mix-edit-tabela')?.value);
   const pct = parseFloat(el('mix-edit-desc-pct')?.value)||0;
   const neg = tab*(1-pct/100);
   const el2 = el('mix-edit-neg-preview');
@@ -3700,7 +3711,7 @@ function mixEditCalcNeg() {
 function salvarMixEdit() {
   const idx = parseInt(el('mix-edit-idx').value);
   if(isNaN(idx)||!mixProdutos[idx]) return;
-  const tabela   = parseFloat(el('mix-edit-tabela').value)||0;
+  const tabela   = parsePrecoBR(el('mix-edit-tabela').value);
   const desc_pct = parseFloat(el('mix-edit-desc-pct').value)||0;
   mixProdutos[idx] = {
     ...mixProdutos[idx],
@@ -3848,19 +3859,19 @@ function prodSwitchTab(id, el2) {
 }
 
 function prodSincTabelas() {
-  const base = parseFloat(el('p-preco')?.value) || 0;
+  const base = parsePrecoBR(el('p-preco')?.value);
   if(base > 0) {
-    if(el('p-preco-dist') && !parseFloat(el('p-preco-dist').value)) el('p-preco-dist').value = base.toFixed(2);
-    if(el('p-preco-atac') && !parseFloat(el('p-preco-atac').value)) el('p-preco-atac').value = base.toFixed(2);
-    if(el('p-preco-var')  && !parseFloat(el('p-preco-var').value))  el('p-preco-var').value  = base.toFixed(2);
+    if(el('p-preco-dist') && !parsePrecoBR(el('p-preco-dist').value)) el('p-preco-dist').value = fmtN(base);
+    if(el('p-preco-atac') && !parsePrecoBR(el('p-preco-atac').value)) el('p-preco-atac').value = fmtN(base);
+    if(el('p-preco-var')  && !parsePrecoBR(el('p-preco-var').value))  el('p-preco-var').value  = fmtN(base);
   }
   _atualizarPreviewTabela();
 }
 
 function _atualizarPreviewTabela() {
-  const d = parseFloat(el('p-preco-dist')?.value) || 0;
-  const a = parseFloat(el('p-preco-atac')?.value) || 0;
-  const v = parseFloat(el('p-preco-var')?.value)  || 0;
+  const d = parsePrecoBR(el('p-preco-dist')?.value);
+  const a = parsePrecoBR(el('p-preco-atac')?.value);
+  const v = parsePrecoBR(el('p-preco-var')?.value);
   const prev = el('p-tabela-preview');
   if(!prev) return;
   if(!d && !a && !v) { prev.innerHTML = 'Preencha os preços acima.'; return; }
@@ -4000,16 +4011,16 @@ function editarProduto(cod) {
   el('p-ean').value    = p.ean   || '';
   el('p-desc').value   = p.desc  || '';
   el('p-cat').value    = p.cat   || '';
-  el('p-preco').value  = p.preco || '';
+  el('p-preco').value  = p.preco ? fmtN(p.preco) : '';
   el('p-obs').value    = p.obs   || '';
   el('p-status').value = p.status || 'Ativo';
   el('p-unid').value   = p.unid  || 'UN';
   _popularSelectIndustria('p-ind', p.ind);
   // Tabelas por canal
   if(p.tabelaCanais) {
-    if(el('p-preco-dist')) el('p-preco-dist').value = p.tabelaCanais.distribuidor || p.preco || '';
-    if(el('p-preco-atac')) el('p-preco-atac').value = p.tabelaCanais.atacado      || p.preco || '';
-    if(el('p-preco-var'))  el('p-preco-var').value  = p.tabelaCanais.varejo       || p.preco || '';
+    if(el('p-preco-dist')) el('p-preco-dist').value = p.tabelaCanais.distribuidor ? fmtN(p.tabelaCanais.distribuidor) : (p.preco ? fmtN(p.preco) : '');
+    if(el('p-preco-atac')) el('p-preco-atac').value = p.tabelaCanais.atacado      ? fmtN(p.tabelaCanais.atacado)      : (p.preco ? fmtN(p.preco) : '');
+    if(el('p-preco-var'))  el('p-preco-var').value  = p.tabelaCanais.varejo       ? fmtN(p.tabelaCanais.varejo)       : (p.preco ? fmtN(p.preco) : '');
   }
   // Códigos por UF e EAN por UF
   _renderUFList(p.codigosUF || {}, p.eanUF || {});
@@ -4036,7 +4047,7 @@ function duplicarProduto(cod) {
   el('p-ean').value    = p.ean   || '';
   el('p-desc').value   = p.desc  + ' (cópia)';
   el('p-cat').value    = p.cat   || '';
-  el('p-preco').value  = p.preco || '';
+  el('p-preco').value  = p.preco ? fmtN(p.preco) : '';
   el('p-obs').value    = p.obs   || '';
   el('p-status').value = p.status || 'Ativo';
   el('p-unid').value   = p.unid  || 'UN';
@@ -4080,7 +4091,7 @@ function salvarProduto() {
   const cod   = el('p-cod').value.trim().toUpperCase();
   const desc  = el('p-desc').value.trim();
   const ind   = el('p-ind').value;
-  const preco = parseFloat(el('p-preco').value)||0;
+  const preco = parsePrecoBR(el('p-preco').value);
   if(!cod)   { alert('Informe o Código do produto.'); el('p-cod').focus(); return; }
   if(!desc)  { alert('Informe a Descrição do produto.'); el('p-desc').focus(); return; }
   if(!ind)   { alert('Selecione a Indústria.'); el('p-ind').focus(); return; }
@@ -4093,9 +4104,9 @@ function salvarProduto() {
 
   // Coletar tabelas por canal
   const tabelaCanais = {
-    distribuidor: parseFloat(el('p-preco-dist')?.value) || preco,
-    atacado:      parseFloat(el('p-preco-atac')?.value) || preco,
-    varejo:       parseFloat(el('p-preco-var')?.value)  || preco,
+    distribuidor: parsePrecoBR(el('p-preco-dist')?.value) || preco,
+    atacado:      parsePrecoBR(el('p-preco-atac')?.value) || preco,
+    varejo:       parsePrecoBR(el('p-preco-var')?.value)  || preco,
   };
 
   // Coletar códigos por UF e EAN por UF
@@ -7363,7 +7374,7 @@ setTimeout(tentarReconexaoAuto, 800);
         </select>
       </div>
       <div class="form-group"><label>Preço Tabela (R$)</label>
-        <input type="number" id="mix-edit-tabela" placeholder="0,00" min="0" step="0.01" oninput="mixEditCalcNeg()">
+        <input type="text" inputmode="decimal" id="mix-edit-tabela" placeholder="0,00" oninput="mixEditCalcNeg()">
       </div>
       <div class="form-group"><label>% Desconto</label>
         <input type="number" id="mix-edit-desc-pct" placeholder="0" min="0" max="100" oninput="mixEditCalcNeg()">
