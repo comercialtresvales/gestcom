@@ -4697,7 +4697,16 @@ function confirmarImport() {
     importDados.forEach(row => {
       const cod = (row.cod||'').trim().toUpperCase();
       if(!cod || !row.desc) { ignorados++; return; }
-      const fmtPreco = v => parseFloat((v||'0').toString().replace('R$','').replace(/\./g,'').replace(',','.').trim()) || 0;
+      const fmtPreco = v => {
+        let s = (v||'0').toString().replace('R$','').trim();
+        // Formato BR com milhar: 1.750,00 → tem vírgula como decimal
+        // Formato internacional: 1.75 → tem ponto como decimal
+        // Só remove o ponto se ele for separador de milhar (vírgula presente como decimal)
+        if(s.includes(',')) {
+          s = s.replace(/\./g,'').replace(',','.');
+        }
+        return parseFloat(s) || 0;
+      };
       const preco = fmtPreco(row.preco);
       // Tabelas por canal — usa base se não informado
       const tabelaCanais = {
