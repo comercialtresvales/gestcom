@@ -873,7 +873,11 @@ tr:last-child td{border-bottom:none;}
       <div class="card" style="padding:0;overflow:hidden">
         <table><thead><tr>
           <th style="width:36px"><input type="checkbox" id="mix-chk-all" title="Selecionar todos" onchange="mixToggleAll(this.checked)" style="cursor:pointer;width:15px;height:15px;accent-color:var(--amarelo)"></th>
-          <th>Código</th><th>Descrição</th><th>Indústria</th><th>Curva</th><th>Preço Tabela</th><th>% Desconto</th><th>Preço Negociado</th><th>Última Compra</th><th>Mix</th><th>Obs.</th><th>Ações</th></tr></thead>
+          <th>Código</th><th>Descrição</th><th>Indústria</th><th>Curva</th>
+          <th title="Preço para canal Distribuidor">💼 Dist.</th>
+          <th title="Preço para canal Atacado">📦 Atac.</th>
+          <th title="Preço para canal Varejo">🏪 Var.</th>
+          <th>% Desconto</th><th>Preço Negociado</th><th>Última Compra</th><th>Mix</th><th>Obs.</th><th>Ações</th></tr></thead>
         <tbody id="mix-tbody"></tbody></table>
       </div>
     </div>
@@ -3620,11 +3624,24 @@ function renderMix() {
       <td>${esc(p.desc)}${!p.ativo?' <span class="badge badge-cinza" style="font-size:9px">inativo</span>':''}${origemTag}</td>
       <td><span class="tag-industria">${p.ind}</span></td>
       <td><span class="${curvaC}">${p.curva}</span></td>
-      <td>
-        ${precoChanged
-          ? `<span style="color:#aaa;text-decoration:line-through;font-size:10px">${fmt(p.tabela)}</span><br><span style="font-weight:600;color:var(--azul)">${fmt(precoResolvido)}</span>`
-          : fmt(precoResolvido)}
-      </td>
+      <td style="padding:6px 8px">${(()=>{
+        const cat=PRODUTOS_CAT[p.cod];const tc=cat?.tabelaCanais;
+        const pDist=tc?.distribuidor||p.tabela;
+        const seg=segmento.toLowerCase();const ativo=seg.includes('distrib');
+        return ativo?`<span style="font-weight:700;color:var(--azul);background:#e3f2fd;border-radius:4px;padding:1px 5px;font-size:12px">${fmt(pDist)}</span>`:`<span style="font-size:11px;color:#aaa">${fmt(pDist)}</span>`;
+      })()}</td>
+      <td style="padding:6px 8px">${(()=>{
+        const cat=PRODUTOS_CAT[p.cod];const tc=cat?.tabelaCanais;
+        const pAtac=tc?.atacado||p.tabela;
+        const seg=segmento.toLowerCase();const ativo=seg.includes('atac');
+        return ativo?`<span style="font-weight:700;color:var(--azul);background:#e3f2fd;border-radius:4px;padding:1px 5px;font-size:12px">${fmt(pAtac)}</span>`:`<span style="font-size:11px;color:#aaa">${fmt(pAtac)}</span>`;
+      })()}</td>
+      <td style="padding:6px 8px">${(()=>{
+        const cat=PRODUTOS_CAT[p.cod];const tc=cat?.tabelaCanais;
+        const pVar=tc?.varejo||p.tabela;
+        const seg=segmento.toLowerCase();const ativo=seg.includes('varejo');
+        return ativo?`<span style="font-weight:700;color:var(--azul);background:#e3f2fd;border-radius:4px;padding:1px 5px;font-size:12px">${fmt(pVar)}</span>`:`<span style="font-size:11px;color:#aaa">${fmt(pVar)}</span>`;
+      })()}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <input class="mix-inline-input" type="number" value="${p.desc_pct}" min="0" max="100" onchange="updateDesconto(${i},this.value)">
@@ -3648,7 +3665,7 @@ function renderMix() {
       <td><input type="text" placeholder="—" value="${esc(p.obs||'')}" style="width:90px;font-size:11px;padding:4px 7px;border:1px solid var(--cinza-medio);border-radius:4px" onchange="mixSalvarObs(${i},this.value)"></td>
       <td><button class="btn btn-outline btn-xs" onclick="abrirEditarMixItem(${i})" title="Editar produto do mix">✏️</button></td>
     </tr>`;
-  }).join('')||'<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px">Nenhum produto no mix para este cliente/rede</td></tr>';
+  }).join('')||'<tr><td colspan="14" style="text-align:center;color:#aaa;padding:20px">Nenhum produto no mix para este cliente/rede</td></tr>';
   setTimeout(_mixAtualizarChipsIndustria, 0);
 }
 
