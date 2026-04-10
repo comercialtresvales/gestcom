@@ -3687,7 +3687,7 @@ function renderMix() {
   setTimeout(_mixAtualizarChipsIndustria, 0);
 }
 
-function updateDesconto(idx,val){mixProdutos[idx].desc_pct=parseFloat(val)||0;renderMix();}
+function updateDesconto(idx,val){mixProdutos[idx].desc_pct=parseFloat(val)||0;renderMix();syncAutoSaveHook();}
 function toggleAtivo(idx){mixProdutos[idx].ativo=!mixProdutos[idx].ativo;renderMix();}
 function mixSalvarObs(idx,val){mixProdutos[idx].obs=val;syncAutoSaveHook();}
 
