@@ -802,6 +802,7 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Mix de Produtos por Cliente</div><div class="section-sub">Defina portfólio, preços e descontos por cliente × indústria</div></div>
         <div class="export-btns">
           <button class="btn btn-outline btn-sm" onclick="openModal('modal-add-produto')">+ Adicionar Produto</button>
+          <button class="btn btn-danger btn-sm" onclick="limparOrfaosMix()" title="Remove do mix produtos que não existem mais no catálogo">🧹 Limpar Órfãos</button>
           <button class="btn btn-primary btn-sm" onclick="popularSelectsDinamicos();atualizarSelectsMixNovo();openModal('modal-mix-novo')">+ Novo Mix</button>
         </div>
       </div>
@@ -821,7 +822,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="search-bar">
         <input id="mix-busca" placeholder="🔍 Código ou descrição..." oninput="renderMix()">
-        <select id="filtro-industria-mix" onchange="renderMix()"><option value="">Todas as indústrias</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option><option>DUTY</option></select>
+        <select id="filtro-industria-mix" onchange="renderMix()"><option value="">Todas as indústrias</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option></select>
         <select id="mix-filtro-status" onchange="renderMix()"><option value="">Ativo + Inativo</option><option value="ativo">Apenas ativos</option><option value="inativo">Apenas inativos</option></select>
         <select id="mix-filtro-curva" onchange="renderMix()"><option value="">Curva A+B+C</option><option value="A">Curva A</option><option value="B">Curva B</option><option value="C">Curva C</option></select>
         <select id="mix-filtro-desconto" onchange="renderMix()" style="border:1.5px solid #f0d060;background:#fffef5;color:#7a5800;font-weight:600"><option value="">🏷️ Todos os descontos</option><option value="com">Com desconto</option><option value="sem">Sem desconto</option><option value="acima10">Desconto ≥ 10%</option><option value="acima20">Desconto ≥ 20%</option><option value="acima30">Desconto ≥ 30%</option></select>
@@ -2887,7 +2888,7 @@ function gerarComissaoAuto(ped, baseLiq) {
   ) || regrasComerciais.find(r=>r.ativo && r.industria===ped.industria);
   const pct = regra ? regra.pct : 5;
   const tipo = regra ? regra.tipo : 'Faturamento';
-  const id='COM-'+String(comissoes_data.length+1).padStart(4,'0');
+  const id = gerarId('COM-', comissoes_data);
   const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const d=new Date();
   const mesLabel = meses[d.getMonth()]+'/'+(d.getFullYear()+'').slice(2);
@@ -4309,6 +4310,37 @@ function excluirProdutosSelecionados() {
   toast(`🗑️ ${selecionados.length} produto${selecionados.length!==1?'s':''} excluído${selecionados.length!==1?'s':''}!`);
 }
 
+/* ── Limpa entradas órfãs do mix (produtos que não existem mais no catálogo) ── */
+function limparOrfaosMix() {
+  const antes = mixProdutos.length;
+  // Considera órfão: código não existe no PRODUTOS_CAT OU indústria não existe mais
+  const indsAtivas = new Set([
+    ...Object.values(PRODUTOS_CAT).map(p=>p.ind),
+    ...industrias.map(i=>i.nome)
+  ]);
+  const dutyOuSemCatalogo = mixProdutos.filter(m => {
+    const existeNoCatalogo = !!PRODUTOS_CAT[m.cod];
+    const indExiste = indsAtivas.has(m.ind);
+    return !existeNoCatalogo || !indExiste;
+  });
+  if(dutyOuSemCatalogo.length === 0) {
+    toast('✅ Nenhum item órfão encontrado no mix. Tudo limpo!');
+    return;
+  }
+  const indsOrfas = [...new Set(dutyOuSemCatalogo.map(m=>m.ind))].join(', ');
+  if(!confirm(`🧹 Foram encontrados ${dutyOuSemCatalogo.length} item(ns) órfão(s) no mix:\n\nIndústrias: ${indsOrfas}\n\nEsses itens não têm produto correspondente no catálogo.\n\nDeseja removê-los permanentemente?`)) return;
+  mixProdutos = mixProdutos.filter(m => {
+    const existeNoCatalogo = !!PRODUTOS_CAT[m.cod];
+    const indExiste = indsAtivas.has(m.ind);
+    return existeNoCatalogo && indExiste;
+  });
+  const removidos = antes - mixProdutos.length;
+  addAudit(usuarioLogado?.login||'admin', `Mix: ${removidos} item(ns) órfão(s) removido(s) (indústrias: ${indsOrfas})`, '🧹');
+  renderMix();
+  syncAutoSaveHook();
+  toast(`🧹 ${removidos} item(ns) órfão(s) removido(s) do mix com sucesso!`);
+}
+
 /* helper: popula select de indústria no modal */
 function _popularSelectIndustria(selectId, valorAtual) {
   const sel = el(selectId); if(!sel) return;
@@ -4915,8 +4947,11 @@ function popularSelectsDinamicos() {
 
   // selects de filtro (search bars)
   const filtroCli = ['fat-filtro-cli','saldo-cli','sio-filtro-cli'];
+  // Filtros gerais usam todasInds (inclui indsExtra p/ compatibilidade com pedidos/NFs antigos)
   const filtroInd = ['orc-filtro-ind','ped-filtro-ind','fat-filtro-ind','saldo-ind',
-    'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix','prod-ind-filtro'];
+    'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','prod-ind-filtro'];
+  // Filtro do mix usa apenas indústrias formalmente cadastradas — evita reintroduzir excluídas
+  const filtroIndMix = ['filtro-industria-mix'];
 
   filtroCli.forEach(id=>{
     const s=el(id); if(!s) return;
@@ -4929,6 +4964,14 @@ function popularSelectsDinamicos() {
     const cur=s.value;
     s.innerHTML='<option value="">Todas as indústrias</option>'+optsInd;
     if(cur) s.value=cur;
+  });
+  // Filtro do mix: só indústrias formalmente cadastradas e ativas
+  const optsIndMix = nomesIndustrias.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  filtroIndMix.forEach(id=>{
+    const s=el(id); if(!s) return;
+    const cur=s.value;
+    s.innerHTML='<option value="">Todas as indústrias</option>'+optsIndMix;
+    if(cur && nomesIndustrias.includes(cur)) s.value=cur; // limpa seleção se indústria foi excluída
   });
 
   // mix novo — clientes
@@ -5006,8 +5049,13 @@ function excluirRede(id) {
   }
   if(!confirm(`Excluir permanentemente a rede "${r.nome}"?`)) return;
   redes = redes.filter(x=>x.id!==id);
-  addAudit(usuarioLogado?.login||'admin', `Rede excluída: ${r.nome}`, '🗑️');
-  renderRedes(); popularSelectsDinamicos(); syncAutoSaveHook(); toast('Rede excluída.');
+  // Remove itens órfãos do mix vinculados a essa rede
+  const qtdMixAntes = mixProdutos.length;
+  mixProdutos = mixProdutos.filter(m => m.rede !== r.nome);
+  const removidosMix = qtdMixAntes - mixProdutos.length;
+  addAudit(usuarioLogado?.login||'admin', `Rede excluída: ${r.nome}${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`, '🗑️');
+  renderRedes(); renderMix(); popularSelectsDinamicos(); syncAutoSaveHook();
+  toast(`Rede excluída.${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`);
 }
 
 function renderRedes() {
@@ -5123,7 +5171,7 @@ function criarNovoMix() {
     if(!jaExiste) {
       mixProdutos.push({
         cod, desc:p.desc, ind:p.ind, curva:'B', tabela:p.preco,
-        desc_pct:desc, ativo:true, ultima:'—',
+        desc_pct:desc, ativo:true, ultima:'—', obs:p.obs||'',
         rede:      tipo==='rede'    ? vinculo : '',
         clienteEspecifico: tipo==='cliente' ? vinculo : '',
       });
@@ -5459,10 +5507,15 @@ function excluirIndustria(id) {
     addAudit(usuarioLogado?.login||'admin', `Indústria marcada inativa: ${ind.nome}`, '🏭');
     renderIndustrias(); toast('Indústria marcada como inativa.'); return;
   }
-  if(!confirm(`Excluir permanentemente a indústria "${ind.nome}"?`)) return;
+  if(!confirm(`Excluir permanentemente a indústria "${ind.nome}"?\n\nTodos os itens do mix dessa indústria também serão removidos.`)) return;
   industrias = industrias.filter(x=>x.id!==id);
-  addAudit(usuarioLogado?.login||'admin', `Indústria excluída: ${ind.nome}`, '🗑️');
-  renderIndustrias(); _popularSelectsIndustriaTodos(); syncAutoSaveHook(); toast('Indústria excluída.');
+  // Remove itens órfãos do mix vinculados a essa indústria
+  const qtdMixAntes = mixProdutos.length;
+  mixProdutos = mixProdutos.filter(m => m.ind !== ind.nome);
+  const removidosMix = qtdMixAntes - mixProdutos.length;
+  addAudit(usuarioLogado?.login||'admin', `Indústria excluída: ${ind.nome}${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`, '🗑️');
+  renderIndustrias(); renderMix(); _popularSelectsIndustriaTodos(); syncAutoSaveHook();
+  toast(`Indústria excluída.${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`);
 }
 
 function renderIndustrias() {
