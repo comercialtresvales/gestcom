@@ -824,6 +824,7 @@ tr:last-child td{border-bottom:none;}
         <select id="filtro-industria-mix" onchange="renderMix()"><option value="">Todas as indústrias</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option><option>DUTY</option></select>
         <select id="mix-filtro-status" onchange="renderMix()"><option value="">Ativo + Inativo</option><option value="ativo">Apenas ativos</option><option value="inativo">Apenas inativos</option></select>
         <select id="mix-filtro-curva" onchange="renderMix()"><option value="">Curva A+B+C</option><option value="A">Curva A</option><option value="B">Curva B</option><option value="C">Curva C</option></select>
+        <select id="mix-filtro-desconto" onchange="renderMix()" style="border:1.5px solid #f0d060;background:#fffef5;color:#7a5800;font-weight:600"><option value="">🏷️ Todos os descontos</option><option value="com">Com desconto</option><option value="sem">Sem desconto</option><option value="acima10">Desconto ≥ 10%</option><option value="acima20">Desconto ≥ 20%</option><option value="acima30">Desconto ≥ 30%</option></select>
         <span id="mix-count" style="font-size:12px;color:#888;margin-left:4px">14 produtos</span>
       </div>
       <!-- Seleção rápida por indústria -->
@@ -3553,6 +3554,7 @@ function renderMix() {
   const filtInd=(el('filtro-industria-mix')||{}).value||'';
   const filtSt=(el('mix-filtro-status')||{}).value||'';
   const filtCurva=(el('mix-filtro-curva')||{}).value||'';
+  const filtDesconto=(el('mix-filtro-desconto')||{}).value||'';
 
   // Determina se o clienteAtual é uma rede (prefixo 🔗) ou cliente individual
   const isRede = clienteAtual && clienteAtual.startsWith('🔗 ');
@@ -3583,6 +3585,11 @@ function renderMix() {
     if(filtSt==='ativo'&&!p.ativo)return false;
     if(filtSt==='inativo'&&p.ativo)return false;
     if(filtCurva&&p.curva!==filtCurva)return false;
+    if(filtDesconto==='com'&&!(p.desc_pct>0))return false;
+    if(filtDesconto==='sem'&&p.desc_pct>0)return false;
+    if(filtDesconto==='acima10'&&!(p.desc_pct>=10))return false;
+    if(filtDesconto==='acima20'&&!(p.desc_pct>=20))return false;
+    if(filtDesconto==='acima30'&&!(p.desc_pct>=30))return false;
     return true;
   });
   if(el('mix-count'))el('mix-count').textContent=list.length+' produto'+(list.length!==1?'s':'');
