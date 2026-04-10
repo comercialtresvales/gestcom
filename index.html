@@ -2243,6 +2243,20 @@ const today = () => new Date().toISOString().split('T')[0];
 const el = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+// Gera ID único baseado em timestamp para evitar colisão após exclusões
+function gerarId(prefixo, arr, campo='id') {
+  // Tenta sequencial a partir do máximo existente
+  const nums = arr.map(x=>{
+    const m = String(x[campo]||'').match(/(\d+)$/);
+    return m ? parseInt(m[1]) : 0;
+  });
+  const proximo = (nums.length ? Math.max(...nums) : 0) + 1;
+  const candidato = prefixo + String(proximo).padStart(4,'0');
+  // Se por algum motivo já existe, usa timestamp para garantir unicidade
+  if(arr.find(x=>x[campo]===candidato)) return prefixo + Date.now();
+  return candidato;
+}
+
 function syncAutoSaveHook() {
   if(configSync.autoSave && configSync.conectado) {
     clearTimeout(window._syncDebounce);
@@ -2458,7 +2472,7 @@ function salvarOrcamento() {
   if(orcItens.length===0){alert('Adicione pelo menos um produto.');return;}
   const total = orcItens.reduce((s,i)=>s+i.total,0);
   const obj = {
-    id: orcEditId || ('ORC-' + String(orcamentos.length+1).padStart(4,'0')),
+    id: orcEditId || gerarId('ORC-', orcamentos),
     cliente: cli, industria: el('orc-ind').value, data: el('orc-data').value||today(),
     validade: el('orc-validade').value, cond: el('orc-cond').value,
     status: el('orc-status').value, itens: [...orcItens], total, obs: el('orc-obs').value,
@@ -2468,16 +2482,18 @@ function salvarOrcamento() {
   orcItens = []; orcEditId = null;
   closeModal('modal-orcamento');
   renderOrcamentos();
+  syncAutoSaveHook();
   toast('Orçamento salvo com sucesso!');
 }
 
 function converterEmPedido(id) {
   const o = orcamentos.find(x=>x.id===id);
   if(!o||!confirm('Converter orçamento em pedido?')) return;
-  const pedId = 'PED-' + String(pedidos.length+1).padStart(4,'0');
+  const pedId = gerarId('PED-', pedidos);
   pedidos.push({id:pedId,cliente:o.cliente,industria:o.industria,data:today(),cond:o.cond,status:'Recebido',itens:o.itens.map(i=>({...i})),total:o.total,obs:'Gerado a partir de '+o.id,orcOrigem:o.id,nf:null});
   orcamentos = orcamentos.map(x=>x.id===id?{...x,status:'Convertido em pedido'}:x);
   renderOrcamentos(); renderPedidos();
+  syncAutoSaveHook();
   toast('Convertido em '+pedId+'!');
 }
 
@@ -2486,7 +2502,7 @@ function converterEmPedido(id) {
 ══════════════════════════ */
 function exportarOrcamentoPDF() {
   const cli = el('orc-cli').value||'Cliente';
-  const orcId = orcEditId || ('ORC-' + String(orcamentos.length+1).padStart(4,'0'));
+  const orcId = orcEditId || gerarId('ORC-', orcamentos);
   const total = orcItens.reduce((s,i)=>s+i.total,0);
   gerarOrcPDF({id:orcId,cliente:cli,industria:el('orc-ind').value,data:today(),validade:el('orc-validade').value,cond:el('orc-cond').value,itens:orcItens,total,obs:el('orc-obs').value});
 }
@@ -2730,7 +2746,7 @@ function salvarPedido() {
   if(pedItens.length===0){alert('Adicione pelo menos um produto.');return;}
   const total = pedItens.reduce((s,i)=>s+i.total,0);
   const obj = {
-    id: pedEditId || ('PED-' + String(pedidos.length+1).padStart(4,'0')),
+    id: pedEditId || gerarId('PED-', pedidos),
     cliente:cli,industria:el('ped-ind').value,data:el('ped-data').value||today(),
     cond:el('ped-cond').value,status:el('ped-status').value,
     itens:[...pedItens],total,obs:el('ped-obs').value,orcOrigem:'',nf:null
@@ -2740,6 +2756,7 @@ function salvarPedido() {
   pedItens=[]; pedEditId=null;
   closeModal('modal-pedido');
   renderPedidos();
+  syncAutoSaveHook();
   toast('Pedido salvo com sucesso!');
 }
 
@@ -2858,6 +2875,7 @@ function salvarNF() {
   renderPedidos();
   popularSelectsDinamicos();
   renderDashboard();
+  syncAutoSaveHook();
   toast('NF registrada! Comissão calculada automaticamente.');
 }
 
@@ -3220,7 +3238,7 @@ function zerarTodosSaldos() {
 
 function _registrarZeramentoSaldo(cli, ind, dif, pedIds) {
   const agora = new Date().toLocaleString('pt-BR').slice(0,14);
-  const id = 'TRAT-'+String(tratativas.length+1).padStart(3,'0');
+  const id = gerarId('TRAT-', tratativas);
   tratativas.push({
     id, tipo: 'zeramento',
     pedido: pedIds.join(', '),
@@ -4078,10 +4096,15 @@ function excluirProduto(cod) {
   }
   if(!confirm(`Excluir permanentemente o produto:\n\n"${cod} — ${p.desc}"\n\nEsta ação não pode ser desfeita.`)) return;
   delete PRODUTOS_CAT[cod];
-  addAudit(usuarioLogado?.login||'admin', `Produto excluído: ${cod} — ${p.desc}`, '🗑️');
+  // Remove também do mix de produtos para não aparecer como item órfão
+  const qtdMixAntes = mixProdutos.length;
+  mixProdutos = mixProdutos.filter(m => m.cod !== cod);
+  const removidosMix = qtdMixAntes - mixProdutos.length;
+  addAudit(usuarioLogado?.login||'admin', `Produto excluído: ${cod} — ${p.desc}${removidosMix>0?' ('+removidosMix+' entrada(s) removida(s) do mix)':''}`, '🗑️');
   renderProdutos();
+  renderMix();
   syncAutoSaveHook();
-  toast('Produto excluído com sucesso.');
+  toast(`Produto excluído com sucesso.${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`);
 }
 
 function toggleStatusProduto(cod) {
@@ -4153,6 +4176,7 @@ function salvarProduto() {
   closeModal('modal-produto');
   renderProdutos();
   _popularSelectsIndustriaTodos(); // atualiza todos os selects
+  syncAutoSaveHook();
   toast(`Produto ${acao} com sucesso!`);
 }
 
@@ -4270,13 +4294,17 @@ function excluirProdutosSelecionados() {
 
   if(!confirm(`⚠️ Tem certeza que deseja excluir ${selecionados.length} produto${selecionados.length!==1?'s':''}?\n\nEsta ação não pode ser desfeita.`)) return;
 
+  const codsSet = new Set(selecionados);
   selecionados.forEach(cod => {
     const p = PRODUTOS_CAT[cod];
     if(p) addAudit(usuarioLogado?.login||'admin', `Produto excluído: ${cod} — ${p.desc}`, '🗑️');
     delete PRODUTOS_CAT[cod];
   });
+  // Remove também do mix para não aparecer como item órfão
+  mixProdutos = mixProdutos.filter(m => !codsSet.has(m.cod));
   popularSelectsDinamicos();
   renderProdutos();
+  renderMix();
   syncAutoSaveHook();
   toast(`🗑️ ${selecionados.length} produto${selecionados.length!==1?'s':''} excluído${selecionados.length!==1?'s':''}!`);
 }
@@ -4979,7 +5007,7 @@ function excluirRede(id) {
   if(!confirm(`Excluir permanentemente a rede "${r.nome}"?`)) return;
   redes = redes.filter(x=>x.id!==id);
   addAudit(usuarioLogado?.login||'admin', `Rede excluída: ${r.nome}`, '🗑️');
-  renderRedes(); popularSelectsDinamicos(); toast('Rede excluída.');
+  renderRedes(); popularSelectsDinamicos(); syncAutoSaveHook(); toast('Rede excluída.');
 }
 
 function renderRedes() {
@@ -5180,6 +5208,7 @@ function salvarCliente() {
   popularSelectsDinamicos();
   renderMix(); // reconstrói chips
   renderDashboard();
+  syncAutoSaveHook();
   toast(`Cliente ${acao} com sucesso!`);
 }
 
@@ -5194,8 +5223,14 @@ function excluirCliente(id) {
   }
   if(!confirm(`Excluir permanentemente o cliente "${c.nome}"?`)) return;
   clientes = clientes.filter(x=>x.id!==id);
-  addAudit(usuarioLogado?.login||'admin', `Cliente excluído: ${c.nome}`, '🗑️');
-  renderClientes(); renderDashboard(); toast('Cliente excluído.');
+  // Remove itens órfãos do mix vinculados a esse cliente
+  const qtdMixAntes = mixProdutos.length;
+  mixProdutos = mixProdutos.filter(m => m.clienteEspecifico !== c.nome);
+  const removidosMix = qtdMixAntes - mixProdutos.length;
+  addAudit(usuarioLogado?.login||'admin', `Cliente excluído: ${c.nome}${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`, '🗑️');
+  renderClientes(); renderDashboard(); renderMix();
+  syncAutoSaveHook();
+  toast(`Cliente excluído.${removidosMix>0?' ('+removidosMix+' item(ns) removido(s) do mix)':''}`);
 }
 
 /* ── Seleção em massa de clientes ── */
@@ -5243,6 +5278,7 @@ function excluirClientesSelecionados() {
   }
   if(!confirm(msg)) return;
 
+  const nomesExcluidos = [];
   selecionados.forEach(id => {
     const c = clientes.find(x=>x.id===id);
     if(!c) return;
@@ -5252,11 +5288,17 @@ function excluirClientesSelecionados() {
       addAudit(usuarioLogado?.login||'admin', `Cliente marcado inativo: ${c.nome}`, '👥');
     } else {
       clientes = clientes.filter(x=>x.id!==id);
+      nomesExcluidos.push(c.nome);
       addAudit(usuarioLogado?.login||'admin', `Cliente excluído: ${c.nome}`, '🗑️');
     }
   });
-
-  salvarDados();
+  // Remove itens órfãos do mix dos clientes realmente excluídos
+  if(nomesExcluidos.length > 0) {
+    const nomesSet = new Set(nomesExcluidos);
+    mixProdutos = mixProdutos.filter(m => !nomesSet.has(m.clienteEspecifico));
+    renderMix();
+  }
+  syncAutoSaveHook();
   popularSelectsDinamicos();
   renderClientes();
   renderDashboard();
@@ -5402,6 +5444,7 @@ function salvarIndustria() {
   renderIndustrias();
   popularSelectsDinamicos();
   _popularSelectsIndustriaTodos();
+  syncAutoSaveHook();
   toast(`Indústria ${acao} com sucesso!`);
 }
 
@@ -5419,7 +5462,7 @@ function excluirIndustria(id) {
   if(!confirm(`Excluir permanentemente a indústria "${ind.nome}"?`)) return;
   industrias = industrias.filter(x=>x.id!==id);
   addAudit(usuarioLogado?.login||'admin', `Indústria excluída: ${ind.nome}`, '🗑️');
-  renderIndustrias(); _popularSelectsIndustriaTodos(); toast('Indústria excluída.');
+  renderIndustrias(); _popularSelectsIndustriaTodos(); syncAutoSaveHook(); toast('Indústria excluída.');
 }
 
 function renderIndustrias() {
@@ -5428,8 +5471,7 @@ function renderIndustrias() {
   const filtStat = (el('ind-filtro-status')||{}).value||'';
 
   const list = industrias.filter(i=>{
-    if(busca && !i.nome.toLowerCase().includes(i.nome&&busca) &&
-       !i.nome.toLowerCase().includes(busca) &&
+    if(busca && !i.nome.toLowerCase().includes(busca) &&
        !(i.cnpj||'').includes(busca) && !(i.contato||'').toLowerCase().includes(busca)) return false;
     if(filtStat && i.status !== filtStat) return false;
     return true;
@@ -5823,6 +5865,7 @@ function salvarSellOut() {
   el('so-positivacao').value = '';
   closeModal('modal-sellout');
   renderSellInOut();
+  syncAutoSaveHook();
   toast('Sell Out registrado com sucesso!');
 }
 
@@ -6137,6 +6180,7 @@ function salvarUsuario() {
   _usrEditId = null;
   closeModal('modal-usuario');
   renderUsuarios();
+  syncAutoSaveHook();
   // Atualizar configurações se estiver aberta
   if(el('cfg-acesso-usuarios')) renderConfiguracoes();
 }
@@ -6148,6 +6192,7 @@ function toggleUsuario(id) {
   });
   addAudit(usuarioLogado?.login||'admin', `Status de usuário alterado: ID ${id}`, '👤');
   renderUsuarios();
+  syncAutoSaveHook();
   toast('Status do usuário atualizado!');
 }
 
@@ -6251,13 +6296,13 @@ function salvarMeta() {
     if(!confirm(`Já existe meta para ${ind} em ${mes}. Substituir?`)) return;
     metasData = metasData.filter(m=>!(m.industria===ind&&m.mes===mes));
   }
-  const id = window._metaEditId || ('META-'+String(metasData.length+1).padStart(3,'0'));
+  const id = window._metaEditId || gerarId('META-', metasData);
   const obj = {id,industria:ind,mes,valor,tipo:el('meta-tipo').value,obs:el('meta-obs').value,usuario:usuarioLogado?.login||'admin',criado:new Date().toLocaleDateString('pt-BR')};
   metasData = metasData.filter(m=>m.id!==id);
   metasData.push(obj);
   window._metaEditId = null;
   addAudit(usuarioLogado?.login||'admin',`Meta ${ind} ${mes}: ${fmt(valor)}`,'🎯');
-  closeModal('modal-meta'); renderMetas(); toast('Meta salva com sucesso!');
+  closeModal('modal-meta'); renderMetas(); syncAutoSaveHook(); toast('Meta salva com sucesso!');
 }
 
 function editarMeta(id) {
@@ -6270,7 +6315,7 @@ function editarMeta(id) {
 }
 function excluirMeta(id) {
   if(!confirm('Remover esta meta?')) return;
-  metasData = metasData.filter(m=>m.id!==id); renderMetas(); toast('Meta removida.');
+  metasData = metasData.filter(m=>m.id!==id); renderMetas(); syncAutoSaveHook(); toast('Meta removida.');
 }
 
 /* ══════════════════════════
@@ -6406,7 +6451,7 @@ function salvarTratativa() {
   }
 
   const ped = pedidos.find(p=>p.id===pedId);
-  const id  = 'TRAT-'+String(tratativas.length+1).padStart(3,'0');
+  const id  = tratativaEditId || gerarId('TRAT-', tratativas);
   const agora = new Date().toLocaleString('pt-BR').slice(0,14);
 
   const trat = {
@@ -6433,6 +6478,7 @@ function salvarTratativa() {
   closeModal('modal-tratativa');
   renderTratativas(); renderFaturamento(); renderSaldo(); renderComissoes();
   atualizarBadgeTratativas();
+  syncAutoSaveHook();
   toast('Tratativa registrada! Módulos atualizados automaticamente.');
 }
 
@@ -6577,6 +6623,7 @@ function cancelarTratativa(id) {
   tratativas=tratativas.map(x=>x.id===id?{...x,status:'cancelada'}:x);
   addAudit(usuarioLogado?.login||'admin',`Tratativa ${id} cancelada`,'🔁');
   renderTratativas(); renderFaturamento(); renderSaldo(); renderComissoes();
+  syncAutoSaveHook();
   toast('Tratativa cancelada e impacto revertido.');
 }
 
@@ -6669,7 +6716,7 @@ function excluirRegra(id) {
   if(!confirm('Excluir esta regra comercial?')) return;
   regrasComerciais = regrasComerciais.filter(r=>r.id!==id);
   addAudit(usuarioLogado?.login||'admin','Regra excluída','⚙️');
-  renderRegras(); toast('Regra excluída.');
+  renderRegras(); syncAutoSaveHook(); toast('Regra excluída.');
 }
 
 function toggleRegra(id) {
@@ -6823,6 +6870,7 @@ function toggleModuloSistema(key, switchEl) {
   else          configSistema.modulosAtivos.push(key);
   switchEl.classList.toggle('on');
   addAudit(usuarioLogado?.login||'admin', `Módulo "${key}" ${idx>-1?'desativado':'ativado'}`, '⚙️');
+  syncAutoSaveHook();
   toast(`Módulo "${panelTitles[key]||key}" ${idx>-1?'desativado':'ativado'}.`);
 }
 
