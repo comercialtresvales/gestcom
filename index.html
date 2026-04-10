@@ -2867,9 +2867,20 @@ function salvarNF() {
   const nfObj={numero:num,data:el('nf-data').value||today(),valorPedido:ped?ped.total:0,
     valorNF:val,abatimentos:abat,devolucoes:dev,descFin:fin,nfd,bonif:bon,liquida:liq,pdf:null,xml:null};
   if(ped){
+    const jaTemNF = !!ped.nf;
     pedidos=pedidos.map(p=>p.id===pedId?{...p,nf:nfObj,status:p.status==='Implantado'?'Faturado total':p.status}:p);
-    // Gerar comissão automática
-    gerarComissaoAuto(ped, liq);
+    // Só gera nova comissão se o pedido ainda não tinha NF registrada
+    if(!jaTemNF) {
+      gerarComissaoAuto(ped, liq);
+    } else {
+      // Atualiza a comissão existente vinculada a este pedido (recalcula base e valor)
+      comissoes_data = comissoes_data.map(c => {
+        if(c.pedido === pedId && c.status === 'Prevista') {
+          return {...c, baseLiq: liq, valor: liq * c.pct / 100};
+        }
+        return c;
+      });
+    }
   }
   closeModal('modal-nf');
   renderFaturamento();
@@ -3490,11 +3501,19 @@ function selectCliente(nomeCliente, btn) {
   let prodsCli;
   if(isRedeAtual) {
     const filiaisAtu = clientes.filter(cx=>cx.rede===nomeRedeAtual).map(cx=>cx.nome);
-    prodsCli = mixProdutos.filter(p=> p.rede===nomeRedeAtual || filiaisAtu.includes(p.clienteEspecifico));
+    prodsCli = mixProdutos.filter(p=> {
+      const cat = PRODUTOS_CAT[p.cod];
+      if(!cat || cat.status === 'Inativo') return false;
+      return p.rede===nomeRedeAtual || filiaisAtu.includes(p.clienteEspecifico);
+    });
   } else {
     const cliObj = clientes.find(cx=>cx.nome===nomeCliente);
     const redeDoCli = cliObj ? cliObj.rede : '';
-    prodsCli = mixProdutos.filter(p=> p.clienteEspecifico===nomeCliente || (redeDoCli && p.rede===redeDoCli));
+    prodsCli = mixProdutos.filter(p=> {
+      const cat = PRODUTOS_CAT[p.cod];
+      if(!cat || cat.status === 'Inativo') return false;
+      return p.clienteEspecifico===nomeCliente || (redeDoCli && p.rede===redeDoCli);
+    });
   }
   const indsSet = new Set(prodsCli.map(p=>p.ind));
   const descs = prodsCli.filter(p=>p.desc_pct>0).map(p=>p.desc_pct);
@@ -3583,6 +3602,9 @@ function renderMix() {
   const filiaisRede = isRede ? clientes.filter(c=>c.rede===nomeRede).map(c=>c.nome) : [];
 
   const list=mixProdutos.map((p,i)=>({...p,_idx:i})).filter(p=>{
+    // Oculta produtos cujo catálogo foi excluído ou marcado como Inativo
+    const catProd = PRODUTOS_CAT[p.cod];
+    if(!catProd || catProd.status === 'Inativo') return false;
     // Filtro por cliente/rede selecionado
     if(clienteAtual) {
       if(isRede) {
@@ -3707,7 +3729,7 @@ function renderMix() {
 }
 
 function updateDesconto(idx,val){mixProdutos[idx].desc_pct=parseFloat(val)||0;renderMix();syncAutoSaveHook();}
-function toggleAtivo(idx){mixProdutos[idx].ativo=!mixProdutos[idx].ativo;renderMix();}
+function toggleAtivo(idx){mixProdutos[idx].ativo=!mixProdutos[idx].ativo;renderMix();syncAutoSaveHook();}
 function mixSalvarObs(idx,val){mixProdutos[idx].obs=val;syncAutoSaveHook();}
 
 // ── Mix: edição individual ──
@@ -3958,10 +3980,9 @@ function _resolverPrecoCanal(prod, segmentoCliente) {
 }
 
 function _clienteAtualObj() {
-  const chips = document.querySelectorAll('#cliente-chips .chip');
-  let nomeAtual = '';
-  chips.forEach(c => { if(c.classList.contains('active')) nomeAtual = c.dataset.nome || c.textContent.trim(); });
-  return clientes.find(c => c.nome === nomeAtual) || null;
+  // clienteAtual é a variável global que guarda o nome do cliente/rede selecionado
+  if(!clienteAtual || clienteAtual.startsWith('🔗 ')) return null;
+  return clientes.find(c => c.nome === clienteAtual) || null;
 }
 
 function prodAddUF() {
@@ -3984,24 +4005,6 @@ function prodAddUF() {
   _renderUFList(curCodigosUF, curEanUF);
   sel.value = '';
   toast('UF ' + uf + ' adicionada.', 'success');
-}
-
-function abrirNovoProduto() {
-  _prodEditCod = null;
-  el('prod-modal-titulo').textContent = 'Novo Produto';
-  el('p-cod').value = '';
-  el('p-cod').readOnly = false;
-  el('p-cod').style.background = '';
-  el('p-desc').value = ''; el('p-cat').value = '';
-  el('p-preco').value = ''; el('p-obs').value = ''; el('p-ean').value = '';
-  el('p-status').value = 'Ativo'; el('p-unid').value = 'UN';
-  if(el('p-preco-dist')) el('p-preco-dist').value = '';
-  if(el('p-preco-atac')) el('p-preco-atac').value = '';
-  if(el('p-preco-var'))  el('p-preco-var').value  = '';
-  _renderUFList({});
-  document.querySelectorAll('#p-disp-canais input[type=checkbox]').forEach(cb => cb.checked = true);
-  _popularSelectIndustria('p-ind', '');
-  openModal('modal-produto');
 }
 
 function novoProduto() {
@@ -4090,9 +4093,15 @@ function excluirProduto(cod) {
   if(emUso) {
     if(!confirm(`O produto "${cod} — ${p.desc}" está vinculado a pedidos ou orçamentos.\n\nDeseja marcá-lo como INATIVO em vez de excluir?`)) return;
     PRODUTOS_CAT[cod] = {...p, status:'Inativo'};
-    addAudit(usuarioLogado?.login||'admin', `Produto ${cod} marcado como inativo (em uso)`, '📦');
+    // Remove também do mix para não aparecer como item órfão
+    const qtdMixAntesMarcado = mixProdutos.length;
+    mixProdutos = mixProdutos.filter(m => m.cod !== cod);
+    const removidosMixMarcado = qtdMixAntesMarcado - mixProdutos.length;
+    addAudit(usuarioLogado?.login||'admin', `Produto ${cod} marcado como inativo (em uso)${removidosMixMarcado>0?' ('+removidosMixMarcado+' entrada(s) removida(s) do mix)':''}`, '📦');
     renderProdutos();
-    toast('Produto marcado como inativo (estava vinculado a registros existentes).');
+    renderMix();
+    syncAutoSaveHook();
+    toast(`Produto marcado como inativo (estava vinculado a registros existentes).${removidosMixMarcado>0?' ('+removidosMixMarcado+' item(ns) removido(s) do mix)':''}`);
     return;
   }
   if(!confirm(`Excluir permanentemente o produto:\n\n"${cod} — ${p.desc}"\n\nEsta ação não pode ser desfeita.`)) return;
@@ -4115,6 +4124,7 @@ function toggleStatusProduto(cod) {
   PRODUTOS_CAT[cod] = {...p, status: novoStatus};
   addAudit(usuarioLogado?.login||'admin', `Produto ${cod}: status → ${novoStatus}`, '📦');
   renderProdutos();
+  syncAutoSaveHook();
   toast(`Produto "${cod}" marcado como ${novoStatus}.`);
 }
 
@@ -5267,7 +5277,8 @@ function excluirCliente(id) {
     if(!confirm(`"${c.nome}" está vinculado a pedidos ou orçamentos.\nDeseja marcá-lo como Inativo?`)) return;
     clientes = clientes.map(x=>x.id===id ? {...x,status:'Inativo'} : x);
     addAudit(usuarioLogado?.login||'admin', `Cliente marcado inativo: ${c.nome}`, '👥');
-    renderClientes(); toast('Cliente marcado como inativo.'); return;
+    renderClientes(); renderDashboard(); syncAutoSaveHook();
+    toast('Cliente marcado como inativo.'); return;
   }
   if(!confirm(`Excluir permanentemente o cliente "${c.nome}"?`)) return;
   clientes = clientes.filter(x=>x.id!==id);
@@ -5505,7 +5516,7 @@ function excluirIndustria(id) {
     if(!confirm(`"${ind.nome}" está vinculada a pedidos, orçamentos ou produtos.\nDeseja marcá-la como Inativa?`)) return;
     industrias = industrias.map(x=>x.id===id ? {...x,status:'Inativo'} : x);
     addAudit(usuarioLogado?.login||'admin', `Indústria marcada inativa: ${ind.nome}`, '🏭');
-    renderIndustrias(); toast('Indústria marcada como inativa.'); return;
+    renderIndustrias(); syncAutoSaveHook(); toast('Indústria marcada como inativa.'); return;
   }
   if(!confirm(`Excluir permanentemente a indústria "${ind.nome}"?\n\nTodos os itens do mix dessa indústria também serão removidos.`)) return;
   industrias = industrias.filter(x=>x.id!==id);
@@ -7280,6 +7291,11 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
   if(Array.isArray(dados.tratativas))       tratativas = dados.tratativas;
   if(Array.isArray(dados.mixProdutos))      mixProdutos = dados.mixProdutos;
+  // Purga automaticamente itens do mix cujo produto foi excluído ou marcado Inativo no catálogo
+  mixProdutos = mixProdutos.filter(m => {
+    const cat = PRODUTOS_CAT[m.cod];
+    return cat && cat.status !== 'Inativo';
+  });
   // BUG FIX: restaura permissões granulares persistidas
   if(dados.userPerms && typeof dados.userPerms==='object') {
     Object.keys(userPerms).forEach(k=>delete userPerms[k]);
