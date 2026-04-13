@@ -620,8 +620,15 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo.</div>
       <div class="card" style="padding:0;overflow:hidden">
-          <tbody id="log-tbody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Data</th>
+              <th>Transportadora</th><th>Previsão Entrega</th><th>Status</th><th>Observação</th>
+            </tr></thead>
+            <tbody id="log-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
