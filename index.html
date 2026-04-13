@@ -3624,11 +3624,11 @@ function renderSaldo() {
   div.innerHTML = nomesClientes.map(cli=>{
     const pedsCli = pedidos.filter(p=>p.cliente===cli && !p.excluido);
     if(pedsCli.length===0) return '';
-    // Só pedidos de venda entram nos cálculos financeiros
-    const pedsVenda = pedsCli.filter(p=>(p.tipo||'venda')==='venda');
-    if(pedsVenda.length===0) return ''; // skip clientes só com bonificações
+    // Pedidos de venda E bonificação entram no saldo (bonificação não gera comissão mas gera saldo)
+    const pedsVenda = pedsCli; // todos os pedidos não excluídos do cliente
+    if(pedsVenda.length===0) return '';
 
-    // Usa pedsVenda (não pedsCli) para listar indústrias — garante consistência
+    // Usa pedsVenda para listar indústrias
     const indsDoCliente = nomesIndustrias.filter(ind=>pedsVenda.some(p=>p.industria===ind));
     const av = cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
@@ -3672,7 +3672,7 @@ function renderSaldo() {
             </tr></thead>
             <tbody>
               ${indsDoCliente.map(ind=>{
-                const pedsInd      = pedsCli.filter(p=>p.industria===ind && (p.tipo||'venda')==='venda');
+                const pedsInd      = pedsCli.filter(p=>p.industria===ind && !p.excluido);
                 if(pedsInd.length===0) return '';
                 const pTot  = pedsInd.reduce((s,p)=>s+p.total, 0);
                 const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
@@ -6188,6 +6188,7 @@ function fazerLogin() {
   toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!');
   renderOrcamentos(); renderPedidos(); renderMix(); renderProdutos();
   renderClientes(); renderIndustrias(); renderRedes(); renderDashboard();
+  renderLogistica(); renderSaldo(); renderComissoes(); renderFaturamento();
   popularSelectsDinamicos();
   el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
 }
@@ -8035,6 +8036,9 @@ pedidos.filter(p=>!p.excluido).forEach(p=>{
 el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
 atualizarBadgeTratativas();
 renderDashboard();
+// Garante que logística e saldo renderizam com dados do localStorage
+renderLogistica();
+renderSaldo();
 renderRedes();
 popularSelectsDinamicos();
 setTimeout(tentarReconexaoAuto, 800);
