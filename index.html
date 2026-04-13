@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -336,6 +337,7 @@ tr:last-child td{border-bottom:none;}
     <div class="nav-item" onclick="showPanel('nfcompare',this)"><span class="nav-icon">⚖️</span> Pedido × NF</div>
     <div class="nav-item" onclick="showPanel('logistica',this)"><span class="nav-icon">🚚</span> Logística</div>
     <div class="nav-item" onclick="showPanel('tratativas',this)"><span class="nav-icon">🔁</span> Tratativas <span class="nav-badge" id="badge-tratativas">0</span></div>
+    <div class="nav-item" onclick="showPanel('bonificacoes',this)"><span class="nav-icon">🎁</span> Bonificações</div>
   </div>
 
   <div class="sidebar-section">
@@ -442,7 +444,7 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Orçamentos</div><div class="section-sub">Criação e controle de orçamentos comerciais</div></div>
         <div class="export-btns">
           <button class="btn btn-outline btn-sm" onclick="importarArquivo('orcamento')">📥 Importar</button>
-          <button class="btn btn-primary btn-sm" onclick="openModal('modal-orcamento')">+ Novo Orçamento</button>
+          <button class="btn btn-primary btn-sm" onclick="novoOrcamento()">+ Novo Orçamento</button>
         </div>
       </div>
       <div class="search-bar">
@@ -465,6 +467,38 @@ tr:last-child td{border-bottom:none;}
       </div>
     </div>
 
+    <!-- ===== BONIFICAÇÕES ===== -->
+    <div class="panel" id="panel-bonificacoes">
+      <div class="section-bar">
+        <div>
+          <div class="section-title">🎁 Bonificações</div>
+          <div class="section-sub">Registros de pedidos de bonificação — não geram comissão</div>
+        </div>
+        <div class="export-btns">
+          <button class="btn btn-info btn-sm" onclick="exportarBonificacoes()">📤 Exportar Excel</button>
+        </div>
+      </div>
+      <div class="alert alert-warning">🎁 Pedidos de bonificação são registros separados. <strong>Não geram comissão</strong> e não afetam o saldo financeiro do cliente.</div>
+      <div class="search-bar">
+        <input id="bonif-busca" placeholder="🔍 Nº registro, cliente, pedido..." oninput="renderBonificacoes()">
+        <select id="bonif-filtro-ind" onchange="renderBonificacoes()">
+          <option value="">Todas as indústrias</option>
+        </select>
+        <select id="bonif-filtro-cli" onchange="renderBonificacoes()">
+          <option value="">Todos os clientes</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Pedido</th><th>Cliente</th><th>Indústria</th>
+            <th>Data</th><th>NF</th><th>Valor Pedido</th><th>Valor NF</th><th>Mês</th><th>Status</th>
+          </tr></thead>
+          <tbody id="bonif-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ===== PEDIDOS ===== -->
     <div class="panel" id="panel-pedidos">
       <div class="section-bar">
@@ -472,11 +506,16 @@ tr:last-child td{border-bottom:none;}
         <div class="export-btns">
           <button class="btn btn-outline btn-sm" onclick="importarArquivo('pedido')">📥 Importar Excel/PDF</button>
           <button class="btn btn-info btn-sm" onclick="exportarPedidos()">📤 Exportar Excel</button>
-          <button class="btn btn-primary btn-sm" onclick="openModal('modal-pedido')">+ Novo Pedido</button>
+          <button class="btn btn-primary btn-sm" onclick="novoPedido()">+ Novo Pedido</button>
         </div>
       </div>
       <div class="search-bar">
         <input id="ped-busca" placeholder="🔍 Nº pedido, cliente..." oninput="renderPedidos()">
+        <select id="ped-filtro-tipo" onchange="renderPedidos()">
+          <option value="">Todos os tipos</option>
+          <option value="venda">🛒 Venda</option>
+          <option value="bonificacao">🎁 Bonificação</option>
+        </select>
         <select id="ped-filtro-status" onchange="renderPedidos()">
           <option value="">Todos os status</option>
           <option>Recebido</option><option>Em digitação</option><option>Implantado</option>
@@ -490,7 +529,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Condição</th><th>Itens</th><th>Total Pedido</th><th>NF Líquida</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>#</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Condição</th><th>Itens</th><th>Total Pedido</th><th>NF Líquida</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="ped-tbody"></tbody>
         </table>
       </div>
@@ -510,7 +549,7 @@ tr:last-child td{border-bottom:none;}
         <button class="month-pill active" onclick="filtrarFatMes('',this)">Todos</button>
         <button class="month-pill" onclick="filtrarFatMes('2026-01',this)">Jan/26</button>
         <button class="month-pill" onclick="filtrarFatMes('2026-02',this)">Fev/26</button>
-        <button class="month-pill active" onclick="filtrarFatMes('2026-03',this)">Mar/26</button>
+        <button class="month-pill" onclick="filtrarFatMes('2026-03',this)">Mar/26</button>
         <button class="month-pill" onclick="filtrarFatMes('2026-04',this)">Abr/26</button>
         <button class="month-pill" onclick="filtrarFatMes('2026-05',this)">Mai/26</button>
       </div>
@@ -574,9 +613,8 @@ tr:last-child td{border-bottom:none;}
           <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option>
         </select>
       </div>
+      <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo.</div>
       <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr><th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Data Pedido</th><th>Transportadora</th><th>Previsão Entrega</th><th>Status Logístico</th><th>Ações</th></tr></thead>
           <tbody id="log-tbody"></tbody>
         </table>
       </div>
@@ -1337,7 +1375,7 @@ tr:last-child td{border-bottom:none;}
     <table class="itens-table">
       <thead><tr><th>Código</th><th>Descrição</th><th>Indústria</th><th>Preço Tab.</th><th>Qtd</th><th>% Desc.</th><th>Preço Unit.</th><th>Total</th><th></th></tr></thead>
       <tbody id="orc-itens-tbody">
-        <tr id="orc-itens-empty"><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>
+        <tr><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>
       </tbody>
     </table>
 
@@ -1371,7 +1409,7 @@ tr:last-child td{border-bottom:none;}
     </div>
     <div class="form-grid" style="margin-bottom:12px">
       <div class="form-group"><label>Cliente / Filial *</label>
-        <select id="ped-cli" onchange="pedAutoFillRede()"><option value="">Selecione...</option></select>
+        <select id="ped-cli" onchange="pedAutoFillRede();pedCalcItem()"><option value="">Selecione...</option></select>
       </div>
       <div class="form-group" id="ped-rede-info-group" style="display:none">
         <label>Rede vinculada <span style="font-size:10px;color:#888;font-weight:400">(auto)</span></label>
@@ -1382,10 +1420,21 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-group"><label>Data do Pedido</label><input type="date" id="ped-data"></div>
       <div class="form-group"><label>Condição Comercial</label><input type="text" id="ped-cond" placeholder="Ex: 28D, 30/60D"></div>
+      <div class="form-group"><label>Tipo de Pedido *</label>
+        <select id="ped-tipo" onchange="pedTipoChange(this.value)" style="font-weight:600">
+          <option value="venda">🛒 Venda — gera comissão</option>
+          <option value="bonificacao">🎁 Bonificação — gera saldo, sem comissão</option>
+        </select>
+      </div>
       <div class="form-group"><label>Status</label>
         <select id="ped-status"><option>Recebido</option><option>Em digitação</option><option>Implantado</option><option>Faturado parcial</option><option>Faturado total</option><option>Expedido</option><option>Agendado</option><option>Entregue</option><option>Cancelado</option></select>
       </div>
       <div class="form-group"><label>Orçamento de origem (opcional)</label><input type="text" id="ped-orc-origem" placeholder="ORC-0001"></div>
+    </div>
+
+    <!-- Banner de bonificação (visível só quando tipo=bonificacao) -->
+    <div id="ped-bonif-alert" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #d97706;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
+      🎁 <strong>Pedido de Bonificação:</strong> este pedido <strong>não gerará comissão</strong>. O valor total será registrado como saldo de bonificação para o cliente × indústria.
     </div>
 
     <!-- Adicionar produto ao pedido -->
@@ -1419,7 +1468,7 @@ tr:last-child td{border-bottom:none;}
     <table class="itens-table">
       <thead><tr><th>Código</th><th>Descrição</th><th>Indústria</th><th>Preço Tab.</th><th>Qtd</th><th>% Desc.</th><th>Preço Unit.</th><th>Total</th><th></th></tr></thead>
       <tbody id="ped-itens-tbody">
-        <tr id="ped-itens-empty"><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>
+        <tr><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>
       </tbody>
     </table>
 
@@ -1448,10 +1497,14 @@ tr:last-child td{border-bottom:none;}
   <div class="modal">
     <div class="modal-title">Registrar Nota Fiscal<button class="close-btn" onclick="closeModal('modal-nf')">✕</button></div>
     <div class="alert alert-info">O <strong>valor líquido da NF</strong> será a base de cálculo da comissão. Preencha todos os abatimentos.</div>
+    <!-- Aviso quando pedido vinculado for bonificação -->
+    <div id="nf-bonif-alert" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #d97706;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
+      🎁 <strong>Pedido de Bonificação:</strong> esta NF será registrada como bonificação. <strong>Não gerará comissão.</strong> Um registro separado será criado na aba Bonificações.
+    </div>
     <div class="form-grid">
       <div class="form-group"><label>Número da NF *</label><input id="nf-num" placeholder="000001"></div>
       <div class="form-group"><label>Pedido vinculado *</label>
-        <select id="nf-pedido"><option value="">Selecione o pedido...</option></select>
+        <select id="nf-pedido" onchange="nfPedidoChange(this.value)"><option value="">Selecione o pedido...</option></select>
       </div>
       <div class="form-group"><label>Data de emissão</label><input type="date" id="nf-data"></div>
       <div class="form-group"><label>Valor do Pedido (ref.)</label><input type="number" id="nf-val-pedido" placeholder="0,00" readonly style="background:#f4f3ef"></div>
@@ -2040,6 +2093,9 @@ let faturamentos = [];
 
 let comissoes_data = [];
 
+// Registros separados de bonificações (pedidos tipo 'bonificacao' — sem comissão)
+let bonificacoesData = [];
+
 // Mix de produtos — vazio para início limpo
 let mixProdutos = [];
 
@@ -2274,7 +2330,7 @@ function statusClass(s) {
    NAVEGAÇÃO
 ══════════════════════════ */
 const panelTitles = {
-  sync:'Sincronização em Nuvem',pedidos:'Gestão de Pedidos',
+  sync:'Sincronização em Nuvem',pedidos:'Gestão de Pedidos',bonificacoes:'Bonificações',
   faturamento:'Faturamento / Notas Fiscais',nfcompare:'Comparação Pedido × NF',
   logistica:'Controle Logístico',saldo:'Saldo por Cliente × Indústria',
   comissoes:'Controle de Comissões',sellinout:'Sell In / Sell Out',
@@ -2311,6 +2367,7 @@ function showPanel(name, navEl) {
 
   if(name==='orcamentos')   renderOrcamentos();
   if(name==='pedidos')      renderPedidos();
+  if(name==='bonificacoes') renderBonificacoes();
   if(name==='faturamento')  renderFaturamento();
   if(name==='nfcompare')    renderNFCompare();
   if(name==='comissoes')    renderComissoes();
@@ -2369,6 +2426,22 @@ function renderOrcamentos() {
       </div>
     </td>
   </tr>`).join('');
+}
+
+function novoOrcamento() {
+  orcEditId = null;
+  orcItens = [];
+  el('orc-modal-titulo').textContent = 'Novo Orçamento';
+  el('orc-cli').value = '';
+  el('orc-ind').value = '';
+  el('orc-data').value = today();
+  el('orc-validade').value = '';
+  el('orc-cond').value = '';
+  el('orc-status').value = 'Rascunho';
+  el('orc-obs').value = '';
+  renderOrcItens();
+  popularSelectsDinamicos();
+  openModal('modal-orcamento');
 }
 
 function editarOrcamento(id) {
@@ -2462,25 +2535,57 @@ function orcAddItem() {
 
 function renderOrcItens() {
   const tbody = el('orc-itens-tbody');
-  const empty = el('orc-itens-empty');
   if(orcItens.length===0){tbody.innerHTML='<tr id="orc-itens-empty"><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>';return;}
-  const subtotal = orcItens.reduce((s,i)=>s+i.precoTab*i.qtd,0);
-  const total = orcItens.reduce((s,i)=>s+i.total,0);
-  const descTotal = subtotal-total;
+  const inStyle = 'padding:3px 6px;border:1.5px solid var(--cinza-medio);border-radius:4px;font-size:12px;font-family:\'DM Sans\',sans-serif;outline:none;';
   tbody.innerHTML = orcItens.map((it,i)=>`<tr>
-    <td class="mono">${it.cod}</td>
+    <td class="mono">${esc(it.cod)}</td>
     <td>${esc(it.desc)}</td>
     <td><span class="tag">${esc(it.ind||'—')}</span></td>
-    <td>${fmt(it.precoTab)}</td>
-    <td>${it.qtd}</td>
-    <td>${it.descPct}%</td>
-    <td>${fmt(it.precoUnit)}</td>
-    <td class="bold verde">${fmt(it.total)}</td>
+    <td style="color:#888;font-size:11px">${fmt(it.precoTab)}</td>
+    <td><input type="number" value="${it.qtd}" min="1" style="${inStyle}width:56px" title="Quantidade"
+      onfocus="this.style.borderColor='var(--amarelo)'"
+      onblur="this.style.borderColor='var(--cinza-medio)'"
+      oninput="orcAtualizarItem(${i},'qtd',this.value)"></td>
+    <td><input type="number" value="${it.descPct}" min="0" max="100" style="${inStyle}width:54px" title="% Desconto"
+      onfocus="this.style.borderColor='var(--amarelo)'"
+      onblur="this.style.borderColor='var(--cinza-medio)'"
+      oninput="orcAtualizarItem(${i},'descPct',this.value)"></td>
+    <td><input type="text" inputmode="decimal" value="${fmtN(it.precoUnit)}" style="${inStyle}width:80px;font-weight:600;color:var(--azul)" title="Preço Unitário (editável)"
+      onfocus="this.style.borderColor='var(--amarelo)'"
+      onblur="this.style.borderColor='var(--cinza-medio)';orcAtualizarItem(${i},'precoUnit',this.value)"></td>
+    <td class="bold verde" id="orc-it-tot-${i}">${fmt(it.total)}</td>
     <td><button class="btn btn-danger btn-xs" onclick="orcRemItem(${i})">✕</button></td>
   </tr>`).join('');
-  el('orc-subtotal').textContent = fmt(subtotal);
-  el('orc-desc-total').textContent = '- '+fmt(descTotal);
-  el('orc-total-val').textContent = fmt(total);
+  _orcAtualizarTotais();
+}
+
+function orcAtualizarItem(i, campo, valor) {
+  const it = orcItens[i]; if(!it) return;
+  if(campo === 'qtd') {
+    it.qtd = parseFloat(valor)||1;
+    it.total = it.precoUnit * it.qtd;
+  } else if(campo === 'descPct') {
+    it.descPct = parseFloat(valor)||0;
+    it.precoUnit = it.precoTab * (1 - it.descPct/100);
+    it.total = it.precoUnit * it.qtd;
+  } else if(campo === 'precoUnit') {
+    it.precoUnit = parsePrecoBR(valor);
+    // Recalcula % desconto a partir do novo preço manual
+    it.descPct = it.precoTab > 0 ? Math.round((1 - it.precoUnit/it.precoTab)*100*100)/100 : 0;
+    it.total = it.precoUnit * it.qtd;
+  }
+  // Atualiza só o total da linha sem re-renderizar tudo (preserva foco)
+  const totEl = el('orc-it-tot-'+i);
+  if(totEl) totEl.textContent = fmt(it.total);
+  _orcAtualizarTotais();
+}
+
+function _orcAtualizarTotais() {
+  const subtotal = orcItens.reduce((s,i)=>s+i.precoTab*i.qtd,0);
+  const total    = orcItens.reduce((s,i)=>s+i.total,0);
+  if(el('orc-subtotal'))   el('orc-subtotal').textContent = fmt(subtotal);
+  if(el('orc-desc-total')) el('orc-desc-total').textContent = '- '+fmt(subtotal-total);
+  if(el('orc-total-val'))  el('orc-total-val').textContent = fmt(total);
 }
 
 function orcRemItem(i) { orcItens.splice(i,1); renderOrcItens(); }
@@ -2491,7 +2596,7 @@ function salvarOrcamento() {
   if(orcItens.length===0){alert('Adicione pelo menos um produto.');return;}
   const total = orcItens.reduce((s,i)=>s+i.total,0);
   const obj = {
-    id: orcEditId || ('ORC-' + String(orcamentos.length+1).padStart(4,'0')),
+    id: orcEditId || (()=>{ let n=orcamentos.length+1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));return id; })(),
     cliente: cli, industria: el('orc-ind').value, data: el('orc-data').value||today(),
     validade: el('orc-validade').value, cond: el('orc-cond').value,
     status: el('orc-status').value, itens: [...orcItens], total, obs: el('orc-obs').value,
@@ -2501,16 +2606,21 @@ function salvarOrcamento() {
   orcItens = []; orcEditId = null;
   closeModal('modal-orcamento');
   renderOrcamentos();
+  renderDashboard();
+  syncAutoSaveHook();
   toast('Orçamento salvo com sucesso!');
 }
 
 function converterEmPedido(id) {
   const o = orcamentos.find(x=>x.id===id);
   if(!o||!confirm('Converter orçamento em pedido?')) return;
-  const pedId = 'PED-' + String(pedidos.length+1).padStart(4,'0');
-  pedidos.push({id:pedId,cliente:o.cliente,industria:o.industria,data:today(),cond:o.cond,status:'Recebido',itens:o.itens.map(i=>({...i})),total:o.total,obs:'Gerado a partir de '+o.id,orcOrigem:o.id,nf:null});
+  const pedId = _gerarIdPedido();
+  const pedObj = {id:pedId,tipo:'venda',cliente:o.cliente,industria:o.industria,data:today(),cond:o.cond,status:'Recebido',itens:o.itens.map(i=>({...i})),total:o.total,obs:'Gerado a partir de '+o.id,orcOrigem:o.id,nf:null};
+  pedidos.push(pedObj);
+  _sincLogisticaPedido(pedObj);
   orcamentos = orcamentos.map(x=>x.id===id?{...x,status:'Convertido em pedido'}:x);
   renderOrcamentos(); renderPedidos();
+  syncAutoSaveHook();
   toast('Convertido em '+pedId+'!');
 }
 
@@ -2666,22 +2776,30 @@ function renderPedidos() {
   const busca = (el('ped-busca')||{}).value?.toLowerCase()||'';
   const filtSt = (el('ped-filtro-status')||{}).value||'';
   const filtInd = (el('ped-filtro-ind')||{}).value||'';
+  const filtTipo = (el('ped-filtro-tipo')||{}).value||'';
   const tbody = el('ped-tbody'); if(!tbody) return;
   const list = pedidos.filter(p=>{
     if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)) return false;
     if(filtSt&&p.status!==filtSt) return false;
     if(filtInd&&p.industria!==filtInd) return false;
+    if(filtTipo&&(p.tipo||'venda')!==filtTipo) return false;
     return true;
   });
-  tbody.innerHTML = list.length===0 ? `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
-  list.map(p=>`<tr>
+  tbody.innerHTML = list.length===0 ? `<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
+  list.map(p=>{
+    const isBonif = p.tipo === 'bonificacao';
+    const tipoBadge = isBonif
+      ? `<span class="badge badge-laranja" title="Bonificação — sem comissão">🎁 BONIF</span>`
+      : `<span class="badge badge-azul" title="Pedido de venda">🛒 Venda</span>`;
+    return `<tr>
     <td class="mono bold">${p.id}</td>
+    <td>${tipoBadge}</td>
     <td><strong>${esc(p.cliente)}</strong></td>
     <td><span class="tag">${esc(p.industria)}</span></td>
     <td>${p.data}</td>
     <td>${p.cond||'—'}</td>
     <td>${p.itens.length}</td>
-    <td class="bold">${fmt(p.total)}</td>
+    <td class="bold ${isBonif?'laranja':''}">${fmt(p.total)}</td>
     <td class="bold verde">${p.nf?fmt(p.nf.liquida):'—'}</td>
     <td><span class="badge ${statusClass(p.status)}">${p.status}</span></td>
     <td>
@@ -2692,7 +2810,77 @@ function renderPedidos() {
         <button class="btn btn-roxo btn-xs" onclick="abrirCompare('${p.id}')">⚖️</button>
       </div>
     </td>
+  </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════
+   BONIFICAÇÕES
+══════════════════════════ */
+function renderBonificacoes() {
+  const tbody = el('bonif-tbody'); if(!tbody) return;
+  const busca  = (el('bonif-busca')||{}).value?.toLowerCase()||'';
+  const filtInd = (el('bonif-filtro-ind')||{}).value||'';
+  const filtCli = (el('bonif-filtro-cli')||{}).value||'';
+
+  let list = [...bonificacoesData];
+  if(filtInd) list = list.filter(b=>b.industria===filtInd);
+  if(filtCli) list = list.filter(b=>b.cliente===filtCli);
+  if(busca)   list = list.filter(b=>
+    b.id.toLowerCase().includes(busca) ||
+    b.pedido.toLowerCase().includes(busca) ||
+    b.cliente.toLowerCase().includes(busca) ||
+    (b.nf||'').toLowerCase().includes(busca)
+  );
+
+  if(list.length===0){
+    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">
+      Nenhuma bonificação registrada.<br><span style="font-size:11px">Crie um pedido do tipo <strong>Bonificação</strong> e registre a NF para que apareça aqui.</span>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(b=>`<tr>
+    <td class="mono bold" style="color:var(--laranja)">${b.id}</td>
+    <td class="mono">${b.pedido}</td>
+    <td><strong>${esc(b.cliente)}</strong></td>
+    <td><span class="tag">${esc(b.industria)}</span></td>
+    <td>${b.data}</td>
+    <td class="mono">${b.nf||'—'}</td>
+    <td>${fmt(b.valorPedido)}</td>
+    <td class="bold" style="color:var(--laranja)">${fmt(b.valorNF)}</td>
+    <td><span class="pill">${b.mes}</span></td>
+    <td><span class="badge badge-laranja">${b.status}</span></td>
   </tr>`).join('');
+}
+
+function exportarBonificacoes() {
+  const wb = XLSX.utils.book_new();
+  const rows = [['#','Pedido','Cliente','Indústria','Data','NF','Valor Pedido','Valor NF','Mês','Status']];
+  bonificacoesData.forEach(b=>rows.push([b.id,b.pedido,b.cliente,b.industria,b.data,b.nf||'',b.valorPedido,b.valorNF,b.mes,b.status]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:12},{wch:22},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Bonificacoes');
+  XLSX.writeFile(wb,'Bonificacoes_TresVales.xlsx');
+  toast('Excel de bonificações exportado!');
+}
+
+function novoPedido() {
+  pedEditId = null;
+  pedItens = [];
+  el('ped-modal-titulo').textContent = 'Novo Pedido';
+  el('ped-cli').value = '';
+  el('ped-ind').value = '';
+  el('ped-data').value = today();
+  el('ped-cond').value = '';
+  el('ped-status').value = 'Recebido';
+  el('ped-tipo').value = 'venda';
+  el('ped-obs').value = '';
+  el('ped-orc-origem').value = '';
+  if(el('ped-rede-info-group')) el('ped-rede-info-group').style.display = 'none';
+  pedTipoChange('venda');
+  renderPedItens();
+  popularSelectsDinamicos();
+  openModal('modal-pedido');
 }
 
 function editarPedido(id) {
@@ -2706,9 +2894,17 @@ function editarPedido(id) {
   el('ped-data').value = p.data;
   el('ped-cond').value = p.cond||'';
   el('ped-status').value = p.status;
+  el('ped-tipo').value = p.tipo || 'venda';
+  pedTipoChange(p.tipo || 'venda');
   el('ped-obs').value = p.obs||'';
+  el('ped-orc-origem').value = p.orcOrigem||'';
   renderPedItens();
   openModal('modal-pedido');
+}
+
+function pedTipoChange(val) {
+  const alert = el('ped-bonif-alert');
+  if(alert) alert.style.display = val === 'bonificacao' ? 'block' : 'none';
 }
 
 function pedCalcItem() {
@@ -2733,6 +2929,9 @@ function pedAddItem() {
   const precoUnit = precoTab*(1-descPct/100);
   const total = precoUnit*qtd;
   if(!cod||!desc){alert('Preencha código e descrição.');return;}
+  if(precoTab===0){
+    if(!confirm(`Atenção: o produto "${cod}" não foi encontrado na tabela de preços (preço R$ 0,00).\nDeseja adicionar mesmo assim?`)) return;
+  }
   pedItens.push({cod,desc,ind,precoTab,qtd,descPct,precoUnit,total});
   el('ped-add-cod').value='';el('ped-add-desc').value='';el('ped-add-ind').value='';
   el('ped-add-qtd').value=1;el('ped-add-desc-pct').value=0;el('ped-add-total').value='';
@@ -2742,39 +2941,125 @@ function pedAddItem() {
 function renderPedItens() {
   const tbody = el('ped-itens-tbody');
   if(pedItens.length===0){tbody.innerHTML='<tr id="ped-itens-empty"><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>';return;}
-  const subtotal = pedItens.reduce((s,i)=>s+i.precoTab*i.qtd,0);
-  const total = pedItens.reduce((s,i)=>s+i.total,0);
+  const inStyle = 'padding:3px 6px;border:1.5px solid var(--cinza-medio);border-radius:4px;font-size:12px;font-family:\'DM Sans\',sans-serif;outline:none;';
   tbody.innerHTML = pedItens.map((it,i)=>`<tr>
-    <td class="mono">${it.cod}</td><td>${esc(it.desc)}</td>
+    <td class="mono">${esc(it.cod)}</td>
+    <td>${esc(it.desc)}</td>
     <td><span class="tag">${esc(it.ind||'—')}</span></td>
-    <td>${fmt(it.precoTab)}</td><td>${it.qtd}</td><td>${it.descPct}%</td>
-    <td>${fmt(it.precoUnit)}</td>
-    <td class="bold verde">${fmt(it.total)}</td>
+    <td style="color:#888;font-size:11px">${fmt(it.precoTab)}</td>
+    <td><input type="number" value="${it.qtd}" min="1" style="${inStyle}width:56px" title="Quantidade"
+      onfocus="this.style.borderColor='var(--amarelo)'"
+      onblur="this.style.borderColor='var(--cinza-medio)'"
+      oninput="pedAtualizarItem(${i},'qtd',this.value)"></td>
+    <td><input type="number" value="${it.descPct}" min="0" max="100" style="${inStyle}width:54px" title="% Desconto"
+      onfocus="this.style.borderColor='var(--amarelo)'"
+      onblur="this.style.borderColor='var(--cinza-medio)'"
+      oninput="pedAtualizarItem(${i},'descPct',this.value)"></td>
+    <td><input type="text" inputmode="decimal" value="${fmtN(it.precoUnit)}" style="${inStyle}width:80px;font-weight:600;color:var(--azul)" title="Preço Unitário (editável)"
+      onfocus="this.style.borderColor='var(--amarelo)'"
+      onblur="this.style.borderColor='var(--cinza-medio)';pedAtualizarItem(${i},'precoUnit',this.value)"></td>
+    <td class="bold verde" id="ped-it-tot-${i}">${fmt(it.total)}</td>
     <td><button class="btn btn-danger btn-xs" onclick="pedRemItem(${i})">✕</button></td>
   </tr>`).join('');
-  el('ped-subtotal').textContent = fmt(subtotal);
-  el('ped-desc-total').textContent = '- '+fmt(subtotal-total);
-  el('ped-total-val').textContent = fmt(total);
+  _pedAtualizarTotais();
+}
+
+function pedAtualizarItem(i, campo, valor) {
+  const it = pedItens[i]; if(!it) return;
+  if(campo === 'qtd') {
+    it.qtd = parseFloat(valor)||1;
+    it.total = it.precoUnit * it.qtd;
+  } else if(campo === 'descPct') {
+    it.descPct = parseFloat(valor)||0;
+    it.precoUnit = it.precoTab * (1 - it.descPct/100);
+    it.total = it.precoUnit * it.qtd;
+  } else if(campo === 'precoUnit') {
+    it.precoUnit = parsePrecoBR(valor);
+    // Recalcula % desconto a partir do novo preço manual
+    it.descPct = it.precoTab > 0 ? Math.round((1 - it.precoUnit/it.precoTab)*100*100)/100 : 0;
+    it.total = it.precoUnit * it.qtd;
+  }
+  const totEl = el('ped-it-tot-'+i);
+  if(totEl) totEl.textContent = fmt(it.total);
+  _pedAtualizarTotais();
+}
+
+function _pedAtualizarTotais() {
+  const subtotal = pedItens.reduce((s,i)=>s+i.precoTab*i.qtd,0);
+  const total    = pedItens.reduce((s,i)=>s+i.total,0);
+  if(el('ped-subtotal'))   el('ped-subtotal').textContent = fmt(subtotal);
+  if(el('ped-desc-total')) el('ped-desc-total').textContent = '- '+fmt(subtotal-total);
+  if(el('ped-total-val'))  el('ped-total-val').textContent = fmt(total);
 }
 
 function pedRemItem(i) { pedItens.splice(i,1); renderPedItens(); }
+
+function _gerarIdPedido() {
+  // Gera ID único evitando colisões mesmo após deleções
+  let n = pedidos.length + 1;
+  let id;
+  do { id = 'PED-' + String(n).padStart(4,'0'); n++; } while(pedidos.some(x=>x.id===id));
+  return id;
+}
+
+// Status que ativam entrada na logística (a partir de Implantado)
+const STATUS_LOG_GATILHO = new Set([
+  'Implantado','Faturado parcial','Faturado total','Expedido','Agendado','Entregue'
+]);
+
+function _sincLogisticaPedido(ped) {
+  // Só entra na logística a partir do status "Implantado"
+  if(!STATUS_LOG_GATILHO.has(ped.status)) return;
+
+  const idx = logisticaData.findIndex(l => l.pedId === ped.id);
+  if(idx < 0) {
+    // Primeira vez que o pedido atinge Implantado — cria entrada
+    logisticaData.push({
+      pedId:          ped.id,
+      cliente:        ped.cliente,
+      industria:      ped.industria,
+      data:           ped.data,
+      transportadora: '',
+      previsao:       '',
+      statusLog:      'Pedido Digitado',
+      obs:            ''
+    });
+  } else {
+    // Já existe — atualiza apenas dados cadastrais (preserva campos logísticos)
+    logisticaData[idx] = {
+      ...logisticaData[idx],
+      cliente:   ped.cliente,
+      industria: ped.industria,
+      data:      ped.data
+    };
+  }
+}
 
 function salvarPedido() {
   const cli = el('ped-cli').value;
   if(!cli){alert('Selecione um cliente.');return;}
   if(pedItens.length===0){alert('Adicione pelo menos um produto.');return;}
   const total = pedItens.reduce((s,i)=>s+i.total,0);
+  const orcOrigem = el('ped-orc-origem')?.value?.trim() || '';
+  const tipo = el('ped-tipo')?.value || 'venda';
   const obj = {
-    id: pedEditId || ('PED-' + String(pedidos.length+1).padStart(4,'0')),
-    cliente:cli,industria:el('ped-ind').value,data:el('ped-data').value||today(),
-    cond:el('ped-cond').value,status:el('ped-status').value,
-    itens:[...pedItens],total,obs:el('ped-obs').value,orcOrigem:'',nf:null
+    id: pedEditId || _gerarIdPedido(),
+    tipo,
+    cliente:cli, industria:el('ped-ind').value, data:el('ped-data').value||today(),
+    cond:el('ped-cond').value, status:el('ped-status').value,
+    itens:[...pedItens], total, obs:el('ped-obs').value, orcOrigem
   };
-  if(pedEditId){pedidos=pedidos.map(x=>x.id===pedEditId?{...x,...obj,nf:x.nf}:x);}
-  else{pedidos.push(obj);}
+  if(pedEditId){
+    pedidos = pedidos.map(x => x.id===pedEditId ? {...x, ...obj, nf:x.nf} : x);
+  } else {
+    pedidos.push({...obj, nf:null});
+  }
+  _sincLogisticaPedido(obj);
   pedItens=[]; pedEditId=null;
   closeModal('modal-pedido');
   renderPedidos();
+  renderLogistica();
+  syncAutoSaveHook();
   toast('Pedido salvo com sucesso!');
 }
 
@@ -2798,9 +3083,9 @@ function gerarPedPDF(p) {
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(200,200,200);
   doc.text('Gestão Comercial',14,21);
   doc.setTextColor(26,26,26);doc.setFontSize(14);doc.setFont('helvetica','bold');
-  doc.text(`PEDIDO ${p.id}`,14,44);
+  doc.text(`PEDIDO ${p.id}${p.tipo==='bonificacao'?' — BONIFICAÇÃO':''}`,14,44);
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
-  doc.text(`Status: ${p.status}`,14,51);
+  doc.text(`Status: ${p.status}  |  Tipo: ${p.tipo==='bonificacao'?'Bonificação':'Venda'}`,14,51);
   doc.setTextColor(26,26,26);
   let y=62;
   doc.setFillColor(244,243,239);doc.rect(10,y-5,yw-20,20,'F');
@@ -2847,8 +3132,8 @@ function gerarPedExcel(p){
 
 function exportarPedidos(){
   const wb=XLSX.utils.book_new();
-  const rows=[['#','Cliente','Indústria','Data','Condição','Total Pedido','NF Líquida','Status']];
-  pedidos.forEach(p=>rows.push([p.id,p.cliente,p.industria,p.data,p.cond,p.total,p.nf?p.nf.liquida:'',p.status]));
+  const rows=[['#','Tipo','Cliente','Indústria','Data','Condição','Total Pedido','NF Líquida','Status']];
+  pedidos.forEach(p=>rows.push([p.id,p.tipo||'venda',p.cliente,p.industria,p.data,p.cond,p.total,p.nf?p.nf.liquida:'',p.status]));
   const ws=XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
   XLSX.writeFile(wb,'Pedidos_TresVales.xlsx');toast('Excel exportado!');
@@ -2857,6 +3142,15 @@ function exportarPedidos(){
 /* ══════════════════════════
    FATURAMENTO
 ══════════════════════════ */
+function nfPedidoChange(pedId) {
+  const ped = pedidos.find(p=>p.id===pedId);
+  const alert = el('nf-bonif-alert');
+  if(alert) alert.style.display = (ped && ped.tipo==='bonificacao') ? 'block' : 'none';
+  // Preenche valor de referência do pedido
+  const valEl = el('nf-val-pedido');
+  if(valEl) valEl.value = ped ? ped.total : '';
+}
+
 function calcNFLiquida() {
   const val=parseFloat(el('nf-valor').value)||0;
   const abat=parseFloat(el('nf-abat').value)||0;
@@ -2885,18 +3179,40 @@ function salvarNF() {
     valorNF:val,abatimentos:abat,devolucoes:dev,descFin:fin,nfd,bonif:bon,liquida:liq,pdf:null,xml:null};
   if(ped){
     pedidos=pedidos.map(p=>p.id===pedId?{...p,nf:nfObj,status:p.status==='Implantado'?'Faturado total':p.status}:p);
-    // Gerar comissão automática
-    gerarComissaoAuto(ped, liq);
+    // Limpa formulário
+    ['nf-num','nf-valor','nf-abat','nf-devolucoes','nf-desc-fin','nf-nfd','nf-bonif','nf-obs'].forEach(id=>{const e=el(id);if(e)e.value='';});
+    if(el('nf-abat'))el('nf-abat').value='0';
+    if(el('nf-devolucoes'))el('nf-devolucoes').value='0';
+    if(el('nf-desc-fin'))el('nf-desc-fin').value='0';
+    if(el('nf-nfd'))el('nf-nfd').value='0';
+    if(el('nf-bonif'))el('nf-bonif').value='0';
+    if(el('nf-liquida-val'))el('nf-liquida-val').textContent='R$ 0,00';
+    if(el('nf-bonif-alert'))el('nf-bonif-alert').style.display='none';
+    if(ped.tipo === 'bonificacao') {
+      // Pedido de bonificação: cria registro separado, NÃO gera comissão
+      _registrarBonificacao(ped, nfObj);
+      closeModal('modal-nf');
+      renderFaturamento(); renderPedidos(); popularSelectsDinamicos(); renderDashboard();
+      syncAutoSaveHook();
+      toast('NF de bonificação registrada! (sem geração de comissão)');
+    } else {
+      // Pedido de venda: gera comissão normalmente
+      gerarComissaoAuto(ped, liq);
+      closeModal('modal-nf');
+      renderFaturamento(); renderPedidos(); popularSelectsDinamicos(); renderDashboard();
+      syncAutoSaveHook();
+      toast('NF registrada! Comissão calculada automaticamente.');
+    }
+  } else {
+    closeModal('modal-nf');
+    renderFaturamento(); renderPedidos(); popularSelectsDinamicos(); renderDashboard();
+    syncAutoSaveHook();
+    toast('NF registrada!');
   }
-  closeModal('modal-nf');
-  renderFaturamento();
-  renderPedidos();
-  popularSelectsDinamicos();
-  renderDashboard();
-  toast('NF registrada! Comissão calculada automaticamente.');
 }
 
 function gerarComissaoAuto(ped, baseLiq) {
+  if(!baseLiq || baseLiq <= 0) return; // não gera comissão R$0
   // Busca a regra cadastrada para esta indústria/cliente, senão usa padrão 5%
   const regra = regrasComerciais.find(r=>r.ativo &&
     (r.industria==='Todas'||r.industria===ped.industria) &&
@@ -2904,13 +3220,43 @@ function gerarComissaoAuto(ped, baseLiq) {
   ) || regrasComerciais.find(r=>r.ativo && r.industria===ped.industria);
   const pct = regra ? regra.pct : 5;
   const tipo = regra ? regra.tipo : 'Faturamento';
-  const id='COM-'+String(comissoes_data.length+1).padStart(4,'0');
+  let comN = comissoes_data.length + 1;
+  let comIdStr;
+  do { comIdStr = 'COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr));
+  const id = comIdStr;
   const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const d=new Date();
   const mesLabel = meses[d.getMonth()]+'/'+(d.getFullYear()+'').slice(2);
   comissoes_data.push({id,pedido:ped.id,cliente:ped.cliente,industria:ped.industria,
     tipo,baseLiq,pct,valor:baseLiq*pct/100,
     mesPrevisao:mesLabel,mesRecebimento:'',status:'Prevista'});
+}
+
+// Registra bonificação como entrada separada (não gera comissão, não afeta saldo financeiro)
+function _registrarBonificacao(ped, nfObj) {
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const d = new Date();
+  const mesLabel = meses[d.getMonth()]+'/'+(d.getFullYear()+'').slice(2);
+  let bN = bonificacoesData.length + 1;
+  let bId;
+  do { bId = 'BONIF-'+String(bN).padStart(4,'0'); bN++; } while(bonificacoesData.some(x=>x.id===bId));
+  const id = bId;
+  bonificacoesData.push({
+    id,
+    pedido:      ped.id,
+    cliente:     ped.cliente,
+    industria:   ped.industria,
+    data:        nfObj.data,
+    nf:          nfObj.numero,
+    valorPedido: ped.total,
+    valorNF:     nfObj.valorNF,
+    mes:         mesLabel,
+    obs:         ped.obs || '',
+    status:      'Registrada'
+  });
+  addAudit(usuarioLogado?.login||'sistema',
+    `Bonificação registrada: ${id} — ${ped.cliente} / ${ped.industria} — ${fmt(nfObj.valorNF)}`, '🎁');
+  syncAutoSaveHook();
 }
 
 function filtrarFatMes(mes, btn) {
@@ -2926,11 +3272,14 @@ function renderFaturamento() {
   const filtCli=(el('fat-filtro-cli')||{}).value||'';
   const filtInd=(el('fat-filtro-ind')||{}).value||'';
   const filtMes=window._fatMesFiltro||'';
+  const filtBonif=(el('fat-filtro-status')||{}).value||'';
 
   let list=pedidos.filter(p=>p.nf);
   if(filtCli) list=list.filter(p=>p.cliente===filtCli);
   if(filtInd) list=list.filter(p=>p.industria===filtInd);
   if(filtMes) list=list.filter(p=>p.nf.data && p.nf.data.startsWith(filtMes));
+  if(filtBonif==='bonif') list=list.filter(p=>p.nf.bonif>0);
+  if(filtBonif==='normal') list=list.filter(p=>!p.nf.bonif||p.nf.bonif===0);
   if(busca) list=list.filter(p=>p.nf.numero.toLowerCase().includes(busca)||p.id.toLowerCase().includes(busca)||p.cliente.toLowerCase().includes(busca));
 
   if(list.length===0){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';return;}
@@ -2973,7 +3322,12 @@ function renderNFCompare() {
   const list=pedidos.filter(p=>{
     if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca))return false;
     if(filtDiv==='com'&&!p.nf)return false;
-    if(filtDiv==='sem'&&p.nf){const dif=Math.abs((p.nf?p.nf.valorNF:0)-p.total);if(dif>1)return false;}
+    if(filtDiv==='sem'){
+      // "Sem divergência" = tem NF e diferença <= R$1
+      if(!p.nf)return false;
+      const dif=Math.abs(p.nf.valorNF-p.total);
+      if(dif>1)return false;
+    }
     return true;
   });
   if(list.length===0){div.innerHTML='<div class="card" style="text-align:center;color:#aaa;padding:30px">Nenhum pedido encontrado</div>';return;}
@@ -3127,14 +3481,16 @@ function renderSaldo() {
   div.innerHTML = nomesClientes.map(cli=>{
     const pedsCli = pedidos.filter(p=>p.cliente===cli);
     if(pedsCli.length===0) return '';
+    // Só pedidos de venda entram nos cálculos financeiros
+    const pedsVenda = pedsCli.filter(p=>(p.tipo||'venda')==='venda');
 
     const indsDoCliente = nomesIndustrias.filter(ind=>pedsCli.some(p=>p.industria===ind));
     const av = cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
-    // SALDO = diferença entre valor do PEDIDO e valor da NF faturada
-    const totalPedido = pedsCli.reduce((s,p)=>s+p.total, 0);
-    const totalNF     = pedsCli.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
-    const totalLiq    = pedsCli.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
+    // SALDO = diferença entre valor do PEDIDO (venda) e valor da NF faturada
+    const totalPedido = pedsVenda.reduce((s,p)=>s+p.total, 0);
+    const totalNF     = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
+    const totalLiq    = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
     const totalSaldo  = totalPedido - totalNF; // diferença pedido × NF
 
     return `
@@ -3143,7 +3499,7 @@ function renderSaldo() {
           <div class="saldo-avatar">${av}</div>
           <div>
             <div class="saldo-nome">${esc(cli)}</div>
-            <div class="saldo-sub">${pedsCli.length} pedido(s) · ${pedsCli.filter(p=>p.nf).length} faturado(s)</div>
+            <div class="saldo-sub">${pedsCli.length} pedido(s) · ${pedsVenda.filter(p=>p.nf).length} faturado(s)</div>
           </div>
           <div class="saldo-stats">
             <div style="text-align:right"><div class="saldo-stat-val">${fmt(totalPedido)}</div><div class="saldo-stat-lbl">Total Pedidos</div></div>
@@ -3171,7 +3527,7 @@ function renderSaldo() {
             </tr></thead>
             <tbody>
               ${indsDoCliente.map(ind=>{
-                const pedsInd = pedsCli.filter(p=>p.industria===ind);
+                const pedsInd      = pedsCli.filter(p=>p.industria===ind && (p.tipo||'venda')==='venda');
                 if(pedsInd.length===0) return '';
                 const pTot  = pedsInd.reduce((s,p)=>s+p.total, 0);
                 const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
@@ -4181,7 +4537,8 @@ function salvarProduto() {
   _prodEditCod = null;
   closeModal('modal-produto');
   renderProdutos();
-  _popularSelectsIndustriaTodos(); // atualiza todos os selects
+  _popularSelectsIndustriaTodos();
+  syncAutoSaveHook();
   toast(`Produto ${acao} com sucesso!`);
 }
 
@@ -4418,11 +4775,19 @@ const IMPORT_COLS = {
     {key:'obs',             label:'Observação',         req:false},
   ],
   pedido: [
-    {key:'cliente',  label:'Cliente',   req:true},
-    {key:'industria',label:'Indústria', req:true},
-    {key:'data',     label:'Data',      req:false},
-    {key:'cond',     label:'Condição',  req:false},
-    {key:'status',   label:'Status',    req:false},
+    {key:'cliente',    label:'Cliente',          req:true,  hint:'Deve estar cadastrado no sistema'},
+    {key:'industria',  label:'Indústria',         req:true,  hint:'Deve estar cadastrada no sistema'},
+    {key:'tipo',       label:'Tipo',              req:false, hint:'venda ou bonificacao (padrão: venda)'},
+    {key:'data',       label:'Data',              req:false, hint:'AAAA-MM-DD'},
+    {key:'cond',       label:'Condição',          req:false, hint:'Ex: 28D, 30/60D'},
+    {key:'status',     label:'Status',            req:false, hint:'Recebido, Implantado...'},
+    {key:'obs',        label:'Observações',       req:false},
+    {key:'cod',        label:'Cód. Produto',      req:false, hint:'Uma linha por item do pedido'},
+    {key:'desc',       label:'Descrição Produto', req:false, hint:'Auto se produto cadastrado'},
+    {key:'qtd',        label:'Qtd',               req:false, hint:'Quantidade do item'},
+    {key:'descPct',    label:'% Desconto',        req:false, hint:'Ex: 10 (sem %)'},
+    {key:'precoUnit',  label:'Preço Unitário',    req:false, hint:'Se vazio, busca no catálogo'},
+    {key:'total',      label:'Total Item',        req:false, hint:'Se vazio, calcula automaticamente'},
   ],
 };
 
@@ -4476,6 +4841,20 @@ const HEADER_MAP = {
   'ean rs':'eanRS','ean rio grande do sul':'eanRS',
   // Disponibilidade
   'canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais',
+  // Pedido — cabeçalho de pedido e itens
+  'cliente':'cliente','razao social':'cliente',
+  'industria':'industria','fabricante':'industria','marca':'industria',
+  'tipo':'tipo','tipo pedido':'tipo',
+  'data':'data','data pedido':'data',
+  'condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond',
+  'status':'status',
+  'observacoes':'obs','obs':'obs','observacao':'obs',
+  'cod produto':'cod','codigo produto':'cod','sku':'cod','ref produto':'cod','codigo':'cod',
+  'descricao produto':'desc','descricao':'desc','produto':'desc','item':'desc','nome produto':'desc',
+  'qtd':'qtd','quantidade':'qtd','quant':'qtd',
+  'desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct',
+  'preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit',
+  'total item':'total','total':'total','valor total':'total','subtotal':'total',
 };
 
 function normHeader(h) {
@@ -4820,8 +5199,66 @@ function confirmarImport() {
     toast(`✅ ${adicionados} produto${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}`);
     syncAutoSaveHook();
 
+  } else if(importTipo === 'pedido') {
+    // Agrupa linhas por cliente+industria+data (cada grupo = um pedido, múltiplas linhas = itens)
+    const grupos = {};
+    importDados.forEach(row => {
+      const cli = (row.cliente||'').trim();
+      const ind = (row.industria||'').trim();
+      if(!cli || !ind) { ignorados++; return; }
+      // Chave única do pedido: cliente+industria+data+cond (agrupa itens do mesmo pedido)
+      const chave = [cli, ind, row.data||'', row.cond||''].join('|');
+      if(!grupos[chave]) {
+        grupos[chave] = {
+          cliente:  cli,
+          industria: ind,
+          tipo:     ['venda','bonificacao'].includes((row.tipo||'').toLowerCase().trim()) ? (row.tipo||'venda').toLowerCase().trim() : 'venda',
+          data:     row.data || today(),
+          cond:     row.cond || '',
+          status:   row.status || 'Recebido',
+          obs:      row.obs   || '',
+          itens:    []
+        };
+      }
+      // Se a linha tem produto, adiciona como item
+      const cod = (row.cod||'').trim().toUpperCase();
+      if(cod) {
+        const prodCat = PRODUTOS_CAT[cod];
+        const desc    = (row.desc||'').trim() || (prodCat?.desc||cod);
+        const indItem = (row.industria||'').trim() || (prodCat?.ind||'');
+        const qtd     = parseFloat((row.qtd||'1').toString().replace(',','.')) || 1;
+        const descPct = parseFloat((row.descPct||'0').toString().replace(',','.')) || 0;
+        const precoTab = prodCat ? prodCat.preco : 0;
+        const precoUnit = row.precoUnit
+          ? parseFloat(row.precoUnit.toString().replace(',','.').replace(/[R$\s]/g,'')) || precoTab*(1-descPct/100)
+          : precoTab*(1-descPct/100);
+        const total = row.total
+          ? parseFloat(row.total.toString().replace(',','.').replace(/[R$\s]/g,'')) || precoUnit*qtd
+          : precoUnit*qtd;
+        grupos[chave].itens.push({cod, desc, ind:indItem, precoTab, qtd, descPct, precoUnit, total});
+      }
+    });
+
+    Object.values(grupos).forEach(g => {
+      if(g.itens.length === 0) { ignorados++; return; }
+      const total = g.itens.reduce((s,i)=>s+i.total, 0);
+      const pedId = _gerarIdPedido();
+      const pedObj = {id:pedId, tipo:g.tipo, cliente:g.cliente, industria:g.industria,
+        data:g.data, cond:g.cond, status:g.status, itens:g.itens, total, obs:g.obs, orcOrigem:'', nf:null};
+      pedidos.push(pedObj);
+      _sincLogisticaPedido(pedObj);
+      adicionados++;
+    });
+
+    closeModal('modal-import');
+    renderPedidos();
+    popularSelectsDinamicos();
+    renderDashboard();
+    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} pedido${adicionados!==1?'s':''}`, '📥');
+    toast(`✅ ${adicionados} pedido${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}${ignorados?' · '+ignorados+' ignorado'+(ignorados!==1?'s':'')  :''}`);
+    syncAutoSaveHook();
+
   } else {
-    // Tipos genéricos (pedido, nf, etc.)
     toast(`Importação concluída! ${importDados.length||1} registro(s) processado(s).`);
     closeModal('modal-import');
   }
@@ -4839,10 +5276,19 @@ function baixarModeloImport() {
     clientes: ['Farmácia Central', '12.345.678/0001-90', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
     produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', '7891234560013', '7891234560012', '7891234560011', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
-    pedido: ['Farmácia Central', 'LABOTRAT', '2026-03-01', '28D', 'Recebido'],
+    pedido: [
+      ['Farmácia Central', 'LABOTRAT', 'venda', '2026-03-01', '28D', 'Recebido', '', 'LAB-001', 'Shampoo Hidratação 300ml', '2', '10', '16.20', '32.40'],
+      ['Farmácia Central', 'LABOTRAT', 'venda', '2026-03-01', '28D', 'Recebido', '', 'LAB-002', 'Condicionador Nutrição 250ml', '3', '0',  '18.00', '54.00'],
+      ['DCA Bahia',        'ZALIKE',   'bonificacao', '2026-03-05', '28D', 'Recebido', 'Bonif. campanha', 'ZAL-010', 'Kit Presente Premium', '1', '0', '45.00', '45.00'],
+    ],
   };
   const rows = [header];
-  if(exemplo[importTipo]) rows.push(exemplo[importTipo]);
+  const ex = exemplo[importTipo];
+  if(ex) {
+    // pedido tem array de arrays (múltiplas linhas de exemplo)
+    if(Array.isArray(ex[0])) ex.forEach(r=>rows.push(r));
+    else rows.push(ex);
+  }
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = cols.map(()=>({wch:22}));
   XLSX.utils.book_append_sheet(wb, ws, titulos[importTipo]||'Modelo');
@@ -4915,9 +5361,9 @@ function popularSelectsDinamicos() {
   });
 
   // selects de filtro (search bars)
-  const filtroCli = ['fat-filtro-cli','saldo-cli','sio-filtro-cli'];
+  const filtroCli = ['fat-filtro-cli','saldo-cli','sio-filtro-cli','bonif-filtro-cli'];
   const filtroInd = ['orc-filtro-ind','ped-filtro-ind','fat-filtro-ind','saldo-ind',
-    'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix','prod-ind-filtro'];
+    'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix','prod-ind-filtro','bonif-filtro-ind'];
 
   filtroCli.forEach(id=>{
     const s=el(id); if(!s) return;
@@ -5207,8 +5653,9 @@ function salvarCliente() {
   closeModal('modal-cliente');
   renderClientes();
   popularSelectsDinamicos();
-  renderMix(); // reconstrói chips
+  renderMix();
   renderDashboard();
+  syncAutoSaveHook();
   toast(`Cliente ${acao} com sucesso!`);
 }
 
@@ -5431,6 +5878,7 @@ function salvarIndustria() {
   renderIndustrias();
   popularSelectsDinamicos();
   _popularSelectsIndustriaTodos();
+  syncAutoSaveHook();
   toast(`Indústria ${acao} com sucesso!`);
 }
 
@@ -5531,15 +5979,16 @@ function renderDashboard() {
   const anoAtual = agora.getFullYear();
   const prefix   = `${anoAtual}-${mesAtual}`;
 
-  const pedsMes = pedidos.filter(p => p.data && p.data.startsWith(prefix));
-  const fatLiq  = pedidos.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida,0);
+  const pedsMes = pedidos.filter(p => p.data && p.data.startsWith(prefix) && (p.tipo||'venda')==='venda');
+  const fatLiq  = pedidos.filter(p=>p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+p.nf.liquida,0);
+  const nfCount = pedidos.filter(p=>p.nf && (p.tipo||'venda')==='venda').length;
   const comPrev = comissoes_data.filter(c=>c.status==='Prevista'||c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
   const orcAbertos = orcamentos.filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
 
   if(el('kpi-pedidos'))     el('kpi-pedidos').textContent     = pedsMes.length;
   if(el('kpi-pedidos-sub')) el('kpi-pedidos-sub').textContent = pedsMes.length===0 ? 'Nenhum pedido no mês' : `${pedsMes.length} pedido${pedsMes.length!==1?'s':''} em ${meses[agora.getMonth()].slice(0,3)}`;
   if(el('kpi-faturamento')) el('kpi-faturamento').textContent = fmt(fatLiq);
-  if(el('kpi-fat-sub'))     el('kpi-fat-sub').textContent     = `${pedidos.filter(p=>p.nf).length} NF${pedidos.filter(p=>p.nf).length!==1?'s':''} registrada${pedidos.filter(p=>p.nf).length!==1?'s':''}`;
+  if(el('kpi-fat-sub'))     el('kpi-fat-sub').textContent     = `${nfCount} NF${nfCount!==1?'s':''} registrada${nfCount!==1?'s':''}`;
   if(el('kpi-comissao'))    el('kpi-comissao').textContent    = fmt(comPrev);
   if(el('kpi-com-sub'))     el('kpi-com-sub').textContent     = `${comissoes_data.filter(c=>c.status==='Atrasada').length} em atraso`;
   if(el('kpi-orc'))         el('kpi-orc').textContent         = orcAbertos;
@@ -5705,35 +6154,94 @@ function addAudit(user, acao, icon='ℹ️') {
 ══════════════════════════ */
 function renderLogistica() {
   const tbody = el('log-tbody'); if(!tbody) return;
-  const busca = (el('log-busca')||{}).value?.toLowerCase()||'';
+  const busca  = (el('log-busca')||{}).value?.toLowerCase()||'';
   const filtSt = (el('log-filtro-status')||{}).value||'';
   const filtInd = (el('log-filtro-ind')||{}).value||'';
 
-  const statusColors = {
-    'Pedido Digitado':'badge-cinza','Pedido Enviado':'badge-azul','Em Separação':'badge-laranja',
-    'Faturado':'badge-roxo','Aguardando Coleta':'badge-amarelo','Em Transporte':'badge-azul',
-    'Entregue':'badge-verde','Finalizado':'badge-preto','Cancelado':'badge-vermelho'
-  };
+  const statusOpts = ['Pedido Digitado','Pedido Enviado','Em Separação','Faturado',
+    'Aguardando Coleta','Em Transporte','Entregue','Finalizado','Cancelado'];
 
-  const list = logisticaData.filter(l=>{
-    if(busca && !l.pedId.toLowerCase().includes(busca) && !l.cliente.toLowerCase().includes(busca)) return false;
-    if(filtSt && l.statusLog !== filtSt) return false;
-    if(filtInd && l.industria !== filtInd) return false;
-    return true;
+  // Fonte de verdade: array pedidos filtrado por status elegível
+  const pedElegiveis = pedidos.filter(p => STATUS_LOG_GATILHO.has(p.status));
+
+  // Garante entrada em logisticaData para cada pedido elegível
+  pedElegiveis.forEach(p => _sincLogisticaPedido(p));
+
+  // Monta lista combinando pedido + dados logísticos salvos
+  let list = pedElegiveis.map(p => {
+    const l = logisticaData.find(x => x.pedId === p.id) || {};
+    return {
+      pedId:          p.id,
+      cliente:        p.cliente,
+      industria:      p.industria,
+      data:           p.data,
+      transportadora: l.transportadora || '',
+      previsao:       l.previsao       || '',
+      statusLog:      l.statusLog      || 'Pedido Digitado',
+      obs:            l.obs            || ''
+    };
   });
 
-  tbody.innerHTML = list.length===0
-    ? `<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>`
-    : list.map(l=>`<tr>
+  // Aplica filtros
+  if(busca)   list = list.filter(l => l.pedId.toLowerCase().includes(busca) || l.cliente.toLowerCase().includes(busca));
+  if(filtSt)  list = list.filter(l => l.statusLog === filtSt);
+  if(filtInd) list = list.filter(l => l.industria === filtInd);
+
+  if(list.length===0){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#aaa;padding:24px">
+      Nenhum pedido encontrado.<br><span style="font-size:11px">Pedidos aparecem aqui a partir do status <strong>Implantado</strong>.</span>
+    </td></tr>`;
+    return;
+  }
+
+  const inStyle = "padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;";
+
+  tbody.innerHTML = list.map(l=>{
+    const optsHtml = statusOpts.map(s=>
+      `<option value="${s}" ${l.statusLog===s?'selected':''}>${s}</option>`
+    ).join('');
+    return `<tr>
       <td class="mono bold">${l.pedId}</td>
       <td><strong>${esc(l.cliente)}</strong></td>
       <td><span class="tag">${esc(l.industria)}</span></td>
       <td>${l.data}</td>
-      <td>${l.transportadora||'<span style="color:#aaa">—</span>'}</td>
-      <td>${l.previsao||'<span style="color:#aaa">—</span>'}</td>
-      <td><span class="badge ${statusColors[l.statusLog]||'badge-cinza'}">${l.statusLog}</span></td>
-      <td><button class="btn btn-outline btn-xs" onclick="abrirModalStatusLog('${l.pedId}')">✏️ Status</button></td>
-    </tr>`).join('');
+      <td>
+        <input type="text" value="${esc(l.transportadora)}" placeholder="Transportadora"
+          style="${inStyle}width:130px"
+          onfocus="this.style.borderColor='var(--amarelo)'"
+          onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','transportadora',this.value)">
+      </td>
+      <td>
+        <input type="date" value="${l.previsao}"
+          style="${inStyle}width:130px"
+          onfocus="this.style.borderColor='var(--amarelo)'"
+          onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','previsao',this.value)">
+      </td>
+      <td>
+        <select class="status-select" onchange="logSalvarCampo('${l.pedId}','statusLog',this.value)">
+          ${optsHtml}
+        </select>
+      </td>
+      <td>
+        <input type="text" value="${esc(l.obs)}" placeholder="Obs..."
+          style="${inStyle}width:120px"
+          onfocus="this.style.borderColor='var(--amarelo)'"
+          onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','obs',this.value)">
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Salva um campo individual da logística inline
+function logSalvarCampo(pedId, campo, valor) {
+  const idx = logisticaData.findIndex(l=>l.pedId===pedId);
+  if(idx < 0) return;
+  logisticaData[idx] = {...logisticaData[idx], [campo]: valor};
+  if(campo==='statusLog') {
+    addAudit(usuarioLogado?.login||'sistema', `Logística ${pedId} → ${valor}`, '🚚');
+    toast('Status atualizado: '+valor);
+  }
+  syncAutoSaveHook();
 }
 
 function abrirModalStatusLog(pedId) {
@@ -5838,9 +6346,11 @@ function salvarSellOut() {
   const ind = el('so-ind').value;
   const valor = parseFloat(el('so-valor').value)||0;
   if(!cli||!ind||!valor){alert('Preencha os campos obrigatórios.');return;}
-  const id = 'SO-'+String(sellOutData.length+1).padStart(3,'0');
+  let soN = sellOutData.length + 1;
+  let soId;
+  do { soId = 'SO-'+String(soN).padStart(3,'0'); soN++; } while(sellOutData.some(x=>x.id===soId));
   sellOutData.push({
-    id, cliente:cli, industria:ind,
+    id:soId, cliente:cli, industria:ind,
     produto: el('so-produto').value||'',
     mes: el('so-mes').value,
     qtd: parseInt(el('so-qtd').value)||0,
@@ -5852,6 +6362,7 @@ function salvarSellOut() {
   el('so-positivacao').value = '';
   closeModal('modal-sellout');
   renderSellInOut();
+  syncAutoSaveHook();
   toast('Sell Out registrado com sucesso!');
 }
 
@@ -6188,12 +6699,15 @@ function exportarTudo(){
   const r1=[['#','Cliente','Indústria','Data','Total','Status']];
   orcamentos.forEach(o=>r1.push([o.id,o.cliente,o.industria,o.data,o.total,o.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r1),'Orcamentos');
-  const r2=[['#','Cliente','Indústria','Data','Total Pedido','NF Líquida','Status']];
-  pedidos.forEach(p=>r2.push([p.id,p.cliente,p.industria,p.data,p.total,p.nf?p.nf.liquida:'',p.status]));
+  const r2=[['#','Tipo','Cliente','Indústria','Data','Total Pedido','NF Líquida','Status']];
+  pedidos.forEach(p=>r2.push([p.id,p.tipo||'venda',p.cliente,p.industria,p.data,p.total,p.nf?p.nf.liquida:'',p.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r2),'Pedidos');
   const r3=[['#','Pedido','Cliente','Indústria','Tipo','Base','%','Valor','Status']];
   comissoes_data.forEach(c=>r3.push([c.id,c.pedido,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct,c.valor,c.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r3),'Comissoes');
+  const r5=[['#','Pedido','Cliente','Indústria','Data','NF','Valor Pedido','Valor NF','Mês','Status']];
+  bonificacoesData.forEach(b=>r5.push([b.id,b.pedido,b.cliente,b.industria,b.data,b.nf||'',b.valorPedido,b.valorNF,b.mes,b.status]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r5),'Bonificacoes');
   const r4=[['Pedido','Cliente','Indústria','Data','Transportadora','Previsão','Status Log.']];
   logisticaData.forEach(l=>r4.push([l.pedId,l.cliente,l.industria,l.data,l.transportadora||'',l.previsao||'',l.statusLog]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r4),'Logistica');
@@ -6286,7 +6800,10 @@ function salvarMeta() {
   metasData.push(obj);
   window._metaEditId = null;
   addAudit(usuarioLogado?.login||'admin',`Meta ${ind} ${mes}: ${fmt(valor)}`,'🎯');
-  closeModal('modal-meta'); renderMetas(); toast('Meta salva com sucesso!');
+  closeModal('modal-meta');
+  renderMetas();
+  syncAutoSaveHook();
+  toast('Meta salva com sucesso!');
 }
 
 function editarMeta(id) {
@@ -6462,6 +6979,7 @@ function salvarTratativa() {
   closeModal('modal-tratativa');
   renderTratativas(); renderFaturamento(); renderSaldo(); renderComissoes();
   atualizarBadgeTratativas();
+  syncAutoSaveHook();
   toast('Tratativa registrada! Módulos atualizados automaticamente.');
 }
 
@@ -7179,6 +7697,7 @@ function coletarDadosParaSync() {
     tratativas:     JSON.parse(JSON.stringify(tratativas)),
     PRODUTOS_CAT:   JSON.parse(JSON.stringify(PRODUTOS_CAT)),
     mixProdutos:    JSON.parse(JSON.stringify(mixProdutos)),
+    bonificacoesData: JSON.parse(JSON.stringify(bonificacoesData)),
     usuarios:       JSON.parse(JSON.stringify(usuarios)),
     // BUG FIX: persiste permissões de acesso granulares
     userPerms:      JSON.parse(JSON.stringify(userPerms)),
@@ -7203,11 +7722,14 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(Array.isArray(dados.redes))            redes = dados.redes;
   if(Array.isArray(dados.comissoes_data))   comissoes_data = dados.comissoes_data;
   if(Array.isArray(dados.logisticaData))    logisticaData = dados.logisticaData;
+  // Garante que todo pedido existente tenha entrada na logística
+  pedidos.forEach(p => _sincLogisticaPedido(p));
   if(Array.isArray(dados.sellOutData))      sellOutData = dados.sellOutData;
   if(Array.isArray(dados.metasData))        metasData = dados.metasData;
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
   if(Array.isArray(dados.tratativas))       tratativas = dados.tratativas;
   if(Array.isArray(dados.mixProdutos))      mixProdutos = dados.mixProdutos;
+  if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
   // BUG FIX: restaura permissões granulares persistidas
   if(dados.userPerms && typeof dados.userPerms==='object') {
     Object.keys(userPerms).forEach(k=>delete userPerms[k]);
