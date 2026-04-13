@@ -1452,7 +1452,7 @@ tr:last-child td{border-bottom:none;}
     <!-- Adicionar produto ao pedido -->
     <div style="background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Adicionar produto</div>
-      <div style="display:grid;grid-template-columns:90px 1fr 110px 90px 80px 90px auto;gap:8px;align-items:end">
+      <div style="display:grid;grid-template-columns:90px 1fr 110px 70px 70px 100px 90px auto;gap:8px;align-items:end">
         <div class="form-group" style="margin:0"><label>Código</label>
           <input type="text" id="ped-add-cod" class="mono" placeholder="LAB-001" oninput="orcAutoFill(this.value,'ped')">
         </div>
@@ -1467,6 +1467,10 @@ tr:last-child td{border-bottom:none;}
         </div>
         <div class="form-group" style="margin:0"><label>% Desc.</label>
           <input type="number" id="ped-add-desc-pct" value="0" min="0" max="100" oninput="pedCalcItem()">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="display:flex;align-items:center;gap:4px">Preço Unit. <span id="ped-add-preco-badge" style="display:none;font-size:9px;background:#fff7ed;color:#d97706;border:1px solid #fed7aa;border-radius:3px;padding:1px 5px;font-weight:700">≠ MIX</span></label>
+          <input type="text" inputmode="decimal" id="ped-add-preco-unit" placeholder="0,00" oninput="pedCalcItem()" style="font-weight:600;color:var(--azul)">
         </div>
         <div class="form-group" style="margin:0"><label>Total Item</label>
           <input type="text" id="ped-add-total" readonly style="background:#f4f3ef;font-weight:600;color:var(--verde)">
@@ -3012,6 +3016,8 @@ function novoPedido() {
   el('ped-tipo').value = 'venda';
   el('ped-obs').value = '';
   el('ped-orc-origem').value = '';
+  if(el('ped-add-preco-unit')) el('ped-add-preco-unit').value = '';
+  if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display = 'none';
   if(el('ped-rede-info-group')) el('ped-rede-info-group').style.display = 'none';
   pedTipoChange('venda');
   renderPedItens();
@@ -3024,7 +3030,8 @@ function editarPedido(id) {
   if(!p) return;
   pedEditId = id;
   pedItens = p.itens.map(i=>({...i}));
-  el('ped-modal-titulo').textContent = 'Editar Pedido '+id;
+  const importadoBadge = p._importado ? ' <span style="font-size:10px;background:#e3f2fd;color:#1a5fa8;border-radius:4px;padding:2px 7px;font-weight:700;font-family:\'DM Sans\',sans-serif">📥 IMPORTADO</span>' : '';
+  el('ped-modal-titulo').innerHTML = 'Editar Pedido '+id + importadoBadge;
   el('ped-cli').value = p.cliente;
   el('ped-ind').value = p.industria;
   el('ped-data').value = p.data;
@@ -3034,6 +3041,8 @@ function editarPedido(id) {
   pedTipoChange(p.tipo || 'venda');
   el('ped-obs').value = p.obs||'';
   el('ped-orc-origem').value = p.orcOrigem||'';
+  if(el('ped-add-preco-unit')) el('ped-add-preco-unit').value = '';
+  if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display = 'none';
   renderPedItens();
   openModal('modal-pedido');
 }
@@ -3050,7 +3059,23 @@ function pedCalcItem() {
   const tab = mixInfo.precoTab;
   const qtd = parseFloat(el('ped-add-qtd').value)||0;
   const desc = parseFloat(el('ped-add-desc-pct').value)||0;
-  el('ped-add-total').value = fmt(tab*(1-desc/100)*qtd);
+  // Se já há preço manual digitado, usa ele; senão calcula pelo mix/tabela
+  const unitManualRaw = (el('ped-add-preco-unit').value||'').replace(/[R$\s]/g,'').replace(',','.');
+  const unitManual = parseFloat(unitManualRaw)||0;
+  const precoRef = tab*(1-desc/100);
+  if(!unitManual && precoRef) {
+    el('ped-add-preco-unit').value = fmtN(precoRef);
+  }
+  const unitFinal = unitManual || precoRef;
+  el('ped-add-total').value = fmt(unitFinal*qtd);
+  // Badge de divergência com mix
+  const badge = el('ped-add-preco-badge');
+  if(badge && unitManual && tab > 0 && Math.abs(unitManual - precoRef) > 0.01) {
+    badge.style.display = 'inline';
+    badge.title = `Preço de referência (mix/tabela): R$ ${fmtN(precoRef)}`;
+  } else if(badge) {
+    badge.style.display = 'none';
+  }
 }
 
 function pedAddItem() {
@@ -3062,15 +3087,26 @@ function pedAddItem() {
   const mixInfo = _getPrecoMix(cliNome, cod);
   const precoTab = mixInfo.precoTab;
   const descPct  = parseFloat(el('ped-add-desc-pct').value) || mixInfo.descPct || 0;
-  const precoUnit = precoTab*(1-descPct/100);
+  // Lê preço unitário digitado manualmente (campo editável)
+  const unitManualRaw = (el('ped-add-preco-unit').value||'').replace(/[R$\s]/g,'').replace(',','.');
+  const unitManual = parseFloat(unitManualRaw)||0;
+  const precoRef = precoTab*(1-descPct/100);
+  let precoUnit = unitManual || precoRef;
   const total = precoUnit*qtd;
   if(!cod||!desc){alert('Preencha código e descrição.');return;}
-  if(precoTab===0){
-    if(!confirm(`Atenção: o produto "${cod}" não foi encontrado na tabela de preços (preço R$ 0,00).\nDeseja adicionar mesmo assim?`)) return;
+  // Avisa sobre preço zero mas deixa inserir (não bloqueia mais com confirm)
+  if(precoUnit === 0) {
+    const continuar = confirm(`Atenção: o produto "${cod}" será adicionado com preço R$ 0,00.\nNenhum preço foi encontrado no mix ou na tabela e nenhum valor foi digitado manualmente.\nDeseja adicionar mesmo assim?`);
+    if(!continuar) return;
+  } else if(precoTab > 0 && unitManual > 0 && Math.abs(unitManual - precoRef) > 0.01) {
+    // Preço difere do mix/tabela — avisa mas não bloqueia
+    console.info(`[GestCom] Produto ${cod}: preço manual R$ ${fmtN(unitManual)} difere da referência R$ ${fmtN(precoRef)}. Inserido como informado.`);
   }
   pedItens.push({cod,desc,ind,precoTab,qtd,descPct,precoUnit,total});
   el('ped-add-cod').value='';el('ped-add-desc').value='';el('ped-add-ind').value='';
-  el('ped-add-qtd').value=1;el('ped-add-desc-pct').value=0;el('ped-add-total').value='';
+  el('ped-add-ind').value='';el('ped-add-qtd').value=1;el('ped-add-desc-pct').value=0;
+  el('ped-add-preco-unit').value='';el('ped-add-total').value='';
+  if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display='none';
   renderPedItens();
 }
 
@@ -3078,7 +3114,13 @@ function renderPedItens() {
   const tbody = el('ped-itens-tbody');
   if(pedItens.length===0){tbody.innerHTML='<tr id="ped-itens-empty"><td colspan="9" style="text-align:center;color:#aaa;padding:16px">Nenhum produto adicionado</td></tr>';return;}
   const inStyle = 'padding:3px 6px;border:1.5px solid var(--cinza-medio);border-radius:4px;font-size:12px;font-family:\'DM Sans\',sans-serif;outline:none;';
-  tbody.innerHTML = pedItens.map((it,i)=>`<tr>
+  const cliNome = el('ped-cli')?.value || '';
+  tbody.innerHTML = pedItens.map((it,i)=>{
+    const mixInfo = _getPrecoMix(cliNome, it.cod);
+    const precoRef = mixInfo.precoTab > 0 ? mixInfo.precoTab*(1-it.descPct/100) : it.precoTab*(1-it.descPct/100);
+    const diverge = mixInfo.precoTab > 0 && it.precoUnit > 0 && Math.abs(it.precoUnit - precoRef) > 0.01;
+    const divBadge = diverge ? `<span style="font-size:9px;background:#fff7ed;color:#d97706;border:1px solid #fed7aa;border-radius:3px;padding:1px 5px;font-weight:700;display:block;margin-top:2px" title="Preço de referência (mix/tabela): R$ ${fmtN(precoRef)}">≠ MIX R$ ${fmtN(precoRef)}</span>` : '';
+    return `<tr>
     <td class="mono">${esc(it.cod)}</td>
     <td>${esc(it.desc)}</td>
     <td><span class="tag">${esc(it.ind||'—')}</span></td>
@@ -3091,12 +3133,13 @@ function renderPedItens() {
       onfocus="this.style.borderColor='var(--amarelo)'"
       onblur="this.style.borderColor='var(--cinza-medio)'"
       oninput="pedAtualizarItem(${i},'descPct',this.value)"></td>
-    <td><input type="text" inputmode="decimal" value="${fmtN(it.precoUnit)}" style="${inStyle}width:80px;font-weight:600;color:var(--azul)" title="Preço Unitário (editável)"
+    <td><input type="text" inputmode="decimal" value="${fmtN(it.precoUnit)}" style="${inStyle}width:80px;font-weight:600;color:${diverge?'var(--laranja)':'var(--azul)'}" title="Preço Unitário (editável)${diverge?' — DIFERE do mix/tabela':''}"
       onfocus="this.style.borderColor='var(--amarelo)'"
-      onblur="this.style.borderColor='var(--cinza-medio)';pedAtualizarItem(${i},'precoUnit',this.value)"></td>
+      onblur="this.style.borderColor='var(--cinza-medio)';pedAtualizarItem(${i},'precoUnit',this.value)">${divBadge}</td>
     <td class="bold verde" id="ped-it-tot-${i}">${fmt(it.total)}</td>
     <td><button class="btn btn-danger btn-xs" onclick="pedRemItem(${i})">✕</button></td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   _pedAtualizarTotais();
 }
 
@@ -3369,6 +3412,14 @@ function gerarComissaoAuto(ped, baseLiq) {
   ) || regrasComerciais.find(r=>r.ativo && r.industria===ped.industria);
   const pct = regra ? regra.pct : 5;
   const tipo = regra ? regra.tipo : 'Faturamento';
+  // Verifica se já existe comissão para este pedido (re-registro de NF)
+  const existente = comissoes_data.find(c => c.pedido === ped.id);
+  if(existente) {
+    // Atualiza a comissão existente com os novos valores
+    const idx = comissoes_data.indexOf(existente);
+    comissoes_data[idx] = {...existente, baseLiq, pct, valor: baseLiq*pct/100, tipo};
+    return;
+  }
   let comN = comissoes_data.length + 1;
   let comIdStr;
   do { comIdStr = 'COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr));
@@ -5304,11 +5355,15 @@ function confirmarImport() {
       if(!cli || !ind) { ignorados++; return; }
       // Chave única do pedido: cliente+industria+data+cond (agrupa itens do mesmo pedido)
       const chave = [cli, ind, row.data||'', row.cond||''].join('|');
+      // Aceita variações de "bonificacao" na importação
+      const tipoRaw = (row.tipo||'').toLowerCase().trim()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const isBonifTipo = ['bonificacao','bonif','bonus','bonificação'].some(v => tipoRaw.includes(v));
       if(!grupos[chave]) {
         grupos[chave] = {
           cliente:  cli,
           industria: ind,
-          tipo:     ['venda','bonificacao'].includes((row.tipo||'').toLowerCase().trim()) ? (row.tipo||'venda').toLowerCase().trim() : 'venda',
+          tipo:     isBonifTipo ? 'bonificacao' : 'venda',
           data:     row.data || today(),
           cond:     row.cond || '',
           status:   row.status || 'Recebido',
@@ -5341,11 +5396,17 @@ function confirmarImport() {
         let precoUnit = row.precoUnit ? parseMoney(row.precoUnit) : 0;
         if(!precoUnit && precoTab) precoUnit = precoTab * (1 - descPct / 100);
         // Total: lê da planilha com parse BR, senão calcula
-        let total = row.total ? parseMoney(row.total) : 0;
+        let total = _impRowTotal || 0;
         if(!total && precoUnit) total = precoUnit * qtd;
         // Derivar precoUnit do total quando produto não está no catálogo
         if(!precoUnit && total && qtd) precoUnit = total / qtd;
         grupos[chave].itens.push({cod, desc, ind:indItem, precoTab, qtd, descPct, precoUnit, total});
+      } else if(_impRowTotal > 0) {
+        // Linha sem código mas com total: cria item genérico para não perder o valor
+        const descGen = (row.desc||'').trim() || 'Item importado';
+        const qtdGen  = parseFloat((row.qtd||'1').toString().replace(',','.')) || 1;
+        const unitGen = _impRowTotal / qtdGen;
+        grupos[chave].itens.push({cod:'IMPORT', desc:descGen, ind:ind, precoTab:0, qtd:qtdGen, descPct:0, precoUnit:unitGen, total:_impRowTotal});
       }
     });
 
@@ -5354,7 +5415,7 @@ function confirmarImport() {
       const total = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : (g._totalBruto||0);
       const pedId = _gerarIdPedido();
       const pedObj = {id:pedId,tipo:g.tipo,cliente:g.cliente,industria:g.industria,
-        data:g.data,cond:g.cond,status:g.status,itens:g.itens,total,obs:g.obs,orcOrigem:'',nf:null};
+        data:g.data,cond:g.cond,status:g.status,itens:g.itens,total,obs:g.obs,orcOrigem:'',nf:null,_importado:true};
       pedidos.push(pedObj);
       // Insere na logística imediatamente
       logisticaData.push({pedId:pedId,cliente:g.cliente,industria:g.industria,
@@ -5362,12 +5423,16 @@ function confirmarImport() {
       adicionados++;
     });
 
+    // Avisa sobre itens com preço zero
+    const itensZero = Object.values(grupos).reduce((acc,g)=>acc+g.itens.filter(i=>i.precoUnit===0).length,0);
+    const aviso = itensZero > 0 ? ` ⚠️ ${itensZero} item(ns) com preço R$ 0,00 — edite o pedido para corrigir.` : '';
+
     closeModal('modal-import');
     renderPedidos(); renderLogistica(); renderSaldo();
     popularSelectsDinamicos();
     renderDashboard();
     addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} pedido${adicionados!==1?'s':''}`, '📥');
-    toast(`✅ ${adicionados} pedido${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}${ignorados?' · '+ignorados+' ignorado'+(ignorados!==1?'s':'')  :''}`);
+    toast(`✅ ${adicionados} pedido${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}${ignorados?' · '+ignorados+' ignorado'+(ignorados!==1?'s':''):''}${aviso}`, aviso?'warning':'success');
     syncAutoSaveHook();
 
   } else {
