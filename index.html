@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -511,7 +510,7 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="search-bar">
-        <input id="ped-busca" placeholder="🔍 Nº pedido, cliente..." oninput="renderPedidos()">
+        <input id="ped-busca" placeholder="🔍 Nº pedido, cliente..." oninput="clearTimeout(window._pedST);window._pedST=setTimeout(()=>{window._pedPag=1;renderPedidos();},280)">
         <select id="ped-filtro-tipo" onchange="renderPedidos()">
           <option value="">Todos os tipos</option>
           <option value="venda">🛒 Venda</option>
@@ -1127,12 +1126,12 @@ tr:last-child td{border-bottom:none;}
 
           <div class="form-group">
             <label>URL do Realtime Database *</label>
-            <input id="fb-dburl" value="https://sistematresvales-default-rtdb.firebaseio.com" autocomplete="off">
+            <input id="fb-dburl" value="" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" autocomplete="off">
             <div style="font-size:11px;color:#888;margin-top:3px">Encontrada no console Firebase → Realtime Database</div>
           </div>
           <div class="form-group">
             <label>API Key <span style="font-size:10px;font-weight:400;color:#888">(opcional — necessária se as regras exigirem autenticação)</span></label>
-            <input id="fb-apikey" value="AIzaSyC1eaTg2sXqyM9BMHZYJNCwwEydhwdVy6c" autocomplete="off">
+            <input id="fb-apikey" value="" placeholder="Cole sua API Key aqui" autocomplete="off">
           </div>
           <div id="fb-feedback" style="display:none;margin-bottom:12px"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -2304,7 +2303,65 @@ const today = () => new Date().toISOString().split('T')[0];
 const el = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+/* ──────────────────────────────────────
+   PERSISTÊNCIA LOCAL — fallback offline
+   Salva em localStorage a cada alteração.
+   Restaura automaticamente ao abrir.
+────────────────────────────────────── */
+function _salvarLocal() {
+  try {
+    const payload = JSON.stringify({
+      pedidos, orcamentos, clientes, industrias, redes, comissoes_data,
+      logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
+      PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms,
+      configSistema, _ts: Date.now()
+    });
+    localStorage.setItem('gestcom_dados', payload);
+  } catch(e) {
+    if(e.name === 'QuotaExceededError')
+      console.warn('[GestCom] ⚠ localStorage cheio — exporte os dados e considere limpar registros antigos.');
+    else
+      console.warn('[GestCom] Erro localStorage:', e.message);
+  }
+}
+function _carregarLocal() {
+  try {
+    const raw = localStorage.getItem('gestcom_dados');
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    if(Array.isArray(d.pedidos))          pedidos          = d.pedidos;
+    if(Array.isArray(d.orcamentos))       orcamentos       = d.orcamentos;
+    if(Array.isArray(d.clientes))         clientes         = d.clientes;
+    if(Array.isArray(d.industrias))       industrias       = d.industrias;
+    if(Array.isArray(d.redes))            redes            = d.redes;
+    if(Array.isArray(d.comissoes_data))   comissoes_data   = d.comissoes_data;
+    if(Array.isArray(d.logisticaData))    logisticaData    = d.logisticaData;
+    if(Array.isArray(d.sellOutData))      sellOutData      = d.sellOutData;
+    if(Array.isArray(d.metasData))        metasData        = d.metasData;
+    if(Array.isArray(d.regrasComerciais)) regrasComerciais = d.regrasComerciais;
+    if(Array.isArray(d.tratativas))       tratativas       = d.tratativas;
+    if(Array.isArray(d.mixProdutos))      mixProdutos      = d.mixProdutos;
+    if(Array.isArray(d.bonificacoesData)) bonificacoesData = d.bonificacoesData;
+    if(Array.isArray(d.usuarios))         usuarios         = d.usuarios;
+    if(d.PRODUTOS_CAT  && typeof d.PRODUTOS_CAT  ==='object') Object.assign(PRODUTOS_CAT,   d.PRODUTOS_CAT);
+    if(d.userPerms     && typeof d.userPerms     ==='object') Object.assign(userPerms,       d.userPerms);
+    if(d.configSistema && typeof d.configSistema ==='object') Object.assign(configSistema,   d.configSistema);
+    // Migração: cria entradas de logística para pedidos antigos
+    pedidos.filter(p=>!p.excluido).forEach(p=>{
+      if(!logisticaData.find(l=>l.pedId===p.id))
+        logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
+          data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+    });
+    console.info('[GestCom] ✓ Dados locais restaurados (' + new Date(d._ts||0).toLocaleTimeString('pt-BR') + ')');
+    return true;
+  } catch(e) {
+    console.warn('[GestCom] Erro ao restaurar dados locais:', e.message);
+    return false;
+  }
+}
+function salvarDados() { _salvarLocal(); } // compatibilidade
 function syncAutoSaveHook() {
+  _salvarLocal(); // sempre salva localmente
   if(configSync.autoSave && configSync.conectado) {
     clearTimeout(window._syncDebounce);
     window._syncDebounce = setTimeout(()=>syncPush(true), 1500);
@@ -2313,10 +2370,13 @@ function syncAutoSaveHook() {
 
 function toast(msg, tipo='success') {
   const t = el('toast');
-  t.innerHTML = (tipo==='success'?'✅ ':'⚠️ ') + msg;
-  t.style.display='flex';
-  t.style.background = tipo==='success'?'#1a1a1a':'#c0392b';
-  setTimeout(()=>t.style.display='none', 3000);
+  const icons = {success:'✅', error:'❌', warning:'⚠️', info:'ℹ️'};
+  const bg = {success:'#1a1a1a', error:'#c0392b', warning:'#b7791f', info:'#1a365d'};
+  t.innerHTML = (icons[tipo]||'✅') + ' ' + msg;
+  t.style.display = 'flex';
+  t.style.background = bg[tipo] || '#1a1a1a';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.style.display='none', tipo==='error'?5000:3000);
 }
 
 function statusClass(s) {
@@ -2623,9 +2683,11 @@ function converterEmPedido(id) {
   const pedId = _gerarIdPedido();
   const pedObj = {id:pedId,tipo:'venda',cliente:o.cliente,industria:o.industria,data:today(),cond:o.cond,status:'Recebido',itens:o.itens.map(i=>({...i})),total:o.total,obs:'Gerado a partir de '+o.id,orcOrigem:o.id,nf:null};
   pedidos.push(pedObj);
-  _sincLogisticaPedido(pedObj);
+  if(!logisticaData.find(l=>l.pedId===pedId))
+    logisticaData.push({pedId:pedId,cliente:o.cliente,industria:o.industria,
+      data:today(),transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
   orcamentos = orcamentos.map(x=>x.id===id?{...x,status:'Convertido em pedido'}:x);
-  renderOrcamentos(); renderPedidos();
+  renderOrcamentos(); renderPedidos(); renderLogistica(); renderSaldo();
   syncAutoSaveHook();
   toast('Convertido em '+pedId+'!');
 }
@@ -2794,8 +2856,23 @@ function renderPedidos() {
     if(filtTipo&&(p.tipo||'venda')!==filtTipo) return false;
     return true;
   });
-  tbody.innerHTML = list.length===0 ? `<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
-  list.map(p=>{
+  // Paginação — 50 por página
+  window._pedPag = window._pedPag || 1;
+  const _ppSize = 50;
+  const _ppTotal = list.length;
+  const _ppPages = Math.max(1, Math.ceil(_ppTotal / _ppSize));
+  window._pedPag = Math.min(window._pedPag, _ppPages);
+  const listShow = list.slice((window._pedPag-1)*_ppSize, window._pedPag*_ppSize);
+  const _ppEl = el('ped-pag-ctrl');
+  if(_ppEl) _ppEl.innerHTML = _ppTotal <= _ppSize ? '' :
+    `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12px;color:var(--cinza-texto)">
+      <span>${_ppTotal} pedidos · Pág. ${window._pedPag}/${_ppPages}</span>
+      <button class="btn btn-outline btn-xs" onclick="window._pedPag=Math.max(1,window._pedPag-1);renderPedidos()" ${window._pedPag<=1?'disabled':''}>‹ Anterior</button>
+      <button class="btn btn-outline btn-xs" onclick="window._pedPag=Math.min(${_ppPages},window._pedPag+1);renderPedidos()" ${window._pedPag>=_ppPages?'disabled':''}>Próxima ›</button>
+    </div>`;
+
+  tbody.innerHTML = listShow.length===0 ? `<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
+  listShow.map(p=>{
     const isBonif = p.tipo === 'bonificacao';
     const isExcluido = !!p.excluido;
     const tipoBadge = isBonif
@@ -3103,8 +3180,15 @@ function salvarPedido() {
   };
   if(pedEditId){
     pedidos = pedidos.map(x => x.id===pedEditId ? {...x, ...obj, nf:x.nf} : x);
+    // Atualiza dados cadastrais na logística ao editar
+    const _lIdx=logisticaData.findIndex(l=>l.pedId===obj.id);
+    if(_lIdx>=0) logisticaData[_lIdx]={...logisticaData[_lIdx],cliente:obj.cliente,industria:obj.industria,data:obj.data};
   } else {
     pedidos.push({...obj, nf:null});
+    // Insere na logística imediatamente ao criar (independente de status)
+    if(!logisticaData.find(l=>l.pedId===obj.id))
+      logisticaData.push({pedId:obj.id,cliente:obj.cliente,industria:obj.industria,
+        data:obj.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
   }
   _sincLogisticaPedido(obj);
   pedItens=[]; pedEditId=null;
@@ -3220,6 +3304,7 @@ function salvarNF() {
   const pedId=el('nf-pedido').value;
   if(!num||!pedId){alert('Informe o número da NF e o pedido vinculado.');return;}
   const val=parseFloat(el('nf-valor').value)||0;
+  if(!val){alert('Informe o valor da NF (deve ser maior que zero).');return;}
   const abat=parseFloat(el('nf-abat').value)||0;
   const dev=parseFloat(el('nf-devolucoes').value)||0;
   const fin=parseFloat(el('nf-desc-fin').value)||0;
@@ -3227,10 +3312,17 @@ function salvarNF() {
   const bon=parseFloat(el('nf-bonif').value)||0;
   const liq=Math.max(0,val-abat-dev-fin-nfd-bon);
   const ped=pedidos.find(p=>p.id===pedId);
+  const jaTemNF = !!(ped && ped.nf); // detecta re-registro
   const nfObj={numero:num,data:el('nf-data').value||today(),valorPedido:ped?ped.total:0,
     valorNF:val,abatimentos:abat,devolucoes:dev,descFin:fin,nfd,bonif:bon,liquida:liq,pdf:null,xml:null};
   if(ped){
-    pedidos=pedidos.map(p=>p.id===pedId?{...p,nf:nfObj,status:p.status==='Implantado'?'Faturado total':p.status}:p);
+    // Atualiza status do pedido (qualquer status pré-faturamento vira "Faturado total")
+    const novoStatus = ['Recebido','Em digitação','Implantado','Faturado parcial'].includes(ped.status)
+      ? 'Faturado total' : ped.status;
+    pedidos=pedidos.map(p=>p.id===pedId?{...p,nf:nfObj,status:novoStatus}:p);
+    // Atualiza status logístico
+    const _lNF=logisticaData.findIndex(l=>l.pedId===pedId);
+    if(_lNF>=0) logisticaData[_lNF]={...logisticaData[_lNF],statusLog:'Faturado'};
     // Limpa formulário
     ['nf-num','nf-valor','nf-abat','nf-devolucoes','nf-desc-fin','nf-nfd','nf-bonif','nf-obs'].forEach(id=>{const e=el(id);if(e)e.value='';});
     if(el('nf-abat'))el('nf-abat').value='0';
@@ -3240,24 +3332,22 @@ function salvarNF() {
     if(el('nf-bonif'))el('nf-bonif').value='0';
     if(el('nf-liquida-val'))el('nf-liquida-val').textContent='R$ 0,00';
     if(el('nf-bonif-alert'))el('nf-bonif-alert').style.display='none';
-    if(ped.tipo === 'bonificacao') {
-      // Pedido de bonificação: cria registro separado, NÃO gera comissão
-      _registrarBonificacao(ped, nfObj);
+    if(ped.tipo==='bonificacao'){
+      if(!jaTemNF) _registrarBonificacao(ped,nfObj); // não duplica bonificação
       closeModal('modal-nf');
-      renderFaturamento(); renderPedidos(); popularSelectsDinamicos(); renderDashboard();
+      renderFaturamento();renderPedidos();renderLogistica();popularSelectsDinamicos();renderDashboard();
       syncAutoSaveHook();
-      toast('NF de bonificação registrada! (sem geração de comissão)');
-    } else {
-      // Pedido de venda: gera comissão normalmente
-      gerarComissaoAuto(ped, liq);
+      toast('NF de bonificação '+(jaTemNF?'atualizada':'registrada')+'! (sem geração de comissão)');
+    }else{
+      if(!jaTemNF) gerarComissaoAuto(ped,liq); // CRÍTICO: não gera comissão duplicada
       closeModal('modal-nf');
-      renderFaturamento(); renderPedidos(); popularSelectsDinamicos(); renderDashboard();
+      renderFaturamento();renderPedidos();renderLogistica();popularSelectsDinamicos();renderDashboard();
       syncAutoSaveHook();
-      toast('NF registrada! Comissão calculada automaticamente.');
+      toast(jaTemNF ? 'NF atualizada com sucesso!' : 'NF registrada! Comissão calculada automaticamente.');
     }
-  } else {
+  }else{
     closeModal('modal-nf');
-    renderFaturamento(); renderPedidos(); popularSelectsDinamicos(); renderDashboard();
+    renderFaturamento();renderPedidos();popularSelectsDinamicos();renderDashboard();
     syncAutoSaveHook();
     toast('NF registrada!');
   }
@@ -3536,8 +3626,10 @@ function renderSaldo() {
     if(pedsCli.length===0) return '';
     // Só pedidos de venda entram nos cálculos financeiros
     const pedsVenda = pedsCli.filter(p=>(p.tipo||'venda')==='venda');
+    if(pedsVenda.length===0) return ''; // skip clientes só com bonificações
 
-    const indsDoCliente = nomesIndustrias.filter(ind=>pedsCli.some(p=>p.industria===ind));
+    // Usa pedsVenda (não pedsCli) para listar indústrias — garante consistência
+    const indsDoCliente = nomesIndustrias.filter(ind=>pedsVenda.some(p=>p.industria===ind));
     const av = cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
     // SALDO = diferença entre valor do PEDIDO (venda) e valor da NF faturada
@@ -4844,71 +4936,13 @@ const IMPORT_COLS = {
   ],
 };
 
-// Mapeamento automático de cabeçalhos para chaves internas
-const HEADER_MAP = {
-  // Clientes
-  'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome',
-  'cnpj':'cnpj','cpf/cnpj':'cnpj',
-  'segmento':'segmento','perfil':'segmento','tipo cliente':'segmento',
-  'cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade',
-  'prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','condicao':'prazo',
-  'contato':'contato','responsavel':'contato',
-  'email':'email','e-mail':'email',
-  'telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone',
-  'status':'status','situacao':'status',
-  'obs':'obs','observacoes':'obs','observacao':'obs','notas':'obs',
-  // Industrias
-  'razao social completa':'razao',
-  '% comissao':'pct','comissao %':'pct',
-  'pct':'pct','percentual':'pct',
-  'tipo comissao':'tipoCom','tipo com':'tipoCom',
-  // Produtos
-  'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod',
-  'ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean',
-  'descricao':'desc','produto':'desc','item':'desc',
-  'industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind',
-  'preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco',
-  'unidade':'unid','unid':'unid','un':'unid',
-  'categoria':'cat','cat':'cat',
-  // Preços por canal
-  'preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor',
-  'preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado',
-  'preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo',
-  // Códigos regionais (UF)
-  'codigo mg':'codigoMG','cod mg':'codigoMG','mg':'codigoMG',
-  'codigo sp':'codigoSP','cod sp':'codigoSP','sp':'codigoSP',
-  'codigo ba':'codigoBA','cod ba':'codigoBA','ba':'codigoBA',
-  'codigo go':'codigoGO','cod go':'codigoGO','go':'codigoGO',
-  'codigo rj':'codigoRJ','cod rj':'codigoRJ','rj':'codigoRJ',
-  'codigo pr':'codigoPR','cod pr':'codigoPR','pr':'codigoPR',
-  'codigo sc':'codigoSC','cod sc':'codigoSC','sc':'codigoSC',
-  'codigo rs':'codigoRS','cod rs':'codigoRS','rs':'codigoRS',
-  // EAN regionais (UF)
-  'ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG',
-  'ean sp':'eanSP','ean sao paulo':'eanSP',
-  'ean ba':'eanBA','ean bahia':'eanBA',
-  'ean go':'eanGO','ean goias':'eanGO',
-  'ean rj':'eanRJ','ean rio de janeiro':'eanRJ',
-  'ean pr':'eanPR','ean parana':'eanPR',
-  'ean sc':'eanSC','ean santa catarina':'eanSC',
-  'ean rs':'eanRS','ean rio grande do sul':'eanRS',
-  // Disponibilidade
-  'canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais',
-  // Pedido — cabeçalho de pedido e itens
-  'cliente':'cliente','razao social':'cliente',
-  'industria':'industria','fabricante':'industria','marca':'industria',
-  'tipo':'tipo','tipo pedido':'tipo',
-  'data':'data','data pedido':'data',
-  'condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond',
-  'status':'status',
-  'observacoes':'obs','obs':'obs','observacao':'obs',
-  'cod produto':'cod','codigo produto':'cod','sku':'cod','ref produto':'cod','codigo':'cod',
-  'descricao produto':'desc','descricao':'desc','produto':'desc','item':'desc','nome produto':'desc',
-  'qtd':'qtd','quantidade':'qtd','quant':'qtd',
-  'desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct',
-  'preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit',
-  'total item':'total','total':'total','valor total':'total','subtotal':'total',
-};
+// ── Mapas de importação separados por contexto (sem colisão de chaves) ──
+const _HMB = {'status':'status','situacao':'status','obs':'obs','observacoes':'obs','observacao':'obs','notas':'obs','email':'email','e-mail':'email','telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone','contato':'contato','responsavel':'contato'};
+const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome','cnpj':'cnpj','cpf/cnpj':'cnpj','segmento':'segmento','perfil':'segmento','tipo cliente':'segmento','cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade','prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','rede':'rede','grupo':'rede'});
+const _HMI = Object.assign({},_HMB,{'nome':'nome','marca':'nome','laboratorio':'nome','fabricante':'nome','razao social':'razao','razao social completa':'razao','cnpj':'cnpj','% comissao':'pct','comissao %':'pct','pct':'pct','percentual':'pct','comissao':'pct','tipo comissao':'tipoCom','tipo com':'tipoCom'});
+const _HMP = Object.assign({},_HMB,{'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod','codigo produto':'cod','ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind','preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco','unidade':'unid','unid':'unid','un':'unid','categoria':'cat','cat':'cat','preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor','preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado','preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo','codigo mg':'codigoMG','cod mg':'codigoMG','codigo sp':'codigoSP','cod sp':'codigoSP','codigo ba':'codigoBA','cod ba':'codigoBA','codigo go':'codigoGO','cod go':'codigoGO','codigo rj':'codigoRJ','cod rj':'codigoRJ','codigo pr':'codigoPR','cod pr':'codigoPR','codigo sc':'codigoSC','cod sc':'codigoSC','codigo rs':'codigoRS','cod rs':'codigoRS','ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG','ean sp':'eanSP','ean sao paulo':'eanSP','ean ba':'eanBA','ean bahia':'eanBA','ean go':'eanGO','ean rj':'eanRJ','ean pr':'eanPR','ean sc':'eanSC','ean rs':'eanRS','canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais'});
+const _HMD = Object.assign({},_HMB,{'cliente':'cliente','razao social':'cliente','industria':'industria','nome industria':'industria','tipo':'tipo','tipo pedido':'tipo','data':'data','data pedido':'data','data emissao':'data','condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond','condicao pagamento':'cond','codigo':'cod','cod':'cod','cod produto':'cod','codigo produto':'cod','sku':'cod','ref':'cod','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','qtd':'qtd','quantidade':'qtd','quant':'qtd','qty':'qtd','desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct','desconto %':'descPct','preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit','preco':'precoUnit','total item':'total','total':'total','valor total':'total','subtotal':'total','valor':'total'});
+const HEADER_MAP = _HMP; // compatibilidade com código existente
 
 function normHeader(h) {
   return String(h||'').toLowerCase().trim()
@@ -4916,8 +4950,10 @@ function normHeader(h) {
     .replace(/[^a-z0-9%./]/g,' ').replace(/\s+/g,' ').trim();
 }
 
-function mapearColunas(headers) {
-  return headers.map(h => HEADER_MAP[normHeader(h)] || null);
+function mapearColunas(headers, tipo) {
+  const mapas = {clientes:_HMC, industrias:_HMI, produtos:_HMP, pedido:_HMD};
+  const mapa = mapas[tipo] || _HMP;
+  return headers.map(h => mapa[normHeader(h)] || null);
 }
 
 function importarCadastro(tipo) {
@@ -5009,7 +5045,7 @@ function _processarDadosImport(data) {
     if(data[i].some(c => String(c||'').trim() !== '')) { headerRow = i; break; }
   }
   const headers = data[headerRow].map(h => String(h||'').trim());
-  const mapeamento = mapearColunas(headers);
+  const mapeamento = mapearColunas(headers, importTipo);
   const rows = data.slice(headerRow + 1).filter(r => r.some(c => String(c||'').trim() !== ''));
 
   importDados = rows.map(row => {
@@ -5270,9 +5306,13 @@ function confirmarImport() {
           cond:     row.cond || '',
           status:   row.status || 'Recebido',
           obs:      row.obs   || '',
-          itens:    []
+          itens:    [],
+          _totalBruto: 0
         };
       }
+      // Acumula total da linha (útil quando não há código de produto)
+      const _impRowTotal = parseFloat((row.total||'0').toString().replace(',','.').replace(/[R$\s]/g,''))||0;
+      if(_impRowTotal>0) grupos[chave]._totalBruto=(grupos[chave]._totalBruto||0)+_impRowTotal;
       // Se a linha tem produto, adiciona como item
       const cod = (row.cod||'').trim().toUpperCase();
       if(cod) {
@@ -5293,18 +5333,20 @@ function confirmarImport() {
     });
 
     Object.values(grupos).forEach(g => {
-      if(g.itens.length === 0) { ignorados++; return; }
-      const total = g.itens.reduce((s,i)=>s+i.total, 0);
+      // Aceita pedidos sem itens (usa totalBruto da linha se disponível)
+      const total = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : (g._totalBruto||0);
       const pedId = _gerarIdPedido();
-      const pedObj = {id:pedId, tipo:g.tipo, cliente:g.cliente, industria:g.industria,
-        data:g.data, cond:g.cond, status:g.status, itens:g.itens, total, obs:g.obs, orcOrigem:'', nf:null};
+      const pedObj = {id:pedId,tipo:g.tipo,cliente:g.cliente,industria:g.industria,
+        data:g.data,cond:g.cond,status:g.status,itens:g.itens,total,obs:g.obs,orcOrigem:'',nf:null};
       pedidos.push(pedObj);
-      _sincLogisticaPedido(pedObj);
+      // Insere na logística imediatamente
+      logisticaData.push({pedId:pedId,cliente:g.cliente,industria:g.industria,
+        data:g.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
       adicionados++;
     });
 
     closeModal('modal-import');
-    renderPedidos();
+    renderPedidos(); renderLogistica(); renderSaldo();
     popularSelectsDinamicos();
     renderDashboard();
     addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} pedido${adicionados!==1?'s':''}`, '📥');
@@ -5385,8 +5427,8 @@ function popularSelectsDinamicos() {
   const optsCli  = nomesClientes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   const optsInd  = todasInds.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   const optsRede = nomesRedes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  const optsPeds = pedidos.filter(p=>!p.nf)
-    .map(p=>`<option value="${p.id}">${p.id} — ${esc(p.cliente)}</option>`).join('');
+  const optsPeds = pedidos.filter(p=>!p.excluido)
+    .map(p=>`<option value="${p.id}">${p.id} — ${esc(p.cliente)}${p.nf?' ✓NF':''}</option>`).join('');
 
   // selects de escolha (modal de criação)
   const modalCli = ['orc-cli','ped-cli','regra-cli','so-cli'];
@@ -6216,11 +6258,20 @@ function renderLogistica() {
   const statusOpts = ['Pedido Digitado','Pedido Enviado','Em Separação','Faturado',
     'Aguardando Coleta','Em Transporte','Entregue','Finalizado','Cancelado'];
 
-  // Fonte de verdade: array pedidos filtrado por status elegível
-  const pedElegiveis = pedidos.filter(p => STATUS_LOG_GATILHO.has(p.status));
+  // TODOS os pedidos não excluídos aparecem na logística
+  const pedElegiveis = pedidos.filter(p => !p.excluido);
 
-  // Garante entrada em logisticaData para cada pedido elegível
-  pedElegiveis.forEach(p => _sincLogisticaPedido(p));
+  // Migração automática: cria entradas faltantes para pedidos sem registro
+  pedElegiveis.forEach(p => {
+    const idx = logisticaData.findIndex(l => l.pedId === p.id);
+    if(idx < 0) {
+      logisticaData.push({pedId:p.id, cliente:p.cliente, industria:p.industria,
+        data:p.data, transportadora:'', previsao:'', statusLog:'Pedido Digitado', obs:''});
+    } else {
+      // Mantém dados logísticos, atualiza apenas cadastrais
+      logisticaData[idx] = {...logisticaData[idx], cliente:p.cliente, industria:p.industria};
+    }
+  });
 
   // Monta lista combinando pedido + dados logísticos salvos
   let list = pedElegiveis.map(p => {
@@ -6244,7 +6295,7 @@ function renderLogistica() {
 
   if(list.length===0){
     tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#aaa;padding:24px">
-      Nenhum pedido encontrado.<br><span style="font-size:11px">Pedidos aparecem aqui a partir do status <strong>Implantado</strong>.</span>
+      Nenhum pedido encontrado.<br><span style="font-size:11px">Nenhum pedido encontrado. Crie um pedido para que apareça aqui automaticamente.</span>
     </td></tr>`;
     return;
   }
@@ -7519,6 +7570,7 @@ function renderFatMensal() {
     }).join('');
 
     content.innerHTML = `
+      <div id="ped-pag-ctrl"></div>
       <div class="card" style="padding:0;overflow:hidden">
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -7627,7 +7679,7 @@ function exportarFatMensal() {
 ══════════════════════════════════════════════════════ */
 
 let configSync = {
-  dbUrl: '',       // ex: https://sistematresvales-default-rtdb.firebaseio.com
+  dbUrl: '',       // ex: https://SEU-PROJETO-default-rtdb.firebaseio.com
   apiKey: '',      // da configuração do web app
   autoSave: true,
   realtime: true,
@@ -7777,8 +7829,12 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(Array.isArray(dados.redes))            redes = dados.redes;
   if(Array.isArray(dados.comissoes_data))   comissoes_data = dados.comissoes_data;
   if(Array.isArray(dados.logisticaData))    logisticaData = dados.logisticaData;
-  // Garante que todo pedido existente tenha entrada na logística
-  pedidos.forEach(p => _sincLogisticaPedido(p));
+  // Migração pós-sync: reconstrói logística para pedidos sem entrada
+  pedidos.filter(p=>!p.excluido).forEach(p=>{
+    if(!logisticaData.find(l=>l.pedId===p.id))
+      logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
+        data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+  });
   if(Array.isArray(dados.sellOutData))      sellOutData = dados.sellOutData;
   if(Array.isArray(dados.metasData))        metasData = dados.metasData;
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
@@ -7930,8 +7986,8 @@ async function syncResetCloud() {
 
 async function tentarReconexaoAuto() {
   // Credenciais do Firebase — Sistematresvales
-  const FIREBASE_DB_URL = 'https://sistematresvales-default-rtdb.firebaseio.com';
-  const FIREBASE_API_KEY = 'AIzaSyC1eaTg2sXqyM9BMHZYJNCwwEydhwdVy6c';
+  const FIREBASE_DB_URL = '';
+  const FIREBASE_API_KEY = '';
 
   try {
     // Preenche os campos do painel de sincronização
@@ -7963,6 +8019,19 @@ async function tentarReconexaoAuto() {
 /* ══════════════════════════
    INIT
 ══════════════════════════ */
+// 1. Restaura dados do localStorage (funciona offline, sem Firebase)
+(function(){
+  if(typeof _carregarLocal === 'function' && _carregarLocal()) {
+    popularSelectsDinamicos();
+    renderDashboard();
+  }
+})();
+// 2. Migração de segurança: garante logística para TODOS os pedidos existentes
+pedidos.filter(p=>!p.excluido).forEach(p=>{
+  if(!logisticaData.find(l=>l.pedId===p.id))
+    logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
+      data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+});
 el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
 atualizarBadgeTratativas();
 renderDashboard();
