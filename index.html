@@ -3276,7 +3276,7 @@ function gerarPedExcel(p){
 function exportarPedidos(){
   const wb=XLSX.utils.book_new();
   const rows=[['#','Tipo','Cliente','Indústria','Data','Condição','Total Pedido','NF Líquida','Status']];
-  pedidos.forEach(p=>rows.push([p.id,p.tipo||'venda',p.cliente,p.industria,p.data,p.cond,p.total,p.nf?p.nf.liquida:'',p.status]));
+  pedidos.filter(p=>!p.excluido).forEach(p=>rows.push([p.id,p.tipo||'venda',p.cliente,p.industria,p.data,p.cond,p.total,p.nf?p.nf.liquida:'',p.status]));
   const ws=XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
   XLSX.writeFile(wb,'Pedidos_TresVales.xlsx');toast('Excel exportado!');
@@ -3730,7 +3730,7 @@ function renderSaldo() {
 ══════════════════════════ */
 
 function zerarSaldoClienteInd(cli, ind) {
-  const pedsInd = pedidos.filter(p=>p.cliente===cli && p.industria===ind);
+  const pedsInd = pedidos.filter(p=>p.cliente===cli && p.industria===ind && !p.excluido);
   const totPed  = pedsInd.reduce((s,p)=>s+p.total, 0);
   const totNF   = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
   const dif     = totPed - totNF;
@@ -3740,7 +3740,7 @@ function zerarSaldoClienteInd(cli, ind) {
 }
 
 function zerarSaldoCliente(cli) {
-  const pedsCli = pedidos.filter(p=>p.cliente===cli);
+  const pedsCli = pedidos.filter(p=>p.cliente===cli && !p.excluido);
   const totPed  = pedsCli.reduce((s,p)=>s+p.total, 0);
   const totNF   = pedsCli.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
   const dif     = totPed - totNF;
@@ -3751,11 +3751,11 @@ function zerarSaldoCliente(cli) {
 }
 
 function zerarTodosSaldos() {
-  const totPed = pedidos.reduce((s,p)=>s+p.total, 0);
-  const totNF  = pedidos.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
+  const totPed = pedidos.filter(p=>!p.excluido).reduce((s,p)=>s+p.total, 0);
+  const totNF  = pedidos.filter(p=>p.nf && !p.excluido).reduce((s,p)=>s+p.nf.valorNF, 0);
   const dif    = totPed - totNF;
   if(Math.abs(dif) < 0.01) { toast('Todos os saldos já estão zerados.'); return; }
-  const clis = [...new Set(pedidos.map(p=>p.cliente))];
+  const clis = [...new Set(pedidos.filter(p=>!p.excluido).map(p=>p.cliente))];
   if(!confirm(`Registrar ajuste de saldo para TODOS os clientes?\n\n${clis.length} cliente(s)\nDiferença total: ${fmt(Math.abs(dif))}\n\nEssa ação ficará registrada no histórico.`)) return;
   if(!confirm(`Segunda confirmação: zerar todos os saldos?`)) return;
   _registrarZeramentoSaldo('todos os clientes', 'todas as indústrias', dif, pedidos.map(p=>p.id));
@@ -5317,8 +5317,16 @@ function confirmarImport() {
           _totalBruto: 0
         };
       }
+      // Helper: converte valor monetário BR (1.750,90) ou EN (1750.90) para float
+      const parseMoney = v => {
+        if(v===undefined||v===null||v==='') return 0;
+        let s = v.toString().replace(/R\$|\s/g,'').trim();
+        // Formato BR: ponto é milhar, vírgula é decimal → remove pontos, troca vírgula por ponto
+        if(s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+        return parseFloat(s) || 0;
+      };
       // Acumula total da linha (útil quando não há código de produto)
-      const _impRowTotal = parseFloat((row.total||'0').toString().replace(',','.').replace(/[R$\s]/g,''))||0;
+      const _impRowTotal = parseMoney(row.total);
       if(_impRowTotal>0) grupos[chave]._totalBruto=(grupos[chave]._totalBruto||0)+_impRowTotal;
       // Se a linha tem produto, adiciona como item
       const cod = (row.cod||'').trim().toUpperCase();
@@ -5329,12 +5337,14 @@ function confirmarImport() {
         const qtd     = parseFloat((row.qtd||'1').toString().replace(',','.')) || 1;
         const descPct = parseFloat((row.descPct||'0').toString().replace(',','.')) || 0;
         const precoTab = prodCat ? prodCat.preco : 0;
-        const precoUnit = row.precoUnit
-          ? parseFloat(row.precoUnit.toString().replace(',','.').replace(/[R$\s]/g,'')) || precoTab*(1-descPct/100)
-          : precoTab*(1-descPct/100);
-        const total = row.total
-          ? parseFloat(row.total.toString().replace(',','.').replace(/[R$\s]/g,'')) || precoUnit*qtd
-          : precoUnit*qtd;
+        // Preço unitário: lê da planilha com parse BR, senão usa catálogo com desconto
+        let precoUnit = row.precoUnit ? parseMoney(row.precoUnit) : 0;
+        if(!precoUnit && precoTab) precoUnit = precoTab * (1 - descPct / 100);
+        // Total: lê da planilha com parse BR, senão calcula
+        let total = row.total ? parseMoney(row.total) : 0;
+        if(!total && precoUnit) total = precoUnit * qtd;
+        // Derivar precoUnit do total quando produto não está no catálogo
+        if(!precoUnit && total && qtd) precoUnit = total / qtd;
         grupos[chave].itens.push({cod, desc, ind:indItem, precoTab, qtd, descPct, precoUnit, total});
       }
     });
@@ -6411,12 +6421,12 @@ function renderSellInOut() {
   const fats = pedidos.filter(p=>p.nf);
   // Build combined rows
   const rows = [];
-  const clientes = [...new Set([...fats.map(p=>p.cliente),...sellOutData.map(s=>s.cliente)])];
-  const inds = [...new Set([...fats.map(p=>p.industria),...sellOutData.map(s=>s.industria)])];
+  const clisLocal = [...new Set([...fats.map(p=>p.cliente),...sellOutData.map(s=>s.cliente)])];
+  const indsLocal = [...new Set([...fats.map(p=>p.industria),...sellOutData.map(s=>s.industria)])];
 
-  clientes.forEach(cli=>{
+  clisLocal.forEach(cli=>{
     if(filtCli && cli!==filtCli) return;
-    inds.forEach(ind=>{
+    indsLocal.forEach(ind=>{
       if(filtInd && ind!==filtInd) return;
       ['Jan/26','Fev/26','Mar/26'].forEach(mes=>{
         if(filtMes && mes!==filtMes) return;
