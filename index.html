@@ -125,6 +125,7 @@ tr:last-child td{border-bottom:none;}
 .status-agendado{background:#e3f2fd;color:#0369a1}
 .status-entregue{background:#e8f5e9;color:#166534}
 .status-prevista{background:#fff7ed;color:#d97706}
+.status-excluido{background:#f4f3ef;color:#999;text-decoration:line-through;}
 .status-recebida{background:#e8f5e9;color:#2d7a3a}
 .status-atrasada{background:#fef2f2;color:#c0392b}
 
@@ -520,11 +521,16 @@ tr:last-child td{border-bottom:none;}
           <option>Recebido</option><option>Em digitação</option><option>Implantado</option>
           <option>Faturado parcial</option><option>Faturado total</option><option>Expedido</option>
           <option>Agendado</option><option>Entregue</option><option>Cancelado</option>
+          <option>Excluído</option>
         </select>
         <select id="ped-filtro-ind" onchange="renderPedidos()">
           <option value="">Todas as indústrias</option>
           <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option>
         </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;background:#fff">
+          <input type="checkbox" id="ped-mostrar-excluidos" onchange="renderPedidos()" style="accent-color:var(--vermelho)">
+          🚫 Ver excluídos
+        </label>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -2776,8 +2782,11 @@ function renderPedidos() {
   const filtSt = (el('ped-filtro-status')||{}).value||'';
   const filtInd = (el('ped-filtro-ind')||{}).value||'';
   const filtTipo = (el('ped-filtro-tipo')||{}).value||'';
+  const mostrarExcluidos = el('ped-mostrar-excluidos')?.checked || false;
   const tbody = el('ped-tbody'); if(!tbody) return;
   const list = pedidos.filter(p=>{
+    // Por padrão, oculta excluídos; mostra só se checkbox marcado
+    if(p.excluido && !mostrarExcluidos) return false;
     if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)) return false;
     if(filtSt&&p.status!==filtSt) return false;
     if(filtInd&&p.industria!==filtInd) return false;
@@ -2787,11 +2796,13 @@ function renderPedidos() {
   tbody.innerHTML = list.length===0 ? `<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
   list.map(p=>{
     const isBonif = p.tipo === 'bonificacao';
+    const isExcluido = !!p.excluido;
     const tipoBadge = isBonif
       ? `<span class="badge badge-laranja" title="Bonificação — sem comissão">🎁 BONIF</span>`
       : `<span class="badge badge-azul" title="Pedido de venda">🛒 Venda</span>`;
-    return `<tr>
-    <td class="mono bold">${p.id}</td>
+    const rowStyle = isExcluido ? 'opacity:0.5;background:#f9f9f9;' : '';
+    return `<tr style="${rowStyle}">
+    <td class="mono bold">${p.id}${isExcluido?` <span class="badge badge-cinza" style="font-size:9px">EXCLUÍDO</span>`:''}</td>
     <td>${tipoBadge}</td>
     <td><strong>${esc(p.cliente)}</strong></td>
     <td><span class="tag">${esc(p.industria)}</span></td>
@@ -2802,12 +2813,16 @@ function renderPedidos() {
     <td class="bold verde">${p.nf?fmt(p.nf.liquida):'—'}</td>
     <td><span class="badge ${statusClass(p.status)}">${p.status}</span></td>
     <td>
-      <div style="display:flex;gap:4px">
-        <button class="btn btn-outline btn-xs" onclick="editarPedido('${p.id}')">Editar</button>
-        <button class="btn btn-info btn-xs" onclick="exportarPedidoPDFById('${p.id}')">📄</button>
-        <button class="btn btn-success btn-xs" onclick="exportarPedidoExcelById('${p.id}')">📊</button>
-        <button class="btn btn-roxo btn-xs" onclick="abrirCompare('${p.id}')">⚖️</button>
-        <button class="btn btn-danger btn-xs" onclick="excluirPedido('${p.id}')">🗑️</button>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${isExcluido
+          ? `<button class="btn btn-success btn-xs" onclick="reativarPedido('${p.id}')" title="Reativar pedido">↩️ Reativar</button>
+             <button class="btn btn-danger btn-xs" onclick="excluirPedido('${p.id}')" title="Excluir permanentemente">🗑️ Perm.</button>`
+          : `<button class="btn btn-outline btn-xs" onclick="editarPedido('${p.id}')">Editar</button>
+             <button class="btn btn-info btn-xs" onclick="exportarPedidoPDFById('${p.id}')">📄</button>
+             <button class="btn btn-success btn-xs" onclick="exportarPedidoExcelById('${p.id}')">📊</button>
+             <button class="btn btn-roxo btn-xs" onclick="abrirCompare('${p.id}')">⚖️</button>
+             <button class="btn btn-danger btn-xs" onclick="excluirPedido('${p.id}')" title="Marcar como excluído">🚫</button>`
+        }
       </div>
     </td>
   </tr>`;
@@ -2817,15 +2832,37 @@ function renderPedidos() {
 function excluirPedido(id) {
   const p = pedidos.find(x => x.id === id);
   if (!p) return;
-  if (!confirm(`Excluir o pedido ${id} (${p.cliente} — ${p.industria})?\n\nEsta ação não pode ser desfeita.`)) return;
-  pedidos = pedidos.filter(x => x.id !== id);
-  // Remove entradas de logística vinculadas
-  logisticaData = logisticaData.filter(x => x.pedido !== id);
-  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} excluído (${p.cliente} / ${p.industria})`, '🗑️');
+  if(p.excluido) {
+    // Já está excluído — confirmação para exclusão permanente
+    if (!confirm(`⚠️ ATENÇÃO: Excluir PERMANENTEMENTE o pedido ${id}?\n\nEsta ação não pode ser desfeita e o pedido não poderá ser recuperado.`)) return;
+    pedidos = pedidos.filter(x => x.id !== id);
+    logisticaData = logisticaData.filter(x => x.pedId !== id);
+    addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} excluído PERMANENTEMENTE (${p.cliente} / ${p.industria})`, '🗑️');
+    syncAutoSaveHook();
+    renderPedidos();
+    renderDashboard();
+    toast(`Pedido ${id} removido permanentemente.`);
+    return;
+  }
+  if (!confirm(`Marcar o pedido ${id} como EXCLUÍDO?\n\nO pedido deixará de aparecer no Saldo, Pedido×NF e Dashboard.\nVocê poderá reativá-lo a qualquer momento.`)) return;
+  pedidos = pedidos.map(x => x.id === id ? {...x, excluido: true, statusAnterior: x.status, status: 'Excluído'} : x);
+  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} marcado como excluído (${p.cliente} / ${p.industria})`, '🚫');
   syncAutoSaveHook();
   renderPedidos();
   renderDashboard();
-  toast(`Pedido ${id} excluído com sucesso.`);
+  toast(`Pedido ${id} marcado como excluído. Use "Reativar" para desfazer.`);
+}
+
+function reativarPedido(id) {
+  const p = pedidos.find(x => x.id === id);
+  if (!p || !p.excluido) return;
+  if (!confirm(`Reativar o pedido ${id}?\n\nEle voltará a aparecer no Saldo, Pedido×NF e Dashboard.`)) return;
+  pedidos = pedidos.map(x => x.id === id ? {...x, excluido: false, status: x.statusAnterior || 'Cancelado'} : x);
+  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} reativado (${p.cliente} / ${p.industria})`, '✅');
+  syncAutoSaveHook();
+  renderPedidos();
+  renderDashboard();
+  toast(`Pedido ${id} reativado com sucesso!`);
 }
 
 /* ══════════════════════════
@@ -3288,7 +3325,7 @@ function renderFaturamento() {
   const filtMes=window._fatMesFiltro||'';
   const filtBonif=(el('fat-filtro-status')||{}).value||'';
 
-  let list=pedidos.filter(p=>p.nf);
+  let list=pedidos.filter(p=>p.nf && !p.excluido);
   if(filtCli) list=list.filter(p=>p.cliente===filtCli);
   if(filtInd) list=list.filter(p=>p.industria===filtInd);
   if(filtMes) list=list.filter(p=>p.nf.data && p.nf.data.startsWith(filtMes));
@@ -3321,7 +3358,7 @@ function renderFaturamento() {
 function exportarFaturamento(){
   const wb=XLSX.utils.book_new();
   const rows=[['NF','Pedido','Cliente','Indústria','Data','Val.Pedido','Val.NF','Abatimentos','Devoluções','Desc.Fin.','NFD','Bonif.s/Com.','NF Líquida']];
-  pedidos.filter(p=>p.nf).forEach(p=>{const n=p.nf;rows.push([n.numero,p.id,p.cliente,p.industria,n.data,n.valorPedido,n.valorNF,n.abatimentos,n.devolucoes,n.descFin,n.nfd,n.bonif,n.liquida]);});
+  pedidos.filter(p=>p.nf && !p.excluido).forEach(p=>{const n=p.nf;rows.push([n.numero,p.id,p.cliente,p.industria,n.data,n.valorPedido,n.valorNF,n.abatimentos,n.devolucoes,n.descFin,n.nfd,n.bonif,n.liquida]);});
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Faturamento');
   XLSX.writeFile(wb,'Faturamento_TresVales.xlsx');toast('Excel exportado!');
 }
@@ -3334,6 +3371,7 @@ function renderNFCompare() {
   const filtDiv=(el('cmp-filtro-div')||{}).value||'';
   const busca=(el('cmp-busca')||{}).value?.toLowerCase()||'';
   const list=pedidos.filter(p=>{
+    if(p.excluido) return false;
     if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca))return false;
     if(filtDiv==='com'&&!p.nf)return false;
     if(filtDiv==='sem'){
@@ -3493,7 +3531,7 @@ function renderSaldo() {
   }
 
   div.innerHTML = nomesClientes.map(cli=>{
-    const pedsCli = pedidos.filter(p=>p.cliente===cli);
+    const pedsCli = pedidos.filter(p=>p.cliente===cli && !p.excluido);
     if(pedsCli.length===0) return '';
     // Só pedidos de venda entram nos cálculos financeiros
     const pedsVenda = pedsCli.filter(p=>(p.tipo||'venda')==='venda');
@@ -3654,7 +3692,7 @@ function exportarSaldo(){
   const nomesIndustrias=[...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].sort();
   nomesClientes.forEach(cli=>{
     nomesIndustrias.forEach(ind=>{
-      const pedsInd=pedidos.filter(p=>p.cliente===cli&&p.industria===ind);
+      const pedsInd=pedidos.filter(p=>p.cliente===cli&&p.industria===ind && !p.excluido);
       if(pedsInd.length===0)return;
       const totPed=pedsInd.reduce((s,p)=>s+p.total,0);
       const totFat=pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF,0);
@@ -5993,9 +6031,9 @@ function renderDashboard() {
   const anoAtual = agora.getFullYear();
   const prefix   = `${anoAtual}-${mesAtual}`;
 
-  const pedsMes = pedidos.filter(p => p.data && p.data.startsWith(prefix) && (p.tipo||'venda')==='venda');
-  const fatLiq  = pedidos.filter(p=>p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+p.nf.liquida,0);
-  const nfCount = pedidos.filter(p=>p.nf && (p.tipo||'venda')==='venda').length;
+  const pedsMes = pedidos.filter(p => !p.excluido && p.data && p.data.startsWith(prefix) && (p.tipo||'venda')==='venda');
+  const fatLiq  = pedidos.filter(p=>!p.excluido && p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+p.nf.liquida,0);
+  const nfCount = pedidos.filter(p=>!p.excluido && p.nf && (p.tipo||'venda')==='venda').length;
   const comPrev = comissoes_data.filter(c=>c.status==='Prevista'||c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
   const orcAbertos = orcamentos.filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
 
@@ -6011,7 +6049,7 @@ function renderDashboard() {
   // Pedidos recentes
   const ptbody = el('dash-pedidos-tbody');
   if(ptbody) {
-    const recentes = [...pedidos].sort((a,b)=>b.data?.localeCompare(a.data||'')||0).slice(0,5);
+    const recentes = [...pedidos].filter(p=>!p.excluido).sort((a,b)=>b.data?.localeCompare(a.data||'')||0).slice(0,5);
     ptbody.innerHTML = recentes.length===0
       ? `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px;font-size:12px">Nenhum pedido cadastrado ainda</td></tr>`
       : recentes.map(p=>`<tr>
@@ -6054,7 +6092,7 @@ function renderDashboard() {
   const indDiv = el('dash-fat-ind');
   if(indDiv) {
     const indFat = {};
-    pedidos.filter(p=>p.nf).forEach(p=>{ indFat[p.industria]=(indFat[p.industria]||0)+p.nf.liquida; });
+    pedidos.filter(p=>p.nf && !p.excluido).forEach(p=>{ indFat[p.industria]=(indFat[p.industria]||0)+p.nf.liquida; });
     const ranked = Object.entries(indFat).sort((a,b)=>b[1]-a[1]).slice(0,5);
     indDiv.innerHTML = ranked.length===0
       ? `<div style="text-align:center;color:#aaa;padding:16px;font-size:12px">Nenhum faturamento ainda</div>`
@@ -6071,6 +6109,8 @@ function renderDashboard() {
     if(vencendo.length>0) alertas.push(`<div class="alert alert-warning" style="margin-bottom:6px">⚠️ ${vencendo.length} orçamento${vencendo.length!==1?'s':''} com validade vencida</div>`);
     const atrasadas = comissoes_data.filter(c=>c.status==='Atrasada');
     if(atrasadas.length>0) alertas.push(`<div class="alert alert-danger" style="margin-bottom:6px">💰 ${atrasadas.length} comissão${atrasadas.length!==1?'ões':''} em atraso</div>`);
+    const excluidos = pedidos.filter(p=>p.excluido).length;
+    if(excluidos>0) alertas.push(`<div class="alert alert-info" style="margin-bottom:6px">🚫 ${excluidos} pedido${excluidos!==1?'s':''} marcado${excluidos!==1?'s':''} como excluído${excluidos!==1?'s':''} — <a onclick="showPanel('pedidos',document.querySelector('[onclick*=pedidos]'))" style="cursor:pointer;text-decoration:underline;color:inherit">ver em Pedidos</a></div>`);
     if(Object.keys(PRODUTOS_CAT).length===0) alertas.push(`<div class="alert alert-info" style="margin-bottom:6px">📦 Nenhum produto cadastrado ainda</div>`);
     if(clientes.length===0) alertas.push(`<div class="alert alert-info" style="margin-bottom:6px">👥 Nenhum cliente cadastrado ainda</div>`);
     alertDiv.innerHTML = alertas.length===0
