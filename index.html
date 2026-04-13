@@ -546,7 +546,7 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Faturamento / Notas Fiscais</div><div class="section-sub">Registro de NFs com abatimentos e valor líquido para base de comissão</div></div>
         <div class="export-btns">
           <button class="btn btn-info btn-sm" onclick="exportarFaturamento()">📤 Exportar Excel</button>
-          <button class="btn btn-primary btn-sm" onclick="openModal('modal-nf')">+ Registrar NF</button>
+          <button class="btn btn-primary btn-sm" onclick="nfSetModo('pedido');popularSelectsDinamicos();openModal('modal-nf')">+ Registrar NF</button>
         </div>
       </div>
       <div class="alert alert-info">ℹ️ O <strong>valor líquido da NF</strong> (após todos os abatimentos) é a base de cálculo das comissões. NFD, bonificações sem comissão e devoluções reduzem a base.</div>
@@ -1449,6 +1449,11 @@ tr:last-child td{border-bottom:none;}
       🎁 <strong>Pedido de Bonificação:</strong> este pedido <strong>não gerará comissão</strong>. O valor total será registrado como saldo de bonificação para o cliente × indústria.
     </div>
 
+    <!-- Banner de pedido importado (visível ao editar pedidos importados) -->
+    <div id="ped-import-edit-banner" style="display:none;background:#e3f2fd;border:1px solid #bfdbfe;border-left:4px solid var(--azul);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#0d47a1">
+      📥 <strong>Pedido Importado:</strong> você pode editar todos os itens abaixo — <strong>qtd, % desconto e preço unitário</strong> são editáveis diretamente na tabela. Adicione ou remova itens normalmente.
+    </div>
+
     <!-- Adicionar produto ao pedido -->
     <div style="background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Adicionar produto</div>
@@ -1513,17 +1518,52 @@ tr:last-child td{border-bottom:none;}
   <div class="modal">
     <div class="modal-title">Registrar Nota Fiscal<button class="close-btn" onclick="closeModal('modal-nf')">✕</button></div>
     <div class="alert alert-info">O <strong>valor líquido da NF</strong> será a base de cálculo da comissão. Preencha todos os abatimentos.</div>
+
+    <!-- Toggle: NF com pedido vs sem pedido -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:#f4f3ef;border-radius:8px;border:1px solid var(--cinza-medio)">
+      <span style="font-size:12px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px">Modo:</span>
+      <button id="nf-modo-pedido-btn" class="btn btn-primary btn-sm" onclick="nfSetModo('pedido')" style="font-size:11px">📋 Com Pedido</button>
+      <button id="nf-modo-semped-btn" class="btn btn-outline btn-sm" onclick="nfSetModo('sempedido')" style="font-size:11px">🧾 Somente NF (sem pedido)</button>
+      <span id="nf-modo-hint" style="font-size:11px;color:#888;margin-left:4px">NF vinculada a um pedido já registrado</span>
+    </div>
+
     <!-- Aviso quando pedido vinculado for bonificação -->
     <div id="nf-bonif-alert" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #d97706;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
       🎁 <strong>Pedido de Bonificação:</strong> esta NF será registrada como bonificação. <strong>Não gerará comissão.</strong> Um registro separado será criado na aba Bonificações.
     </div>
-    <div class="form-grid">
-      <div class="form-group"><label>Número da NF *</label><input id="nf-num" placeholder="000001"></div>
-      <div class="form-group"><label>Pedido vinculado *</label>
-        <select id="nf-pedido" onchange="nfPedidoChange(this.value)"><option value="">Selecione o pedido...</option></select>
+
+    <!-- MODO: com pedido -->
+    <div id="nf-bloco-pedido">
+      <div class="form-grid">
+        <div class="form-group"><label>Número da NF *</label><input id="nf-num" placeholder="000001"></div>
+        <div class="form-group"><label>Pedido vinculado *</label>
+          <select id="nf-pedido" onchange="nfPedidoChange(this.value)"><option value="">Selecione o pedido...</option></select>
+        </div>
+        <div class="form-group"><label>Data de emissão</label><input type="date" id="nf-data"></div>
+        <div class="form-group"><label>Valor do Pedido (ref.)</label><input type="number" id="nf-val-pedido" placeholder="0,00" readonly style="background:#f4f3ef"></div>
       </div>
-      <div class="form-group"><label>Data de emissão</label><input type="date" id="nf-data"></div>
-      <div class="form-group"><label>Valor do Pedido (ref.)</label><input type="number" id="nf-val-pedido" placeholder="0,00" readonly style="background:#f4f3ef"></div>
+    </div>
+
+    <!-- MODO: sem pedido -->
+    <div id="nf-bloco-sempedido" style="display:none">
+      <div class="alert alert-warning" style="margin-bottom:12px">⚠️ <strong>NF sem pedido:</strong> será registrada diretamente no faturamento. Uma comissão será gerada automaticamente conforme as regras cadastradas.</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Número da NF *</label><input id="nf-num-sp" placeholder="000001"></div>
+        <div class="form-group"><label>Data de emissão</label><input type="date" id="nf-data-sp"></div>
+        <div class="form-group"><label>Cliente *</label>
+          <select id="nf-cli-sp"><option value="">Selecione o cliente...</option></select>
+        </div>
+        <div class="form-group"><label>Indústria *</label>
+          <select id="nf-ind-sp"><option value="">Selecione a indústria...</option></select>
+        </div>
+        <div class="form-group"><label>Condição Comercial</label><input type="text" id="nf-cond-sp" placeholder="Ex: 28D, 30/60D"></div>
+        <div class="form-group"><label>Tipo</label>
+          <select id="nf-tipo-sp">
+            <option value="venda">🛒 Venda — gera comissão</option>
+            <option value="bonificacao">🎁 Bonificação — sem comissão</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div style="background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:14px;margin-bottom:14px">
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Valores da NF e Abatimentos</div>
@@ -1543,7 +1583,7 @@ tr:last-child td{border-bottom:none;}
     <div class="form-group"><label>Observações</label><textarea id="nf-obs" rows="2" placeholder="Motivo de abatimentos, observações..."></textarea></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modal-nf')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarNF()">💾 Registrar NF</button>
+      <button class="btn btn-primary" onclick="salvarNFUnificado()">💾 Registrar NF</button>
     </div>
   </div>
 </div>
@@ -2897,7 +2937,7 @@ function renderPedidos() {
     <td><span class="tag">${esc(p.industria)}</span></td>
     <td>${p.data}</td>
     <td>${p.cond||'—'}</td>
-    <td>${p.itens.length}</td>
+    <td>${(p.itens||[]).length}</td>
     <td class="bold ${isBonif?'laranja':''}">${fmt(p.total)}</td>
     <td class="bold verde">${p.nf?fmt(p.nf.liquida):'—'}</td>
     <td><span class="badge ${statusClass(p.status)}">${p.status}</span></td>
@@ -3019,6 +3059,7 @@ function novoPedido() {
   if(el('ped-add-preco-unit')) el('ped-add-preco-unit').value = '';
   if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display = 'none';
   if(el('ped-rede-info-group')) el('ped-rede-info-group').style.display = 'none';
+  if(el('ped-import-edit-banner')) el('ped-import-edit-banner').style.display = 'none';
   pedTipoChange('venda');
   renderPedItens();
   popularSelectsDinamicos();
@@ -3029,9 +3070,13 @@ function editarPedido(id) {
   const p = pedidos.find(x=>x.id===id);
   if(!p) return;
   pedEditId = id;
-  pedItens = p.itens.map(i=>({...i}));
+  pedItens = (p.itens||[]).map(i=>({...i}));
   const importadoBadge = p._importado ? ' <span style="font-size:10px;background:#e3f2fd;color:#1a5fa8;border-radius:4px;padding:2px 7px;font-weight:700;font-family:\'DM Sans\',sans-serif">📥 IMPORTADO</span>' : '';
   el('ped-modal-titulo').innerHTML = 'Editar Pedido '+id + importadoBadge;
+
+  // Banner de edição livre para pedidos importados
+  const bannerImport = el('ped-import-edit-banner');
+  if(bannerImport) bannerImport.style.display = p._importado ? 'block' : 'none';
   el('ped-cli').value = p.cliente;
   el('ped-ind').value = p.industria;
   el('ped-data').value = p.data;
@@ -3116,28 +3161,35 @@ function renderPedItens() {
   const inStyle = 'padding:3px 6px;border:1.5px solid var(--cinza-medio);border-radius:4px;font-size:12px;font-family:\'DM Sans\',sans-serif;outline:none;';
   const cliNome = el('ped-cli')?.value || '';
   tbody.innerHTML = pedItens.map((it,i)=>{
-    const mixInfo = _getPrecoMix(cliNome, it.cod);
-    const precoRef = mixInfo.precoTab > 0 ? mixInfo.precoTab*(1-it.descPct/100) : it.precoTab*(1-it.descPct/100);
-    const diverge = mixInfo.precoTab > 0 && it.precoUnit > 0 && Math.abs(it.precoUnit - precoRef) > 0.01;
-    const divBadge = diverge ? `<span style="font-size:9px;background:#fff7ed;color:#d97706;border:1px solid #fed7aa;border-radius:3px;padding:1px 5px;font-weight:700;display:block;margin-top:2px" title="Preço de referência (mix/tabela): R$ ${fmtN(precoRef)}">≠ MIX R$ ${fmtN(precoRef)}</span>` : '';
+    const codSafe = it.cod || '';
+    const precoTabSafe = it.precoTab || 0;
+    const precoUnitSafe = it.precoUnit || 0;
+    const descPctSafe = it.descPct || 0;
+    const mixInfo = _getPrecoMix(cliNome, codSafe);
+    const precoRef = mixInfo.precoTab > 0 ? mixInfo.precoTab*(1-descPctSafe/100) : precoTabSafe*(1-descPctSafe/100);
+    const diverge = mixInfo.precoTab > 0 && precoUnitSafe > 0 && Math.abs(precoUnitSafe - precoRef) > 0.01;
+    const divBadge = diverge ? `<div style="font-size:9px;background:#fff7ed;color:#d97706;border:1px solid #fed7aa;border-radius:3px;padding:1px 4px;font-weight:700;margin-top:2px;white-space:nowrap">&#8800; MIX R$ ${fmtN(precoRef)}</div>` : '';
     return `<tr>
-    <td class="mono">${esc(it.cod)}</td>
-    <td>${esc(it.desc)}</td>
+    <td class="mono">${esc(codSafe)}</td>
+    <td>${esc(it.desc||'')}</td>
     <td><span class="tag">${esc(it.ind||'—')}</span></td>
-    <td style="color:#888;font-size:11px">${fmt(it.precoTab)}</td>
-    <td><input type="number" value="${it.qtd}" min="1" style="${inStyle}width:56px" title="Quantidade"
+    <td style="color:#888;font-size:11px">${fmt(precoTabSafe)}</td>
+    <td><input type="number" value="${it.qtd||1}" min="1" style="${inStyle}width:56px" title="Quantidade"
       onfocus="this.style.borderColor='var(--amarelo)'"
       onblur="this.style.borderColor='var(--cinza-medio)'"
       oninput="pedAtualizarItem(${i},'qtd',this.value)"></td>
-    <td><input type="number" value="${it.descPct}" min="0" max="100" style="${inStyle}width:54px" title="% Desconto"
+    <td><input type="number" value="${descPctSafe}" min="0" max="100" style="${inStyle}width:54px" title="% Desconto"
       onfocus="this.style.borderColor='var(--amarelo)'"
       onblur="this.style.borderColor='var(--cinza-medio)'"
       oninput="pedAtualizarItem(${i},'descPct',this.value)"></td>
-    <td><input type="text" inputmode="decimal" value="${fmtN(it.precoUnit)}" style="${inStyle}width:80px;font-weight:600;color:${diverge?'var(--laranja)':'var(--azul)'}" title="Preço Unitário (editável)${diverge?' — DIFERE do mix/tabela':''}"
-      onfocus="this.style.borderColor='var(--amarelo)'"
-      onblur="this.style.borderColor='var(--cinza-medio)';pedAtualizarItem(${i},'precoUnit',this.value)">${divBadge}</td>
-    <td class="bold verde" id="ped-it-tot-${i}">${fmt(it.total)}</td>
-    <td><button class="btn btn-danger btn-xs" onclick="pedRemItem(${i})">✕</button></td>
+    <td><div style="display:inline-flex;flex-direction:column;gap:0;vertical-align:middle">
+      <input type="text" inputmode="decimal" value="${fmtN(precoUnitSafe)}" style="${inStyle}width:80px;font-weight:600;color:${diverge?'var(--laranja)':'var(--azul)'}" title="Preço Unitário (editável)${diverge?' — DIFERE do mix/tabela':''}"
+        onfocus="this.style.borderColor='var(--amarelo)'"
+        onblur="this.style.borderColor='var(--cinza-medio)';pedAtualizarItem(${i},'precoUnit',this.value)">
+      ${divBadge}
+    </div></td>
+    <td class="bold verde" id="ped-it-tot-${i}">${fmt(it.total||0)}</td>
+    <td><button class="btn btn-danger btn-xs" onclick="pedRemItem(${i})">&#x2715;</button></td>
   </tr>`;
   }).join('');
   _pedAtualizarTotais();
@@ -3282,12 +3334,12 @@ function gerarPedPDF(p) {
   doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
   doc.text('CÓD.',14,y+5);doc.text('DESCRIÇÃO',30,y+5);doc.text('QTD',115,y+5);doc.text('% DESC.',128,y+5);doc.text('UNIT.',145,y+5);doc.text('TOTAL',165,y+5);
   y+=7;doc.setTextColor(26,26,26);doc.setFont('helvetica','normal');
-  p.itens.forEach((it,i)=>{
+  (p.itens||[]).forEach((it,i)=>{
     if(i%2===0){doc.setFillColor(250,250,248);doc.rect(10,y,yw-20,7,'F');}
     doc.text(String(it.cod||''),14,y+5);doc.text(String(it.desc||'').substring(0,30),30,y+5);
-    doc.text(String(it.qtd),115,y+5);doc.text((it.descPct||0)+'%',128,y+5);
-    doc.text('R$ '+fmtN(it.precoUnit),143,y+5);
-    doc.setFont('helvetica','bold');doc.text('R$ '+fmtN(it.total),163,y+5);doc.setFont('helvetica','normal');
+    doc.text(String(it.qtd||0),115,y+5);doc.text((it.descPct||0)+'%',128,y+5);
+    doc.text('R$ '+fmtN(it.precoUnit||0),143,y+5);
+    doc.setFont('helvetica','bold');doc.text('R$ '+fmtN(it.total||0),163,y+5);doc.setFont('helvetica','normal');
     y+=7;if(y>270){doc.addPage();y=20;}
   });
   y+=4;doc.setFillColor(245,197,0);doc.rect(130,y,yw-140,8,'F');
@@ -3308,7 +3360,7 @@ function gerarPedExcel(p){
   const rows=[['PEDIDO - COMERCIAL TRÊS VALES'],[''],
     ['Pedido:',p.id,'Cliente:',p.cliente],['Indústria:',p.industria||'','Status:',p.status],[''],
     ['Código','Descrição','Indústria','Preço Tabela','Qtd','% Desconto','Preço Unit.','Total'],
-    ...p.itens.map(i=>[i.cod,i.desc,i.ind,i.precoTab,i.qtd,i.descPct+'%',i.precoUnit,i.total]),
+    ...(p.itens||[]).map(i=>[i.cod,i.desc,i.ind,i.precoTab,i.qtd,(i.descPct||0)+'%',i.precoUnit,i.total]),
     ['','','','','','','TOTAL:',p.total]];
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:12},{wch:35},{wch:14},{wch:14},{wch:8},{wch:12},{wch:14},{wch:14}];
@@ -3335,6 +3387,8 @@ function nfPedidoChange(pedId) {
   // Preenche valor de referência do pedido
   const valEl = el('nf-val-pedido');
   if(valEl) valEl.value = ped ? ped.total : '';
+  // Inicializa data com hoje se vazio
+  if(el('nf-data') && !el('nf-data').value) el('nf-data').value = today();
 }
 
 function calcNFLiquida() {
@@ -3401,6 +3455,101 @@ function salvarNF() {
     syncAutoSaveHook();
     toast('NF registrada!');
   }
+}
+
+/* ══════════════════════════
+   NF SEM PEDIDO — helpers de modo
+══════════════════════════ */
+let _nfModoAtual = 'pedido'; // 'pedido' | 'sempedido'
+
+function nfSetModo(modo) {
+  _nfModoAtual = modo;
+  const isPedido = modo === 'pedido';
+  el('nf-bloco-pedido').style.display   = isPedido ? '' : 'none';
+  el('nf-bloco-sempedido').style.display = isPedido ? 'none' : '';
+  el('nf-modo-pedido-btn').className = 'btn btn-sm ' + (isPedido ? 'btn-primary' : 'btn-outline');
+  el('nf-modo-semped-btn').className  = 'btn btn-sm ' + (!isPedido ? 'btn-primary' : 'btn-outline');
+  el('nf-modo-hint').textContent = isPedido
+    ? 'NF vinculada a um pedido já registrado'
+    : 'NF lançada diretamente — sem pedido prévio';
+  if(!isPedido) {
+    // Popula selects de cliente e indústria no modo sem pedido
+    const nomesClientes   = clientes.filter(c=>c.status==='Ativo').map(c=>c.nome).sort();
+    const nomesIndustrias = industrias.filter(i=>i.status==='Ativo').map(i=>i.nome).sort();
+    const sCli = el('nf-cli-sp');
+    const sInd = el('nf-ind-sp');
+    if(sCli) sCli.innerHTML = '<option value="">Selecione o cliente...</option>' +
+      nomesClientes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(sInd) sInd.innerHTML = '<option value="">Selecione a indústria...</option>' +
+      nomesIndustrias.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(el('nf-data-sp')) el('nf-data-sp').value = today();
+    if(el('nf-bonif-alert')) el('nf-bonif-alert').style.display = 'none';
+  }
+}
+
+function salvarNFUnificado() {
+  if(_nfModoAtual === 'sempedido') salvarNFSemPedido();
+  else salvarNF();
+}
+
+function salvarNFSemPedido() {
+  const num  = (el('nf-num-sp').value||'').trim();
+  const cli  = el('nf-cli-sp').value;
+  const ind  = el('nf-ind-sp').value;
+  if(!num)  { alert('Informe o número da NF.'); el('nf-num-sp').focus(); return; }
+  if(!cli)  { alert('Selecione o cliente.'); return; }
+  if(!ind)  { alert('Selecione a indústria.'); return; }
+
+  const val  = parseFloat(el('nf-valor').value)||0;
+  if(!val)  { alert('Informe o valor da NF (deve ser maior que zero).'); return; }
+  const abat = parseFloat(el('nf-abat').value)||0;
+  const dev  = parseFloat(el('nf-devolucoes').value)||0;
+  const fin  = parseFloat(el('nf-desc-fin').value)||0;
+  const nfd  = parseFloat(el('nf-nfd').value)||0;
+  const bon  = parseFloat(el('nf-bonif').value)||0;
+  const liq  = Math.max(0, val - abat - dev - fin - nfd - bon);
+  const tipo = el('nf-tipo-sp').value || 'venda';
+  const cond = el('nf-cond-sp').value||'';
+  const data = el('nf-data-sp').value || today();
+  const obs  = el('nf-obs').value||'';
+
+  // Cria um pedido "fantasma" com status Faturado total para carregar o faturamento
+  const pedId = _gerarIdPedido();
+  const nfObj = {
+    numero: num, data, valorPedido: val,
+    valorNF: val, abatimentos: abat, devolucoes: dev,
+    descFin: fin, nfd, bonif: bon, liquida: liq,
+    pdf: null, xml: null
+  };
+  const pedSP = {
+    id: pedId, tipo, cliente: cli, industria: ind,
+    data, cond, status: 'Faturado total',
+    itens: [], total: val, obs, orcOrigem: '',
+    nf: nfObj, _semPedido: true
+  };
+  pedidos.push(pedSP);
+  logisticaData.push({
+    pedId, cliente: cli, industria: ind,
+    data, transportadora: '', previsao: '',
+    statusLog: 'Faturado', obs: ''
+  });
+
+  // Gera comissão se for venda
+  if(tipo === 'venda') gerarComissaoAuto(pedSP, liq);
+
+  // Limpa campos comuns
+  ['nf-valor','nf-abat','nf-devolucoes','nf-desc-fin','nf-nfd','nf-bonif','nf-obs'].forEach(id=>{const e=el(id);if(e)e.value='';});
+  ['nf-abat','nf-devolucoes','nf-desc-fin','nf-nfd','nf-bonif'].forEach(id=>{if(el(id))el(id).value='0';});
+  if(el('nf-liquida-val')) el('nf-liquida-val').textContent = 'R$ 0,00';
+  el('nf-num-sp').value = '';
+
+  addAudit(usuarioLogado?.login||'admin',
+    `NF sem pedido registrada: ${num} — ${cli} / ${ind} — ${fmt(val)} (Liq: ${fmt(liq)})`, '🧾');
+  closeModal('modal-nf');
+  renderFaturamento(); renderPedidos(); renderLogistica();
+  popularSelectsDinamicos(); renderDashboard();
+  syncAutoSaveHook();
+  toast(`🧾 NF ${num} registrada sem pedido! ${tipo==='venda'?'Comissão calculada automaticamente.':'Bonificação registrada.'}`);
 }
 
 function gerarComissaoAuto(ped, baseLiq) {
@@ -3485,13 +3634,14 @@ function renderFaturamento() {
   if(list.length===0){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';return;}
   tbody.innerHTML=list.map(p=>{
     const n=p.nf;
+    const isSemPed = !!p._semPedido;
     return `<tr>
       <td class="mono bold">${n.numero}</td>
-      <td class="mono">${p.id}</td>
+      <td class="mono">${isSemPed ? '<span class="badge badge-cinza" style="font-size:9px">Sem pedido</span>' : p.id}</td>
       <td><strong>${esc(p.cliente)}</strong></td>
       <td><span class="tag">${esc(p.industria)}</span></td>
       <td>${n.data}</td>
-      <td>${fmt(n.valorPedido)}</td>
+      <td>${isSemPed ? '<span style="color:#aaa;font-size:11px">—</span>' : fmt(n.valorPedido)}</td>
       <td class="bold">${fmt(n.valorNF)}</td>
       <td class="vermelho">${n.abatimentos>0?'- '+fmt(n.abatimentos):'—'}</td>
       <td class="vermelho">${n.devolucoes>0?'- '+fmt(n.devolucoes):'—'}</td>
@@ -3499,7 +3649,7 @@ function renderFaturamento() {
       <td class="vermelho">${n.nfd>0?'- '+fmt(n.nfd):'—'}</td>
       <td class="vermelho">${n.bonif>0?'- '+fmt(n.bonif):'—'}</td>
       <td class="bold verde">${fmt(n.liquida)}</td>
-      <td><button class="btn btn-outline btn-xs" onclick="abrirCompare('${p.id}')">⚖️ Compare</button></td>
+      <td>${isSemPed ? '<span style="font-size:11px;color:#aaa">🧾 Direto</span>' : `<button class="btn btn-outline btn-xs" onclick="abrirCompare('${p.id}')">⚖️ Compare</button>`}</td>
     </tr>`;
   }).join('');
 }
@@ -3566,7 +3716,7 @@ function renderNFCompare() {
           <div style="font-size:15px;font-weight:700;color:var(--verde)">${n?fmt(n.liquida):'—'}</div>
         </div>
       </div>
-      ${!n?`<div class="alert alert-warning" style="margin-top:10px;margin-bottom:0">NF ainda não registrada para este pedido. <button class="btn btn-outline btn-sm" onclick="openModal('modal-nf');el('nf-pedido').value='${p.id}'">Registrar NF</button></div>`:''}
+      ${!n?`<div class="alert alert-warning" style="margin-top:10px;margin-bottom:0">NF ainda não registrada para este pedido. <button class="btn btn-outline btn-sm" onclick="nfSetModo('pedido');openModal('modal-nf');el('nf-pedido').value='${p.id}';nfPedidoChange('${p.id}')">Registrar NF</button></div>`:''}
     </div>`;
   }).join('');
 }
@@ -3586,7 +3736,7 @@ function abrirCompare(pedId) {
         <div class="nf-row"><span>Indústria</span><span class="val"><span class="tag">${esc(p.industria)}</span></span></div>
         <div class="nf-row"><span>Data</span><span class="val">${p.data}</span></div>
         <div class="nf-row"><span>Condição</span><span class="val">${p.cond||'—'}</span></div>
-        <div class="nf-row"><span>Itens</span><span class="val">${p.itens.length} produto(s)</span></div>
+        <div class="nf-row"><span>Itens</span><span class="val">${(p.itens||[]).length} produto(s)</span></div>
         <div class="nf-row"><span>Total do Pedido</span><span class="val verde">${fmt(p.total)}</span></div>
       </div>
       <div class="nf-section">
@@ -3617,7 +3767,7 @@ function abrirCompare(pedId) {
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Itens do Pedido</div>
       <table class="itens-table">
         <thead><tr><th>Código</th><th>Descrição</th><th>Indústria</th><th>Qtd</th><th>% Desc.</th><th>Preço Unit.</th><th>Total</th></tr></thead>
-        <tbody>${p.itens.map(it=>`<tr><td class="mono">${it.cod}</td><td>${esc(it.desc)}</td><td><span class="tag">${esc(it.ind||'—')}</span></td><td>${it.qtd}</td><td>${it.descPct}%</td><td>${fmt(it.precoUnit)}</td><td class="bold verde">${fmt(it.total)}</td></tr>`).join('')}</tbody>
+        <tbody>${(p.itens||[]).map(it=>`<tr><td class="mono">${it.cod||''}</td><td>${esc(it.desc||'')}</td><td><span class="tag">${esc(it.ind||'—')}</span></td><td>${it.qtd||0}</td><td>${it.descPct||0}%</td><td>${fmt(it.precoUnit||0)}</td><td class="bold verde">${fmt(it.total||0)}</td></tr>`).join('')}</tbody>
       </table>
     </div>
 
@@ -5392,14 +5542,15 @@ function confirmarImport() {
         const qtd     = parseFloat((row.qtd||'1').toString().replace(',','.')) || 1;
         const descPct = parseFloat((row.descPct||'0').toString().replace(',','.')) || 0;
         const precoTab = prodCat ? prodCat.preco : 0;
-        // Preço unitário: lê da planilha com parse BR, senão usa catálogo com desconto
+        // Preço unitário: PRIORIDADE MÁXIMA para valor da planilha; só usa catálogo como fallback
         let precoUnit = row.precoUnit ? parseMoney(row.precoUnit) : 0;
+        // Se planilha não tem precoUnit mas tem total, deriva o unitário do total
+        if(!precoUnit && _impRowTotal && qtd) precoUnit = _impRowTotal / qtd;
+        // Só então cai para catálogo/desconto como último recurso
         if(!precoUnit && precoTab) precoUnit = precoTab * (1 - descPct / 100);
         // Total: lê da planilha com parse BR, senão calcula
         let total = _impRowTotal || 0;
         if(!total && precoUnit) total = precoUnit * qtd;
-        // Derivar precoUnit do total quando produto não está no catálogo
-        if(!precoUnit && total && qtd) precoUnit = total / qtd;
         grupos[chave].itens.push({cod, desc, ind:indItem, precoTab, qtd, descPct, precoUnit, total});
       } else if(_impRowTotal > 0) {
         // Linha sem código mas com total: cria item genérico para não perder o valor
@@ -6696,7 +6847,7 @@ function renderRelatorios() {
   // Ranking produtos
   const rankProd = el('rel-rank-produtos'); if(!rankProd) return;
   const prodMap = {};
-  pedidos.forEach(p=>p.itens.forEach(it=>{
+  pedidos.forEach(p=>(p.itens||[]).forEach(it=>{
     prodMap[it.cod] = (prodMap[it.cod]||{desc:it.desc,total:0});
     prodMap[it.cod].total += it.total;
   }));
