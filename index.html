@@ -1,23 +1,628 @@
-   </div>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestCom — Comercial Três Vales v4</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --preto:#1a1a1a;--amarelo:#F5C500;--amarelo-claro:#FFF3B0;
+  --cinza:#f4f3ef;--cinza-medio:#e8e6e0;--cinza-escuro:#888;--branco:#fff;
+  --verde:#2d7a3a;--vermelho:#c0392b;--azul:#1a5fa8;--roxo:#6c3db5;--laranja:#d97706;
+  --sidebar-w:230px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--cinza);color:var(--preto);display:flex;min-height:100vh;font-size:13px;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);background:var(--preto);display:flex;flex-direction:column;position:fixed;height:100vh;overflow-y:auto;z-index:100;}
+.sidebar-logo{padding:18px 16px 14px;border-bottom:1px solid #333;}
+.logo-text .comercial{font-size:9px;color:#999;letter-spacing:1.5px;text-transform:uppercase;}
+.logo-text .tresvales{font-size:17px;font-weight:700;color:#fff;font-family:'Syne',sans-serif;}
+.logo-text .tresvales span{color:var(--amarelo);}
+.sidebar-section{padding:10px 0 4px;}
+.sidebar-label{font-size:9px;letter-spacing:1.5px;color:#555;text-transform:uppercase;padding:0 16px 5px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;color:#aaa;font-size:12.5px;border-left:2px solid transparent;transition:all .15s;}
+.nav-item:hover{color:#fff;background:#252525;}
+.nav-item.active{color:var(--amarelo);border-left-color:var(--amarelo);background:#222;font-weight:500;}
+.nav-icon{font-size:13px;width:16px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--vermelho);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:20px;}
+.sb-foot{margin-top:auto;padding:10px 16px 14px;border-top:1px solid #333;font-size:9px;color:#444;text-align:center;line-height:1.8;}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;}
+.topbar{background:#fff;border-bottom:1px solid var(--cinza-medio);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;}
+.topbar-actions{display:flex;gap:8px;align-items:center;}
+.content{padding:22px;flex:1;}
+.panel{display:none;}.panel.active{display:block;animation:fu .18s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn-primary{background:var(--amarelo);color:#000;}.btn-primary:hover{background:#e0b200;}
+.btn-outline{background:transparent;border:1px solid var(--cinza-medio);color:var(--preto);}.btn-outline:hover{background:var(--cinza);}
+.btn-success{background:#e8f5e9;color:var(--verde);border:1px solid #c8e6c9;}.btn-success:hover{background:#c8e6c9;}
+.btn-danger{background:#fef2f2;color:var(--vermelho);border:1px solid #fecaca;}.btn-danger:hover{background:#fecaca;}
+.btn-info{background:#eff6ff;color:var(--azul);border:1px solid #bfdbfe;}.btn-info:hover{background:#dbeafe;}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-xs{padding:3px 8px;font-size:10px;border-radius:4px;}
+.btn-roxo{background:#f3e8ff;color:var(--roxo);border:1px solid #e9d5ff;}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--cinza-medio);border-radius:10px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+.card-body{font-size:13px;}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi-card{background:#fff;border:1px solid var(--cinza-medio);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-amarelo::after{background:var(--amarelo)}.kpi-verde::after{background:var(--verde)}.kpi-azul::after{background:var(--azul)}.kpi-vermelho::after{background:var(--vermelho)}.kpi-roxo::after{background:var(--roxo)}
+.kpi-label{font-size:10px;color:var(--cinza-escuro);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
+.kpi-value{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;}
+.kpi-sub{font-size:11px;color:var(--verde);margin-top:4px;}
+.kpi-sub.neg{color:var(--vermelho);}
+
+/* GRIDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap;background:#fafafa;}
+td{padding:10px 12px;border-bottom:1px solid #f1f0ec;vertical-align:middle;}
+tr:hover td{background:#fafaf8;}
+tr:last-child td{border-bottom:none;}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px;}
+.badge-verde{background:#e8f5e9;color:#2d7a3a}.badge-amarelo{background:#fff8e1;color:#7a5800}
+.badge-vermelho{background:#fef2f2;color:#c0392b}.badge-azul{background:#e3f2fd;color:#1a5fa8}
+.badge-cinza{background:#f4f3ef;color:#888}.badge-roxo{background:#f3e8ff;color:#6c3db5}
+.badge-laranja{background:#fff7ed;color:#d97706}.badge-preto{background:#1a1a1a;color:var(--amarelo)}
+
+/* TAGS */
+.tag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--preto);color:var(--amarelo);}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:var(--cinza-medio);color:var(--preto);}
+.pill.amarelo{background:var(--amarelo);color:#000;}
+
+/* FORMS */
+.form-group{margin-bottom:12px;}
+.form-group label{display:block;font-size:11px;font-weight:700;color:#666;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;}
+.form-group input:focus,.form-group select:focus{border-color:var(--amarelo);box-shadow:0 0 0 3px rgba(245,197,0,.12);}
+.form-group.full{grid-column:1/-1;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--cinza-medio);}
+.tab{padding:8px 14px;cursor:pointer;font-size:12.5px;color:var(--cinza-escuro);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.tab:hover{color:var(--preto);}
+.tab.active{color:var(--preto);border-bottom-color:var(--amarelo);font-weight:600;}
+
+/* STATUS CHIPS */
+.status-rascunho{background:#f4f3ef;color:#666}
+.status-analise{background:#fff7ed;color:#d97706}
+.status-enviado{background:#e3f2fd;color:#1a5fa8}
+.status-aprovado{background:#e8f5e9;color:#2d7a3a}
+.status-reprovado{background:#fef2f2;color:#c0392b}
+.status-cancelado{background:#f4f3ef;color:#888}
+.status-convertido{background:#f3e8ff;color:#6c3db5}
+.status-recebido{background:#e3f2fd;color:#1a5fa8}
+.status-digitacao{background:#fff7ed;color:#d97706}
+.status-implantado{background:#e8f5e9;color:#2d7a3a}
+.status-fat-parcial{background:#fff3b0;color:#7a5800}
+.status-fat-total{background:#1a1a1a;color:var(--amarelo)}
+.status-expedido{background:#f3e8ff;color:#6c3db5}
+.status-agendado{background:#e3f2fd;color:#0369a1}
+.status-entregue{background:#e8f5e9;color:#166534}
+.status-prevista{background:#fff7ed;color:#d97706}
+.status-excluido{background:#f4f3ef;color:#999;text-decoration:line-through;}
+.status-recebida{background:#e8f5e9;color:#2d7a3a}
+.status-atrasada{background:#fef2f2;color:#c0392b}
+
+/* SECTION */
+.section-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+.section-sub{font-size:12px;color:var(--cinza-escuro);margin-bottom:20px;}
+.section-bar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:12px;padding:24px;width:700px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal-xl{width:960px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+.close-btn{cursor:pointer;font-size:18px;color:#888;border:none;background:none;}
+
+/* ALERT */
+.alert{padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:12px;border-left:3px solid;}
+.alert-info{background:#e3f2fd;border-color:var(--azul);color:#0d47a1;}
+.alert-warning{background:#fff8e1;border-color:var(--amarelo);color:#7a5800;}
+.alert-success{background:#e8f5e9;border-color:var(--verde);color:#1b5e20;}
+.alert-danger{background:#fef2f2;border-color:var(--vermelho);color:#7f1d1d;}
+
+/* ITENS PEDIDO/ORCAMENTO */
+.itens-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.itens-table th{background:#f4f3ef;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;}
+.itens-table td{padding:7px 10px;border-bottom:1px solid #f0ede6;vertical-align:middle;}
+.itens-table input[type=text],.itens-table input[type=number]{padding:4px 7px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;}
+.itens-table input:focus{border-color:var(--amarelo);}
+.itens-table .cod-input{width:90px;font-family:monospace;}
+.itens-table .qtd-input{width:60px;}
+.itens-table .desc-input{width:55px;text-align:right;}
+.itens-table .readonly{background:#fafaf8;color:#666;}
+
+/* NF COMPARE */
+.nf-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;}
+.nf-section{background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:14px;}
+.nf-section-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
+.nf-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0ede6;font-size:12px;}
+.nf-row:last-child{border-bottom:none;font-weight:700;font-size:13px;}
+.nf-row .val{font-weight:600;}
+.nf-row .val.verde{color:var(--verde);}
+.nf-row .val.vermelho{color:var(--vermelho);}
+.nf-row .val.amarelo{color:#7a5800;}
+.divergencia-box{background:#fff8e1;border:2px solid var(--amarelo);border-radius:8px;padding:14px;margin-top:14px;}
+.divergencia-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:10px;color:#7a5800;}
+.div-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed #f0d060;font-size:12px;}
+.div-row:last-child{border-bottom:none;}
+
+/* SALDO TABLE */
+.saldo-header{background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:8px;padding:12px 16px;margin-bottom:14px;color:#fff;display:flex;align-items:center;gap:14px;}
+.saldo-avatar{width:40px;height:40px;border-radius:50%;background:var(--amarelo);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#000;flex-shrink:0;}
+.saldo-nome{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+.saldo-sub{font-size:11px;color:#999;margin-top:2px;}
+.saldo-stats{display:flex;gap:20px;margin-left:auto;}
+.saldo-stat-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--amarelo);}
+.saldo-stat-lbl{font-size:10px;color:#888;}
+
+/* COMISSAO */
+.com-tag{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;}
+.com-fat{background:#e3f2fd;color:#1a5fa8;}
+.com-liq{background:#e8f5e9;color:#2d7a3a;}
+.com-bon{background:#fff7ed;color:#d97706;}
+
+/* IMPORT ZONE */
+.import-zone{border:2px dashed var(--cinza-medio);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s;}
+.import-zone:hover{border-color:var(--amarelo);background:#fffef5;}
+.import-zone.dragover{border-color:var(--amarelo);background:#fffef5;}
+.import-icon{font-size:28px;margin-bottom:6px;}
+.import-title{font-weight:600;font-size:13px;}
+.import-sub{font-size:11px;color:#888;margin-top:3px;}
+
+/* MINI ROWS */
+.mini-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--cinza);font-size:12px;}
+.mini-row:last-child{border-bottom:none;}
+
+/* MIX */
+.mix-inline-input{width:60px;padding:4px 6px;border:1px solid var(--cinza-medio);border-radius:4px;font-size:12px;text-align:center;}
+.mix-inline-input:focus{border-color:var(--amarelo);outline:none;}
+.tag-industria{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--preto);color:var(--amarelo);}
+.switch{width:34px;height:18px;background:var(--cinza-medio);border-radius:99px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.switch.on{background:var(--verde);}
+.switch::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .2s;}
+.switch.on::after{left:18px;}
+.abc-a{display:inline-block;padding:1px 6px;background:#fff3b0;color:#7a5800;border-radius:3px;font-size:10px;font-weight:700;}
+.abc-b{display:inline-block;padding:1px 6px;background:#e3f2fd;color:#1a5fa8;border-radius:3px;font-size:10px;font-weight:700;}
+.abc-c{display:inline-block;padding:1px 6px;background:#f4f3ef;color:#888;border-radius:3px;font-size:10px;font-weight:700;}
+.desconto-badge{display:inline-flex;align-items:center;gap:3px;background:#fff8e1;border:1px solid #f0d060;color:#7a5800;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.desconto-badge.zero{background:var(--cinza);border-color:var(--cinza-medio);color:#888;}
+.preco-negociado{display:flex;flex-direction:column;gap:1px;}
+.preco-original{font-size:10px;color:#aaa;text-decoration:line-through;}
+.preco-final{font-size:13px;font-weight:600;}
+.preco-final.com-desconto{color:var(--verde);}
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;}
+.search-bar input{flex:1;min-width:160px;padding:7px 11px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;}
+.search-bar input:focus{border-color:var(--amarelo);}
+.search-bar select{padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;cursor:pointer;}
+
+/* EXPORT BTNS */
+.export-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px;}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--preto);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-screen.hidden{display:none;}
+.login-box{background:#fff;border-radius:16px;padding:36px 40px;width:380px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.4);}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo .comercial{font-size:10px;color:#999;letter-spacing:2px;text-transform:uppercase;}
+.login-logo .tresvales{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--preto);}
+.login-logo .tresvales span{color:var(--amarelo);}
+.login-logo .version{font-size:10px;color:#aaa;margin-top:2px;}
+.login-err{background:#fef2f2;border:1px solid #fecaca;color:#c0392b;font-size:12px;padding:8px 12px;border-radius:6px;margin-bottom:12px;display:none;}
+
+/* TOPBAR USER */
+.topbar-user{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .15s;}
+.topbar-user:hover{background:var(--cinza);}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--amarelo);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#000;}
+.user-name{font-size:12px;font-weight:600;}
+.user-profile{font-size:10px;color:#888;}
+.user-menu{position:absolute;top:100%;right:0;background:#fff;border:1px solid var(--cinza-medio);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);min-width:160px;display:none;z-index:100;margin-top:4px;}
+.user-menu.open{display:block;}
+.user-menu-item{padding:8px 14px;font-size:12.5px;cursor:pointer;color:var(--preto);transition:background .1s;}
+.user-menu-item:hover{background:var(--cinza);}
+.user-menu-item.danger{color:var(--vermelho);}
+.user-menu-sep{border-top:1px solid var(--cinza-medio);margin:4px 0;}
+
+/* LOGISTICA STATUS EDIT */
+.status-select{padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:11px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;}
+.status-select:focus{border-color:var(--amarelo);}
+
+/* SELL OUT FORM */
+.sellout-form{background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:16px;margin-bottom:14px;}
+
+/* RELATORIOS */
+.rel-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.rank-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cinza);font-size:12.5px;}
+.rank-row:last-child{border-bottom:none;}
+.rank-num{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--amarelo);width:24px;text-align:center;}
+.rank-bar{height:6px;border-radius:99px;background:var(--amarelo);flex-shrink:0;}
+.rank-bar-wrap{flex:1;background:var(--cinza-medio);border-radius:99px;height:6px;overflow:hidden;}
+
+/* CONFIG MODULOS */
+.modulo-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza);}
+.modulo-item:last-child{border-bottom:none;}
+.modulo-nome{font-weight:600;font-size:13px;}
+.modulo-desc{font-size:11px;color:#888;}
+
+/* USUARIOS */
+.perfil-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;}
+.perfil-diretoria{background:#1a1a1a;color:var(--amarelo);}
+.perfil-admin{background:#f3e8ff;color:#6c3db5;}
+.perfil-financeiro{background:#e3f2fd;color:#1a5fa8;}
+.perfil-comercial{background:#e8f5e9;color:#2d7a3a;}
+.perfil-logistica{background:#fff7ed;color:#d97706;}
+.perfil-representante{background:#f4f3ef;color:#666;}
+
+/* FATURAMENTO MONTH FILTER */
+.month-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.month-pill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;background:var(--cinza-medio);color:var(--preto);cursor:pointer;border:none;transition:all .15s;}
+.month-pill.active{background:var(--amarelo);color:#000;}
+.month-pill:hover{opacity:.8;}
+
+/* AUDITORIA */
+.audit-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--cinza);font-size:12px;}
+.audit-icon{width:26px;height:26px;border-radius:50%;background:var(--cinza);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.audit-time{font-size:10px;color:#aaa;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="comercial">Comercial</div>
+      <div class="tresvales">Três<span>Vales</span></div>
+      <div class="version">GestCom v4 · Sistema Comercial</div>
+    </div>
+    <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
+    <div class="form-group"><label>Usuário</label><input id="login-user" type="text" placeholder="seu.usuario" autocomplete="username" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
+    <div class="form-group"><label>Senha</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="fazerLogin()">Entrar</button>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#aaa">Login inicial: <strong>admin</strong> / <strong>admin123</strong></div>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">
+      <div class="comercial">Comercial</div>
+      <div class="tresvales">Três<span>Vales</span></div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Principal</div>
+    <div class="nav-item active" onclick="showPanel('dashboard',this)"><span class="nav-icon">◈</span> Dashboard</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Comercial</div>
+    <div class="nav-item" onclick="showPanel('orcamentos',this)"><span class="nav-icon">📝</span> Orçamentos</div>
+    <div class="nav-item" onclick="showPanel('pedidos',this)"><span class="nav-icon">📋</span> Pedidos</div>
+    <div class="nav-item" onclick="showPanel('faturamento',this)"><span class="nav-icon">🧾</span> Faturamento / NF</div>
+    <div class="nav-item" onclick="showPanel('nfcompare',this)"><span class="nav-icon">⚖️</span> Pedido × NF</div>
+    <div class="nav-item" onclick="showPanel('logistica',this)"><span class="nav-icon">🚚</span> Logística</div>
+    <div class="nav-item" onclick="showPanel('tratativas',this)"><span class="nav-icon">🔁</span> Tratativas <span class="nav-badge" id="badge-tratativas">0</span></div>
+    <div class="nav-item" onclick="showPanel('bonificacoes',this)"><span class="nav-icon">🎁</span> Bonificações</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Financeiro</div>
+    <div class="nav-item" onclick="showPanel('saldo',this)"><span class="nav-icon">📊</span> Saldo Cli. × Indústria</div>
+    <div class="nav-item" onclick="showPanel('comissoes',this)"><span class="nav-icon">💰</span> Comissões</div>
+    <div class="nav-item" onclick="showPanel('fatmensal',this)"><span class="nav-icon">📅</span> Fat. Mensal por Indústria</div>
+    <div class="nav-item" onclick="showPanel('sellinout',this)"><span class="nav-icon">↕️</span> Sell In / Sell Out</div>
+    <div class="nav-item" onclick="showPanel('metas',this)"><span class="nav-icon">🎯</span> Metas</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Cadastros</div>
+    <div class="nav-item" onclick="showPanel('mix',this)"><span class="nav-icon">🧩</span> Mix de Produtos</div>
+    <div class="nav-item" onclick="showPanel('redes',this)"><span class="nav-icon">🔗</span> Redes / Grupos</div>
+    <div class="nav-item" onclick="showPanel('clientes',this)"><span class="nav-icon">👥</span> Clientes / Filiais</div>
+    <div class="nav-item" onclick="showPanel('industrias',this)"><span class="nav-icon">🏭</span> Indústrias</div>
+    <div class="nav-item" onclick="showPanel('produtos',this)"><span class="nav-icon">📦</span> Produtos</div>
+    <div class="nav-item" onclick="showPanel('usuarios',this)"><span class="nav-icon">🔐</span> Usuários</div>
+    <div class="nav-item" onclick="showPanel('regras',this)"><span class="nav-icon">⚙️</span> Regras Comerciais</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Análises</div>
+    <div class="nav-item" onclick="showPanel('relatorios',this)"><span class="nav-icon">📈</span> Relatórios / KPIs</div>
+    <div class="nav-item" onclick="showPanel('importexport',this)"><span class="nav-icon">🗂️</span> Import / Export</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Sistema</div>
+    <div class="nav-item" onclick="showPanel('sync',this)"><span class="nav-icon">☁️</span> Sincronização <span class="nav-badge" id="badge-sync" style="display:none">!</span></div>
+    <div class="nav-item" onclick="showPanel('configuracoes',this)"><span class="nav-icon">🔧</span> Configurações</div>
+  </div>
+
+  <div class="sb-foot">
+    <div>GestCom v4.0</div>
+    <div style="color:var(--amarelo)">Comercial Três Vales</div>
+  </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard Comercial</div>
+    <div class="topbar-actions">
+      <span id="sync-ts" style="font-size:11px;color:#aaa"></span>
+      <div style="position:relative">
+        <div class="topbar-user" onclick="toggleUserMenu()">
+          <div class="user-avatar" id="topbar-avatar">AD</div>
+          <div>
+            <div class="user-name" id="topbar-username">Administrador</div>
+            <div class="user-profile" id="topbar-profile">Diretoria</div>
+          </div>
+        </div>
+        <div class="user-menu" id="user-menu">
+          <div class="user-menu-item" onclick="openModal('modal-meu-perfil')">👤 Meu Perfil</div>
+          <div class="user-menu-sep"></div>
+          <div class="user-menu-item danger" onclick="fazerLogout()">🚪 Sair</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="section-title">Dashboard Comercial</div>
+      <div class="section-sub">Visão geral · <span id="dash-periodo"></span></div>
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-amarelo"><div class="kpi-label">Pedidos no Mês</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-sub" id="kpi-pedidos-sub">Nenhum pedido ainda</div></div>
+        <div class="kpi-card kpi-verde"><div class="kpi-label">Faturamento Líquido</div><div class="kpi-value" id="kpi-faturamento">R$ 0</div><div class="kpi-sub" id="kpi-fat-sub">NFs registradas</div></div>
+        <div class="kpi-card kpi-azul"><div class="kpi-label">Comissão Prevista</div><div class="kpi-value" id="kpi-comissao">R$ 0</div><div class="kpi-sub" id="kpi-com-sub">A receber</div></div>
+        <div class="kpi-card kpi-roxo"><div class="kpi-label">Orçamentos Abertos</div><div class="kpi-value" id="kpi-orc">0</div><div class="kpi-sub" id="kpi-orc-sub">Aguardando resposta</div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Pedidos Recentes</div><button class="btn btn-outline btn-sm" onclick="showPanel('pedidos',null)">Ver todos →</button></div>
+          <table><thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody id="dash-pedidos-tbody"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Comissões Pendentes</div><button class="btn btn-outline btn-sm" onclick="showPanel('comissoes',null)">Ver todas →</button></div>
+          <table><thead><tr><th>Indústria</th><th>Cliente</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody id="dash-com-tbody"></tbody></table>
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="card"><div class="card-header"><div class="card-title">Orçamentos por Status</div></div>
+          <div id="dash-orc-status"><div style="text-align:center;color:#aaa;padding:16px;font-size:12px">Nenhum orçamento ainda</div></div>
+        </div>
+        <div class="card"><div class="card-header"><div class="card-title">Fat. por Indústria</div></div>
+          <div id="dash-fat-ind"><div style="text-align:center;color:#aaa;padding:16px;font-size:12px">Nenhum faturamento ainda</div></div>
+        </div>
+        <div class="card"><div class="card-header"><div class="card-title">Alertas do Sistema</div></div>
+          <div id="dash-alertas"><div style="text-align:center;color:#aaa;padding:16px;font-size:12px">✅ Nenhum alerta no momento</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ORÇAMENTOS ===== -->
+    <div class="panel" id="panel-orcamentos">
+      <div class="section-bar">
+        <div><div class="section-title">Orçamentos</div><div class="section-sub">Criação e controle de orçamentos comerciais</div></div>
+        <div class="export-btns">
+          <button class="btn btn-outline btn-sm" onclick="importarArquivo('orcamento')">📥 Importar</button>
+          <button class="btn btn-primary btn-sm" onclick="novoOrcamento()">+ Novo Orçamento</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input id="orc-busca" placeholder="🔍 Buscar orçamento, cliente..." oninput="renderOrcamentos()">
+        <select id="orc-filtro-status" onchange="renderOrcamentos()">
+          <option value="">Todos os status</option>
+          <option>Rascunho</option><option>Em análise</option><option>Enviado</option>
+          <option>Aprovado</option><option>Reprovado</option><option>Cancelado</option><option>Convertido em pedido</option>
+        </select>
+        <select id="orc-filtro-ind" onchange="renderOrcamentos()">
+          <option value="">Todas as indústrias</option>
+          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Validade</th><th>Itens</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="orc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== BONIFICAÇÕES ===== -->
+    <div class="panel" id="panel-bonificacoes">
+      <div class="section-bar">
+        <div>
+          <div class="section-title">🎁 Bonificações</div>
+          <div class="section-sub">Registros de pedidos de bonificação — não geram comissão</div>
+        </div>
+        <div class="export-btns">
+          <button class="btn btn-info btn-sm" onclick="exportarBonificacoes()">📤 Exportar Excel</button>
+        </div>
+      </div>
+      <div class="alert alert-warning">🎁 Pedidos de bonificação são registros separados. <strong>Não geram comissão</strong> e não afetam o saldo financeiro do cliente.</div>
+      <div class="search-bar">
+        <input id="bonif-busca" placeholder="🔍 Nº registro, cliente, pedido..." oninput="renderBonificacoes()">
+        <select id="bonif-filtro-ind" onchange="renderBonificacoes()">
+          <option value="">Todas as indústrias</option>
+        </select>
+        <select id="bonif-filtro-cli" onchange="renderBonificacoes()">
+          <option value="">Todos os clientes</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Pedido</th><th>Cliente</th><th>Indústria</th>
+            <th>Data</th><th>NF</th><th>Valor Pedido</th><th>Valor NF</th><th>Mês</th><th>Status</th>
+          </tr></thead>
+          <tbody id="bonif-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== PEDIDOS ===== -->
+    <div class="panel" id="panel-pedidos">
+      <div class="section-bar">
+        <div><div class="section-title">Gestão de Pedidos</div><div class="section-sub">Controle e acompanhamento de pedidos</div></div>
+        <div class="export-btns">
+          <button class="btn btn-outline btn-sm" onclick="importarArquivo('pedido')">📥 Importar Excel/PDF</button>
+          <button class="btn btn-info btn-sm" onclick="exportarPedidos()">📤 Exportar Excel</button>
+          <button class="btn btn-primary btn-sm" onclick="novoPedido()">+ Novo Pedido</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input id="ped-busca" placeholder="🔍 Nº pedido, cliente..." oninput="renderPedidos()">
+        <select id="ped-filtro-tipo" onchange="renderPedidos()">
+          <option value="">Todos os tipos</option>
+          <option value="venda">🛒 Venda</option>
+          <option value="bonificacao">🎁 Bonificação</option>
+        </select>
+        <select id="ped-filtro-status" onchange="renderPedidos()">
+          <option value="">Todos os status</option>
+          <option>Recebido</option><option>Em digitação</option><option>Implantado</option>
+          <option>Faturado parcial</option><option>Faturado total</option><option>Expedido</option>
+          <option>Agendado</option><option>Entregue</option><option>Cancelado</option>
+          <option>Excluído</option>
+        </select>
+        <select id="ped-filtro-ind" onchange="renderPedidos()">
+          <option value="">Todas as indústrias</option>
+          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;background:#fff">
+          <input type="checkbox" id="ped-mostrar-excluidos" onchange="renderPedidos()" style="accent-color:var(--vermelho)">
+          🚫 Ver excluídos
+        </label>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>#</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Condição</th><th>Itens</th><th>Total Pedido</th><th>NF Líquida</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="ped-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== FATURAMENTO / NF ===== -->
+    <div class="panel" id="panel-faturamento">
+      <div class="section-bar">
+        <div><div class="section-title">Faturamento / Notas Fiscais</div><div class="section-sub">Registro de NFs com abatimentos e valor líquido para base de comissão</div></div>
+        <div class="export-btns">
+          <button class="btn btn-info btn-sm" onclick="exportarFaturamento()">📤 Exportar Excel</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-nf')">+ Registrar NF</button>
+        </div>
+      </div>
+      <div class="alert alert-info">ℹ️ O <strong>valor líquido da NF</strong> (após todos os abatimentos) é a base de cálculo das comissões. NFD, bonificações sem comissão e devoluções reduzem a base.</div>
+      <div class="month-pills">
+        <button class="month-pill active" onclick="filtrarFatMes('',this)">Todos</button>
+        <button class="month-pill" onclick="filtrarFatMes('2026-01',this)">Jan/26</button>
+        <button class="month-pill" onclick="filtrarFatMes('2026-02',this)">Fev/26</button>
+        <button class="month-pill" onclick="filtrarFatMes('2026-03',this)">Mar/26</button>
+        <button class="month-pill" onclick="filtrarFatMes('2026-04',this)">Abr/26</button>
+        <button class="month-pill" onclick="filtrarFatMes('2026-05',this)">Mai/26</button>
+      </div>
+      <div class="search-bar">
+        <input id="fat-busca" placeholder="🔍 Nº NF, cliente, pedido..." oninput="renderFaturamento()">
+        <select id="fat-filtro-cli" onchange="renderFaturamento()">
+          <option value="">Todos os clientes</option>
+          <option>Coelho Diniz</option><option>DCA Bahia</option><option>Casa Aladim TO</option><option>Lojas Rede</option>
+        </select>
+        <select id="fat-filtro-ind" onchange="renderFaturamento()">
+          <option value="">Todas as indústrias</option>
+          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option>
+        </select>
+        <select id="fat-filtro-status" onchange="renderFaturamento()">
+          <option value="">Todos os status</option>
+          <option value="bonif">Com Bonificação</option><option value="normal">Sem Bonificação</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>NF</th><th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Val. Pedido</th><th>Val. NF</th><th>Abatimentos</th><th>Devoluções</th><th>Desc. Fin.</th><th>NFD</th><th>Bonif. s/ Com.</th><th class="bold">NF Líquida</th><th>Ações</th></tr></thead>
+          <tbody id="fat-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== PEDIDO × NF ===== -->
+    <div class="panel" id="panel-nfcompare">
+      <div class="section-bar">
+        <div><div class="section-title">Comparação Pedido × NF</div><div class="section-sub">Conferência e auditoria de divergências entre pedido e nota fiscal</div></div>
+      </div>
+      <div class="search-bar">
+        <input id="cmp-busca" placeholder="🔍 Buscar pedido ou NF..." oninput="renderNFCompare()">
+        <select id="cmp-filtro-div" onchange="renderNFCompare()">
+          <option value="">Todos</option>
+          <option value="com">Com divergência</option>
+          <option value="sem">Sem divergência</option>
+        </select>
+      </div>
+      <div id="nf-compare-list"></div>
+    </div>
+
+    <!-- ===== LOGÍSTICA ===== -->
+    <div class="panel" id="panel-logistica">
+      <div class="section-bar">
+        <div><div class="section-title">Controle Logístico</div><div class="section-sub">Acompanhamento e atualização do status de cada pedido</div></div>
+        <div class="export-btns">
+          <button class="btn btn-info btn-sm" onclick="exportarLogistica()">📤 Exportar Excel</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input id="log-busca" placeholder="🔍 Pedido, cliente..." oninput="renderLogistica()">
+        <select id="log-filtro-status" onchange="renderLogistica()">
+          <option value="">Todos os status</option>
+          <option>Pedido Digitado</option><option>Pedido Enviado</option><option>Em Separação</option>
+          <option>Faturado</option><option>Aguardando Coleta</option><option>Em Transporte</option>
+          <option>Entregue</option><option>Finalizado</option><option>Cancelado</option>
+        </select>
+        <select id="log-filtro-ind" onchange="renderLogistica()">
+          <option value="">Todas as indústrias</option>
+          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option>
+        </select>
+      </div>
       <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo.</div>
       <div class="card" style="padding:0;overflow:hidden">
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:12px">
-            <thead>
-              <tr style="background:#fafafa">
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Pedido</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Cliente</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Indústria</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Data</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Transportadora</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Previsão</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Status</th>
-                <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);white-space:nowrap">Obs.</th>
-              </tr>
-            </thead>
-            <tbody id="log-tbody"></tbody>
-          </table>
-        </div>
+          <tbody id="log-tbody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -39,6 +644,10 @@
         </select>
         <select id="saldo-mes" onchange="renderSaldo()">
           <option value="">Todos os meses</option>
+          <option>Jan/26</option><option>Fev/26</option><option>Mar/26</option>
+          <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
+          <option>Jul/26</option><option>Ago/26</option><option>Set/26</option>
+          <option>Out/26</option><option>Nov/26</option><option>Dez/26</option>
         </select>
       </div>
       <div id="saldo-content"></div>
@@ -64,6 +673,8 @@
         </select>
         <select id="com-filtro-mes-prev" onchange="renderComissoes()">
           <option value="">Mês previsão</option>
+          <option>Jan/26</option><option>Fev/26</option><option>Mar/26</option>
+          <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
         </select>
       </div>
 
@@ -140,6 +751,7 @@
         </select>
         <select id="sio-filtro-mes" onchange="renderSellInOut()">
           <option value="">Todos os meses</option>
+          <option>Jan/26</option><option>Fev/26</option><option>Mar/26</option>
         </select>
       </div>
       <!-- KPIs Sell In/Out -->
@@ -162,7 +774,7 @@
         <div><div class="section-title">Controle de Metas</div><div class="section-sub">Cadastro e acompanhamento de metas mensais por indústria</div></div>
         <div class="export-btns">
           <select id="metas-mes-sel" onchange="renderMetas()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-            <option value="">Selecione...</option>
+            <option value="Mar/26" selected>Mar/26</option><option value="Fev/26">Fev/26</option><option value="Jan/26">Jan/26</option><option value="Abr/26">Abr/26</option>
           </select>
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-meta')">+ Nova Meta</button>
         </div>
@@ -521,7 +1133,6 @@
           <div class="form-group">
             <label>API Key <span style="font-size:10px;font-weight:400;color:#888">(opcional — necessária se as regras exigirem autenticação)</span></label>
             <input id="fb-apikey" value="AIzaSyC1eaTg2sXqyM9BMHZYJNCwwEydhwdVy6c" autocomplete="off">
-            <div class="alert alert-warning" style="margin-top:6px;font-size:11px">⚠️ <strong>Atenção:</strong> A API Key é uma credencial sensível. Não compartilhe este arquivo nem seu conteúdo publicamente. A chave é enviada apenas via HTTPS para o Firebase.</div>
           </div>
           <div id="fb-feedback" style="display:none;margin-bottom:12px"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -663,7 +1274,7 @@
         <div><div class="section-title">Relatórios e Indicadores</div><div class="section-sub">Análises gerenciais · rankings e performance comercial</div></div>
         <div class="export-btns">
           <select id="rel-filtro-mes" onchange="renderRelatorios()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-            <option value="todos">Todos os meses</option>
+            <option value="Mar/26">Mar/26</option><option value="Fev/26">Fev/26</option><option value="Jan/26">Jan/26</option><option value="todos">Todos</option>
           </select>
           <button class="btn btn-info btn-sm" onclick="exportarTudo()">📤 Exportar Completo</button>
         </div>
@@ -1240,7 +1851,7 @@
       </div>
       <div class="form-group"><label>Produto</label><input id="so-produto" placeholder="Descrição ou código do produto"></div>
       <div class="form-group"><label>Mês de Referência *</label>
-        <select id="so-mes"><option value="">Selecione...</option></select>
+        <select id="so-mes"><option>Jan/26</option><option>Fev/26</option><option selected>Mar/26</option><option>Abr/26</option></select>
       </div>
       <div class="form-group"><label>Quantidade Vendida</label><input type="number" id="so-qtd" placeholder="0" min="0"></div>
       <div class="form-group"><label>Valor Total (R$) *</label><input type="number" id="so-valor" placeholder="0,00" min="0" step="0.01"></div>
@@ -1296,7 +1907,7 @@
     <div class="form-group"><label>Alterar Senha</label><input type="password" id="perfil-nova-senha" placeholder="Nova senha (deixe em branco para manter)"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modal-meu-perfil')">Fechar</button>
-      <button class="btn btn-primary" onclick="salvarUsuarioPerfil()">Salvar</button>
+      <button class="btn btn-primary" onclick="toast('Perfil atualizado!');;closeModal('modal-meu-perfil')">Salvar</button>
     </div>
   </div>
 </div>
@@ -1328,7 +1939,10 @@
       <div class="form-group">
         <label>Mês de Recebimento *</label>
         <select id="rec-mes">
-          <option value="">Selecione...</option>
+          <option>Jan/26</option><option>Fev/26</option><option selected>Mar/26</option>
+          <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
+          <option>Jul/26</option><option>Ago/26</option><option>Set/26</option>
+          <option>Out/26</option><option>Nov/26</option><option>Dez/26</option>
         </select>
       </div>
       <div class="form-group full">
@@ -1393,7 +2007,7 @@
         <select id="meta-ind"><option value="">Selecione...</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option></select>
       </div>
       <div class="form-group"><label>Mês/Ano *</label>
-        <select id="meta-mes"><option value="">Selecione...</option></select>
+        <select id="meta-mes"><option>Jan/26</option><option>Fev/26</option><option selected>Mar/26</option><option>Abr/26</option><option>Mai/26</option><option>Jun/26</option><option>Jul/26</option><option>Ago/26</option><option>Set/26</option><option>Out/26</option><option>Nov/26</option><option>Dez/26</option></select>
       </div>
       <div class="form-group"><label>Valor da Meta (R$) *</label><input type="number" id="meta-valor" placeholder="0,00" step="0.01"></div>
       <div class="form-group"><label>Tipo</label>
@@ -1691,9 +2305,6 @@ const el = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 function syncAutoSaveHook() {
-  // Sempre salva localmente como fallback offline
-  salvarDados();
-  // Sincroniza com nuvem se conectado (debounced)
   if(configSync.autoSave && configSync.conectado) {
     clearTimeout(window._syncDebounce);
     window._syncDebounce = setTimeout(()=>syncPush(true), 1500);
@@ -1991,7 +2602,7 @@ function salvarOrcamento() {
   if(orcItens.length===0){alert('Adicione pelo menos um produto.');return;}
   const total = orcItens.reduce((s,i)=>s+i.total,0);
   const obj = {
-    id: orcEditId || (()=>{ const nums=orcamentos.map(o=>{const m=o.id?.match(/ORC-(\d+)/);return m?parseInt(m[1]):0;}); let n=nums.length?Math.max(...nums)+1:1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));return id; })(),
+    id: orcEditId || (()=>{ let n=orcamentos.length+1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));return id; })(),
     cliente: cli, industria: el('orc-ind').value, data: el('orc-data').value||today(),
     validade: el('orc-validade').value, cond: el('orc-cond').value,
     status: el('orc-status').value, itens: [...orcItens], total, obs: el('orc-obs').value,
@@ -2105,15 +2716,7 @@ function gerarOrcPDF(o) {
     doc.text('R$ '+fmtN(it.total),163,y+5);
     doc.setFont('helvetica','normal');
     y+=7;
-    if(y>270){
-      doc.addPage();y=20;
-      // Repete cabeçalho da tabela após nova página
-      doc.setFillColor(26,26,26);doc.rect(10,y,yw-20,7,'F');
-      doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-      doc.text('CÓD.',14,y+5);doc.text('DESCRIÇÃO',30,y+5);doc.text('IND.',95,y+5);
-      doc.text('QTD',115,y+5);doc.text('% DESC.',128,y+5);doc.text('UNIT.',145,y+5);doc.text('TOTAL',165,y+5);
-      y+=7;doc.setTextColor(26,26,26);doc.setFont('helvetica','normal');
-    }
+    if(y>270){doc.addPage();y=20;}
   });
 
   // Total
@@ -2444,9 +3047,8 @@ function _pedAtualizarTotais() {
 function pedRemItem(i) { pedItens.splice(i,1); renderPedItens(); }
 
 function _gerarIdPedido() {
-  // Usa o maior ID existente como base para evitar colisões após deleções ou importações
-  const nums = pedidos.map(p => { const m = p.id?.match(/PED-(\d+)/); return m ? parseInt(m[1]) : 0; });
-  let n = nums.length ? Math.max(...nums) + 1 : 1;
+  // Gera ID único evitando colisões mesmo após deleções
+  let n = pedidos.length + 1;
   let id;
   do { id = 'PED-' + String(n).padStart(4,'0'); n++; } while(pedidos.some(x=>x.id===id));
   return id;
@@ -2552,14 +3154,7 @@ function gerarPedPDF(p) {
     doc.text(String(it.qtd),115,y+5);doc.text((it.descPct||0)+'%',128,y+5);
     doc.text('R$ '+fmtN(it.precoUnit),143,y+5);
     doc.setFont('helvetica','bold');doc.text('R$ '+fmtN(it.total),163,y+5);doc.setFont('helvetica','normal');
-    y+=7;if(y>270){
-      doc.addPage();y=20;
-      // Repete cabeçalho da tabela após nova página
-      doc.setFillColor(26,26,26);doc.rect(10,y,yw-20,7,'F');
-      doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-      doc.text('CÓD.',14,y+5);doc.text('DESCRIÇÃO',30,y+5);doc.text('QTD',115,y+5);doc.text('% DESC.',128,y+5);doc.text('UNIT.',145,y+5);doc.text('TOTAL',165,y+5);
-      y+=7;doc.setTextColor(26,26,26);doc.setFont('helvetica','normal');
-    }
+    y+=7;if(y>270){doc.addPage();y=20;}
   });
   y+=4;doc.setFillColor(245,197,0);doc.rect(130,y,yw-140,8,'F');
   doc.setTextColor(0,0,0);doc.setFont('helvetica','bold');doc.setFontSize(10);
@@ -3038,8 +3633,7 @@ function renderSaldo() {
 function zerarSaldoClienteInd(cli, ind) {
   const pedsInd = pedidos.filter(p=>p.cliente===cli && p.industria===ind);
   const totPed  = pedsInd.reduce((s,p)=>s+p.total, 0);
-  // Usa nf.liquida (exclui bonificações) para cálculo correto do saldo
-  const totNF   = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0), 0);
+  const totNF   = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
   const dif     = totPed - totNF;
   if(Math.abs(dif) < 0.01) { toast('Saldo já está zerado para esta indústria.'); return; }
   if(!confirm(`Registrar ajuste de saldo para "${cli}" × "${ind}"?\n\nDiferença atual: ${fmt(Math.abs(dif))} (${dif>0?'faturado menos que o pedido':'faturado mais que o pedido'})\n\nUm registro será criado no histórico.`)) return;
@@ -3049,8 +3643,7 @@ function zerarSaldoClienteInd(cli, ind) {
 function zerarSaldoCliente(cli) {
   const pedsCli = pedidos.filter(p=>p.cliente===cli);
   const totPed  = pedsCli.reduce((s,p)=>s+p.total, 0);
-  // Usa nf.liquida (exclui bonificações) para cálculo correto do saldo
-  const totNF   = pedsCli.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0), 0);
+  const totNF   = pedsCli.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
   const dif     = totPed - totNF;
   if(Math.abs(dif) < 0.01) { toast('Saldo já está zerado para este cliente.'); return; }
   const inds = [...new Set(pedsCli.map(p=>p.industria))].join(', ');
@@ -3060,8 +3653,7 @@ function zerarSaldoCliente(cli) {
 
 function zerarTodosSaldos() {
   const totPed = pedidos.reduce((s,p)=>s+p.total, 0);
-  // Usa nf.liquida (exclui bonificações) para cálculo correto do saldo
-  const totNF  = pedidos.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0), 0);
+  const totNF  = pedidos.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
   const dif    = totPed - totNF;
   if(Math.abs(dif) < 0.01) { toast('Todos os saldos já estão zerados.'); return; }
   const clis = [...new Set(pedidos.map(p=>p.cliente))];
@@ -4780,21 +5372,7 @@ function salvarProdutosMix(){closeModal('modal-add-produto');renderMix();}
 /* ══════════════════════════
    SELECTS DINÂMICOS
    Popula todos os selects de cliente/indústria em tempo real
-   Inclui helper _gerarOpsMeses() para meses dinâmicos
 ══════════════════════════ */
-function _gerarOpsMeses(valorSelecionado) {
-  const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const anoAtual = new Date().getFullYear();
-  const opts = [];
-  for(let a = anoAtual - 1; a <= anoAtual + 1; a++) {
-    MESES_ABREV.forEach(m => {
-      const v = `${m}/${String(a).slice(2)}`;
-      opts.push(`<option value="${v}"${v===valorSelecionado?' selected':''}>${v}</option>`);
-    });
-  }
-  return opts.join('');
-}
-
 function popularSelectsDinamicos() {
   const nomesClientes   = clientes.filter(c=>c.status==='Ativo').map(c=>c.nome).sort();
   const nomesIndustrias = industrias.filter(i=>i.status==='Ativo').map(i=>i.nome).sort();
@@ -4864,45 +5442,6 @@ function popularSelectsDinamicos() {
     snf.innerHTML='<option value="">Selecione o pedido...</option>'+optsPeds;
     if(cur) snf.value=cur;
   }
-
-  // ── Selects de meses — gerados dinamicamente a partir do ano corrente ──
-  const mesAtualPadrao = (() => {
-    const d = new Date();
-    const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    return MESES_ABREV[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
-  })();
-
-  // saldo-mes (filtro — com opção "todos")
-  const smSaldo = el('saldo-mes');
-  if(smSaldo) { const cur=smSaldo.value; smSaldo.innerHTML='<option value="">Todos os meses</option>'+_gerarOpsMeses(cur||''); if(cur) smSaldo.value=cur; }
-
-  // rec-mes (lançamento de recebimento)
-  const smRec = el('rec-mes');
-  if(smRec) { const cur=smRec.value||mesAtualPadrao; smRec.innerHTML=_gerarOpsMeses(cur); }
-
-  // so-mes (sell out)
-  const smSo = el('so-mes');
-  if(smSo) { const cur=smSo.value||mesAtualPadrao; smSo.innerHTML=_gerarOpsMeses(cur); }
-
-  // sio-filtro-mes (sell in/out filtro)
-  const smSio = el('sio-filtro-mes');
-  if(smSio) { const cur=smSio.value; smSio.innerHTML='<option value="">Todos os meses</option>'+_gerarOpsMeses(cur||''); if(cur) smSio.value=cur; }
-
-  // com-filtro-mes-prev (filtro comissões por mês de previsão)
-  const smComPrev = el('com-filtro-mes-prev');
-  if(smComPrev) { const cur=smComPrev.value; smComPrev.innerHTML='<option value="">Mês previsão</option>'+_gerarOpsMeses(cur||''); if(cur) smComPrev.value=cur; }
-
-  // metas-mes-sel (seletor de mês do painel de metas)
-  const smMetaSel = el('metas-mes-sel');
-  if(smMetaSel) { const cur=smMetaSel.value||mesAtualPadrao; smMetaSel.innerHTML=_gerarOpsMeses(cur); }
-
-  // meta-mes (modal de cadastro de meta)
-  const smMetaMes = el('meta-mes');
-  if(smMetaMes) { const cur=smMetaMes.value||mesAtualPadrao; smMetaMes.innerHTML=_gerarOpsMeses(cur); }
-
-  // rel-filtro-mes (filtro de relatórios)
-  const smRelMes = el('rel-filtro-mes');
-  if(smRelMes) { const cur=smRelMes.value; smRelMes.innerHTML='<option value="todos">Todos os meses</option>'+_gerarOpsMeses(cur||''); if(cur) smRelMes.value=cur; }
 }
 
 /* ══════════════════════════
@@ -5582,107 +6121,12 @@ function renderDashboard() {
 }
 
 /* ══════════════════════════
-   SEGURANÇA — HASH DE SENHA (djb2, 32-bit sem sinal)
-   ⚠️  Este é um hash client-side para ofuscação básica.
-       Para segurança real, use autenticação server-side.
-══════════════════════════ */
-function hashSenha(str) {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h) ^ str.charCodeAt(i);
-    h = h >>> 0;
-  }
-  return 'h$' + h.toString(36);
-}
-
-/* ══════════════════════════
-   PERSISTÊNCIA LOCAL (localStorage fallback)
-   Salva/carrega todos os dados localmente como backup offline
-══════════════════════════ */
-function salvarDados() {
-  try {
-    const ts = Date.now();
-    const payload = {
-      pedidos, orcamentos, clientes, industrias, redes, comissoes_data,
-      logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
-      PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms, configSistema,
-      _ts: ts
-    };
-    localStorage.setItem('gestcom_v4_dados', JSON.stringify(payload));
-    // Timestamp separado para detecção de conflito com dados da nuvem
-    localStorage.setItem('gestcom_v4_ts', String(ts));
-  } catch(e) {
-    console.warn('[GestCom] Falha ao salvar no localStorage:', e);
-  }
-}
-
-function carregarDados() {
-  try {
-    const raw = localStorage.getItem('gestcom_v4_dados');
-    if(!raw) return false;
-    const d = JSON.parse(raw);
-    if(Array.isArray(d.pedidos))          pedidos = d.pedidos;
-    if(Array.isArray(d.orcamentos))       orcamentos = d.orcamentos;
-    if(Array.isArray(d.clientes))         clientes = d.clientes;
-    if(Array.isArray(d.industrias))       industrias = d.industrias;
-    if(Array.isArray(d.redes))            redes = d.redes;
-    if(Array.isArray(d.comissoes_data))   comissoes_data = d.comissoes_data;
-    if(Array.isArray(d.logisticaData))    logisticaData = d.logisticaData;
-    if(Array.isArray(d.sellOutData))      sellOutData = d.sellOutData;
-    if(Array.isArray(d.metasData))        metasData = d.metasData;
-    if(Array.isArray(d.regrasComerciais)) regrasComerciais = d.regrasComerciais;
-    if(Array.isArray(d.tratativas))       tratativas = d.tratativas;
-    if(Array.isArray(d.mixProdutos))      mixProdutos = d.mixProdutos;
-    if(Array.isArray(d.bonificacoesData)) bonificacoesData = d.bonificacoesData;
-    if(Array.isArray(d.usuarios))         usuarios = d.usuarios;
-    if(d.PRODUTOS_CAT && typeof d.PRODUTOS_CAT==='object') {
-      Object.keys(PRODUTOS_CAT).forEach(k=>delete PRODUTOS_CAT[k]);
-      Object.assign(PRODUTOS_CAT, d.PRODUTOS_CAT);
-    }
-    if(d.userPerms && typeof d.userPerms==='object') {
-      Object.keys(userPerms).forEach(k=>delete userPerms[k]);
-      Object.assign(userPerms, d.userPerms);
-    }
-    if(d.configSistema && typeof d.configSistema==='object') {
-      Object.assign(configSistema, d.configSistema);
-    }
-    console.info('[GestCom] Dados carregados do localStorage (' + new Date(d._ts||0).toLocaleTimeString('pt-BR') + ')');
-    return true;
-  } catch(e) {
-    console.warn('[GestCom] Falha ao carregar do localStorage:', e);
-    return false;
-  }
-}
-
-/* ══════════════════════════
-   MEU PERFIL — Salvar senha
-══════════════════════════ */
-function salvarUsuarioPerfil() {
-  if(!usuarioLogado) return;
-  const novaSenha = (el('perfil-nova-senha')||{}).value?.trim();
-  if(novaSenha) {
-    if(novaSenha.length < 4) { alert('A senha deve ter no mínimo 4 caracteres.'); return; }
-    const hash = hashSenha(novaSenha);
-    usuarios = usuarios.map(u => u.id===usuarioLogado.id ? {...u, senha: hash} : u);
-    usuarioLogado = {...usuarioLogado, senha: hash};
-    if(el('perfil-nova-senha')) el('perfil-nova-senha').value = '';
-  }
-  salvarDados();
-  syncAutoSaveHook();
-  addAudit(usuarioLogado.login, 'Perfil atualizado', '👤');
-  closeModal('modal-meu-perfil');
-  toast('Perfil atualizado com sucesso!');
-}
-
-/* ══════════════════════════
    LOGIN / AUTH
 ══════════════════════════ */
 function fazerLogin() {
   const login = (el('login-user').value||'').trim().toLowerCase();
   const senha = el('login-pass').value||'';
-  // Aceita senha em texto plano (legado) OU hash (novos usuários / após troca de senha)
-  const usr = usuarios.find(u=>u.login===login && u.status==='ativo' &&
-    (u.senha===senha || u.senha===hashSenha(senha)));
+  const usr = usuarios.find(u=>u.login===login && u.senha===senha && u.status==='ativo');
   if(!usr) {
     el('login-err').style.display='block';
     el('login-pass').value='';
@@ -5915,10 +6359,7 @@ function renderSellInOut() {
     if(filtCli && cli!==filtCli) return;
     inds.forEach(ind=>{
       if(filtInd && ind!==filtInd) return;
-      const _anoSio = new Date().getFullYear();
-      const _mesesSio = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].map(m=>`${m}/${String(_anoSio).slice(2)}`);
-      const _todosMesesSio = [...new Set([..._mesesSio,...sellOutData.map(s=>s.mes).filter(Boolean)])].sort();
-      _todosMesesSio.forEach(mes=>{
+      ['Jan/26','Fev/26','Mar/26'].forEach(mes=>{
         if(filtMes && mes!==filtMes) return;
         const sellIn = fats.filter(p=>p.cliente===cli&&p.industria===ind).reduce((s,p)=>s+p.nf.liquida,0);
         const soRows = sellOutData.filter(s=>s.cliente===cli&&s.industria===ind&&s.mes===mes);
@@ -5960,8 +6401,7 @@ function salvarSellOut() {
   const ind = el('so-ind').value;
   const valor = parseFloat(el('so-valor').value)||0;
   if(!cli||!ind||!valor){alert('Preencha os campos obrigatórios.');return;}
-  const _soNums = sellOutData.map(x=>{const m=x.id?.match(/SO-(\d+)/);return m?parseInt(m[1]):0;});
-  let soN = (_soNums.length?Math.max(..._soNums):0) + 1;
+  let soN = sellOutData.length + 1;
   let soId;
   do { soId = 'SO-'+String(soN).padStart(3,'0'); soN++; } while(sellOutData.some(x=>x.id===soId));
   sellOutData.push({
@@ -5988,9 +6428,7 @@ function exportarSellInOut() {
   const fats = pedidos.filter(p => p.nf);
   const allClis = [...new Set([...fats.map(p => p.cliente), ...sellOutData.map(s => s.cliente)])];
   const allInds = [...new Set([...fats.map(p => p.industria), ...sellOutData.map(s => s.industria)])];
-  const _anoExp = new Date().getFullYear();
-  const _mesesExp = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].map(m=>`${m}/${String(_anoExp).slice(2)}`);
-  const todosMeses = [...new Set([...sellOutData.map(s => s.mes), ..._mesesExp])].sort();
+  const todosMeses = [...new Set([...sellOutData.map(s => s.mes), 'Jan/26', 'Fev/26', 'Mar/26'])];
 
   const compRows = [
     ['Cliente', 'Indústria', 'Mês', 'Sell In (R$)', 'Sell Out (R$)', 'Positivação (lojas)', 'Estoque Estimado (R$)', 'Giro %', 'Cobertura']
@@ -6569,8 +7007,7 @@ function salvarTratativa() {
   }
 
   const ped = pedidos.find(p=>p.id===pedId);
-  const _tratNums = tratativas.map(t=>{const m=t.id?.match(/TRAT-(\d+)/);return m?parseInt(m[1]):0;});
-  const id  = 'TRAT-'+String((_tratNums.length?Math.max(..._tratNums):0)+1).padStart(3,'0');
+  const id  = 'TRAT-'+String(tratativas.length+1).padStart(3,'0');
   const agora = new Date().toLocaleString('pt-BR').slice(0,14);
 
   const trat = {
@@ -7331,12 +7768,6 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(dados._ts && dados._ts <= _rtdbLastTs) return;
   if(dados._usuario === usuarioLogado?.login && Date.now()-dados._ts < 3000) return;
 
-  // ⚠️ Detecção de conflito: se há dados locais mais recentes, avisa o usuário
-  const tsLocal = parseInt(localStorage.getItem('gestcom_v4_ts')||'0');
-  if(dados._ts && tsLocal > dados._ts && (Date.now() - tsLocal) < 60000 && !silencioso) {
-    if(!confirm(`⚠️ Conflito detectado!\n\nVocê tem alterações locais mais recentes (${new Date(tsLocal).toLocaleTimeString('pt-BR')}) que os dados da nuvem (${new Date(dados._ts).toLocaleTimeString('pt-BR')}).\n\nSobrescrever seus dados locais com os dados da nuvem?`)) return;
-  }
-
   _rtdbLastTs = dados._ts || Date.now();
 
   if(Array.isArray(dados.pedidos))          pedidos = dados.pedidos;
@@ -7450,44 +7881,23 @@ async function syncPull(silencioso=false) {
   }
 }
 
-// ── Polling em tempo real com backoff exponencial em caso de erros ──
+// ── Polling em tempo real (verifica a cada 5s se houve mudanças) ──
 function ativarPollingRealtime() {
   if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
-  let _errCount = 0;
-  let _baseInterval = 5000;
-  const _maxInterval = 60000;
-
-  const poll = async () => {
+  _rtdbPollInterval = setInterval(async ()=>{
     if(!configSync.conectado) return;
     try {
+      // Busca só o timestamp para não transferir tudo a cada poll
       const res = await fetch(rtdbUrl('gestcom/dados/_ts'));
-      if(!res.ok) throw new Error('HTTP ' + res.status);
+      if(!res.ok) return;
       const ts = await res.json();
       if(ts && ts > _rtdbLastTs) {
         syncLog('🔔 Mudança detectada na nuvem — carregando...', 'ok');
         await syncPull(true);
       }
-      // Sucesso — reseta contagem de erros
-      if(_errCount > 0) {
-        _errCount = 0;
-        syncLog('Polling reconectado com sucesso', 'ok');
-      }
-    } catch(e) {
-      _errCount++;
-      const wait = Math.min(_baseInterval * Math.pow(2, _errCount - 1), _maxInterval);
-      syncLog(`Polling: erro ${_errCount} — próxima tentativa em ${Math.round(wait/1000)}s`, 'aviso');
-      if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
-      _rtdbPollInterval = null;
-      setTimeout(() => {
-        if(configSync.conectado) {
-          _rtdbPollInterval = setInterval(poll, _baseInterval);
-        }
-      }, wait);
-    }
-  };
-
-  _rtdbPollInterval = setInterval(poll, _baseInterval);
-  syncLog('Polling em tempo real ativado (a cada 5s, backoff automático em erros)', 'ok');
+    } catch(e) { /* silencioso */ }
+  }, 5000);
+  syncLog('Polling em tempo real ativado (a cada 5s)', 'ok');
 }
 
 function toggleRealtime(swEl) {
@@ -7551,33 +7961,59 @@ async function tentarReconexaoAuto() {
 }
 
 /* ══════════════════════════
-   TRATAMENTO GLOBAL DE ERROS
-   Captura exceções não tratadas e exibe toast sem travar a UI
-══════════════════════════ */
-window.onerror = function(msg, src, linha, col, err) {
-  console.error('[GestCom] Erro não tratado:', msg, 'em', src, linha+':'+col, err);
-  // Só mostra toast para erros críticos, não quebra a UI
-  if(msg && !msg.includes('ResizeObserver')) {
-    toast('⚠️ Erro interno: ' + String(msg).slice(0,80), 'error');
-  }
-  return false; // não suprime o erro do console
-};
-
-window.onunhandledrejection = function(event) {
-  console.error('[GestCom] Promise rejeitada sem tratamento:', event.reason);
-  const msg = event.reason?.message || String(event.reason);
-  if(msg && !msg.includes('AbortError')) {
-    toast('⚠️ Erro assíncrono: ' + msg.slice(0,80), 'error');
-  }
-};
-
-/* ══════════════════════════
    INIT
 ══════════════════════════ */
-// Carrega dados do localStorage como fallback offline (antes da conexão Firebase)
-const _dadosCarregados = carregarDados();
-if(_dadosCarregados) console.info('[GestCom] Dados locais carregados com sucesso.');
-
 el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
 atualizarBadgeTratativas();
 renderDashboard();
+renderRedes();
+popularSelectsDinamicos();
+setTimeout(tentarReconexaoAuto, 800);
+</script>
+<!-- Modal Editar Item do Mix -->
+<div class="modal-bg" id="modal-mix-edit">
+  <div class="modal" style="width:560px">
+    <div class="modal-title">
+      ✏️ Editar Produto do Mix — <span id="mix-edit-cod" style="color:var(--amarelo);font-family:monospace"></span>
+      <button class="close-btn" onclick="closeModal('modal-mix-edit')">✕</button>
+    </div>
+    <input type="hidden" id="mix-edit-idx">
+    <div class="form-grid">
+      <div class="form-group full"><label>Descrição</label><input id="mix-edit-desc" placeholder="Descrição do produto"></div>
+      <div class="form-group"><label>Indústria</label><input id="mix-edit-ind" placeholder="Ex: LABOTRAT"></div>
+      <div class="form-group"><label>Curva ABC</label>
+        <select id="mix-edit-curva">
+          <option value="A">A</option><option value="B">B</option><option value="C">C</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Preço Tabela (R$)</label>
+        <input type="text" inputmode="decimal" id="mix-edit-tabela" placeholder="0,00" oninput="mixEditCalcNeg()">
+      </div>
+      <div class="form-group"><label>% Desconto</label>
+        <input type="number" id="mix-edit-desc-pct" placeholder="0" min="0" max="100" oninput="mixEditCalcNeg()">
+      </div>
+      <div class="form-group"><label>Última Compra</label>
+        <input id="mix-edit-ultima" placeholder="Ex: Jan/26">
+      </div>
+      <div class="form-group"><label>Status no Mix</label>
+        <select id="mix-edit-ativo">
+          <option value="ativo">Ativo</option>
+          <option value="inativo">Inativo</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Observações</label>
+        <input id="mix-edit-obs" placeholder="Condições especiais, restrições...">
+      </div>
+    </div>
+    <div id="mix-edit-neg-preview" style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px 14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--verde);margin-bottom:14px;text-align:center">
+      Preço negociado: R$ 0,00
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeModal('modal-mix-edit')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMixEdit()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
