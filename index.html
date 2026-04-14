@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -3483,6 +3484,53 @@ function pedNFAnexarArquivo(tipo, input) {
   _pedNFInlineArquivos[tipo] = file.name;
   const nomeEl = el('ped-nf-'+tipo+'-nome');
   if(nomeEl) nomeEl.textContent = '✓ ' + file.name;
+
+  // XML: lê e preenche os campos automaticamente
+  if(tipo === 'xml') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(e.target.result, 'text/xml');
+        if(xml.querySelector('parsererror')) { toast('XML inválido.','error'); return; }
+        const gv = sel => xml.querySelector(sel)?.textContent?.trim()||'';
+
+        // Número da NF
+        const nNF = gv('nNF');
+        if(nNF && el('ped-nf-num')) el('ped-nf-num').value = nNF;
+
+        // Data de emissão
+        const dhEmi = (gv('dhEmi')||gv('dEmi')||'').substring(0,10);
+        if(dhEmi && el('ped-nf-data')) el('ped-nf-data').value = dhEmi;
+
+        // Valor total da NF
+        const vNF = parseFloat(gv('ICMSTot vNF')||gv('vNFe')||'0');
+        if(vNF > 0 && el('ped-nf-valor')) el('ped-nf-valor').value = vNF.toFixed(2);
+
+        // Desconto → abatimento
+        const vDesc = parseFloat(gv('ICMSTot vDesc')||'0');
+        if(vDesc > 0 && el('ped-nf-abat')) el('ped-nf-abat').value = vDesc.toFixed(2);
+
+        // Recalcula NF líquida
+        pedCalcNFInline();
+
+        toast('✅ XML lido! Campos preenchidos automaticamente.', 'success');
+      } catch(err) {
+        toast('Erro ao ler XML: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  // PDF: salva como base64 para exibição
+  if(tipo === 'pdf') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      _pedNFInlineArquivos.pdfData = e.target.result;
+      if(nomeEl) nomeEl.innerHTML = `✓ ${file.name} <a href="${e.target.result}" target="_blank" style="font-size:10px;color:var(--azul);margin-left:6px">👁️ Ver PDF</a>`;
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 function _pedPreencherNFInline(p) {
@@ -3600,16 +3648,21 @@ function salvarPedido() {
         data:obj.data,transportadora:'',previsao:'',statusLog: nfInline ? 'Faturado' : 'Pedido Digitado',obs:''});
   }
 
-  // Gera comissão se NF foi lançada inline (e é venda)
+  // Gera/atualiza comissão se NF foi lançada inline (e é venda)
   if(nfInline && tipo === 'venda') {
+    // Base de cálculo: usa NF líquida; se zero, usa valor do pedido como fallback
+    const baseCom = nfInline.liquida > 0 ? nfInline.liquida : obj.total;
     if(!jaTemNF) {
-      gerarComissaoAuto({...obj, nf: nfInline}, nfInline.liquida);
+      gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
     } else {
-      // Atualiza comissão existente
+      // Atualiza comissão existente com a nova base
       const cIdx = comissoes_data.findIndex(c=>c.pedido===obj.id);
       if(cIdx>=0){
         const c = comissoes_data[cIdx];
-        comissoes_data[cIdx] = {...c, baseLiq: nfInline.liquida, valor: nfInline.liquida*c.pct/100};
+        comissoes_data[cIdx] = {...c, baseLiq: baseCom, valor: baseCom*c.pct/100};
+      } else {
+        // Cria comissão se não existia ainda
+        gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
       }
     }
   }
@@ -4087,7 +4140,8 @@ function renderNFCompare() {
   div.innerHTML=list.map(p=>{
     const n=p.nf;
     const difValor=n?Math.abs(n.valorNF-p.total):null;
-    const temDiv=n&&difValor>1;
+    // Tem divergência se NF não existe, NF=0, ou diferença > R$1
+    const temDiv=!n||(n.valorNF<=0)||(difValor>1);
     return `<div class="card" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div>
@@ -9294,47 +9348,28 @@ function coletarDadosParaSync() {
   };
 }
 
-// ── Aplica dados recebidos ──
 function aplicarDadosDaNuvem(dados, silencioso=false) {
-  if(!dados || dados._apagado) return;
-  if(dados._ts && dados._ts <= _rtdbLastTs) return;
+  if(!dados) return;
+  if(dados._ts && dados._ts <= (_rtdbLastTs||0)) return;
   if(dados._usuario === usuarioLogado?.login && Date.now()-dados._ts < 3000) return;
-
   _rtdbLastTs = dados._ts || Date.now();
-
-  if(Array.isArray(dados.pedidos))          pedidos = dados.pedidos;
-  if(Array.isArray(dados.orcamentos))       orcamentos = dados.orcamentos;
-  if(Array.isArray(dados.clientes))         clientes = dados.clientes;
-  if(Array.isArray(dados.industrias))       industrias = dados.industrias;
-  if(Array.isArray(dados.redes))            redes = dados.redes;
-  if(Array.isArray(dados.comissoes_data))   comissoes_data = dados.comissoes_data;
-  if(Array.isArray(dados.logisticaData))    logisticaData = dados.logisticaData;
-  // Migração pós-sync: reconstrói logística para pedidos sem entrada
-  pedidos.filter(p=>!p.excluido).forEach(p=>{
-    if(!logisticaData.find(l=>l.pedId===p.id))
-      logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
-        data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
-  });
-  if(Array.isArray(dados.sellOutData))      sellOutData = dados.sellOutData;
-  if(Array.isArray(dados.metasData))        metasData = dados.metasData;
+  if(Array.isArray(dados.pedidos)) pedidos = dados.pedidos;
+  if(Array.isArray(dados.orcamentos)) orcamentos = dados.orcamentos;
+  if(Array.isArray(dados.clientes)) clientes = dados.clientes;
+  if(Array.isArray(dados.industrias)) industrias = dados.industrias;
+  if(Array.isArray(dados.redes)) redes = dados.redes;
+  if(Array.isArray(dados.comissoes_data)) comissoes_data = dados.comissoes_data;
+  if(Array.isArray(dados.logisticaData)) logisticaData = dados.logisticaData;
+  if(Array.isArray(dados.sellOutData)) sellOutData = dados.sellOutData;
+  if(Array.isArray(dados.metasData)) metasData = dados.metasData;
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
-  if(Array.isArray(dados.tratativas))       tratativas = dados.tratativas;
-  if(Array.isArray(dados.mixProdutos))      mixProdutos = dados.mixProdutos;
+  if(Array.isArray(dados.tratativas)) tratativas = dados.tratativas;
+  if(Array.isArray(dados.mixProdutos)) mixProdutos = dados.mixProdutos;
   if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
-  // BUG FIX: restaura permissões granulares persistidas
-  if(dados.userPerms && typeof dados.userPerms==='object') {
-    Object.keys(userPerms).forEach(k=>delete userPerms[k]);
-    Object.assign(userPerms, dados.userPerms);
-  }
-  // Restaura config do sistema
-  if(dados.configSistema && typeof dados.configSistema==='object') {
-    Object.assign(configSistema, dados.configSistema);
-  }
-  // Usuários — mescla da nuvem mas preserva o usuário logado atual
+  if(dados.userPerms && typeof dados.userPerms==="object") Object.assign(userPerms, dados.userPerms);
+  if(dados.configSistema && typeof dados.configSistema==="object") Object.assign(configSistema, dados.configSistema);
   if(Array.isArray(dados.usuarios)) {
-    const loginAtual = usuarioLogado?.login;
-   
-    const _loginAtual = usuarioLogado?.login;
+const _loginAtual = usuarioLogado?.login;
     const _usrAtual = _loginAtual ? usuarios.find(u=>u.login===_loginAtual) : null;
     usuarios = dados.usuarios;
     if(_usrAtual && !usuarios.find(u=>u.login===_loginAtual)) usuarios.push(_usrAtual);
