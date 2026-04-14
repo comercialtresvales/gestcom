@@ -312,7 +312,10 @@ tr:last-child td{border-bottom:none;}
     <div class="form-group"><label>Usuário</label><input id="login-user" type="text" placeholder="seu.usuario" autocomplete="username" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
     <div class="form-group"><label>Senha</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="fazerLogin()">Entrar</button>
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:#aaa">Login inicial: <strong>admin</strong> / <strong>admin123</strong></div>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:#555">Login padrão: <strong style="color:#fff">admin</strong> / <strong style="color:#fff">admin123</strong></div>
+    <div style="text-align:center;margin-top:10px">
+      <button onclick="recuperarAcesso()" style="background:none;border:none;color:#888;font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit">🔑 Esqueci minha senha / Recuperar acesso</button>
+    </div>
   </div>
 </div>
 
@@ -7336,31 +7339,77 @@ function renderDashboard() {
    LOGIN / AUTH
 ══════════════════════════ */
 function fazerLogin() {
-  const login = (el('login-user').value||'').trim().toLowerCase();
-  const senha = el('login-pass').value||'';
-  const usr = usuarios.find(u=>u.login===login && u.senha===senha && u.status==='ativo');
-  if(!usr) {
-    el('login-err').style.display='block';
-    el('login-pass').value='';
-    return;
+  try {
+    const loginEl = document.getElementById('login-user');
+    const senhaEl = document.getElementById('login-pass');
+    const errEl   = document.getElementById('login-err');
+    if(!loginEl || !senhaEl) { alert('Erro: campos de login não encontrados.'); return; }
+
+    const login = (loginEl.value||'').trim().toLowerCase();
+    const senha = senhaEl.value||'';
+
+    if(!login || !senha) {
+      if(errEl) { errEl.textContent = 'Preencha usuário e senha.'; errEl.style.display='block'; }
+      return;
+    }
+
+    // Busca usuário — aceita status 'ativo' ou 'Ativo'
+    const usr = usuarios.find(u =>
+      u.login === login &&
+      u.senha === senha &&
+      (u.status||'').toLowerCase() === 'ativo'
+    );
+
+    if(!usr) {
+      if(errEl) {
+        errEl.textContent = 'Usuário ou senha incorretos. (Use admin / admin123 para acesso padrão)';
+        errEl.style.display = 'block';
+      } else {
+        alert('Usuário ou senha incorretos.');
+      }
+      senhaEl.value = '';
+      return;
+    }
+
+    usuarioLogado = usr;
+    usr.ultimoAcesso = new Date().toLocaleString('pt-BR').slice(0,14);
+
+    const loginScreen = document.getElementById('login-screen');
+    if(loginScreen) loginScreen.classList.add('hidden');
+
+    // Update topbar
+    try {
+      const av = usr.nome.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      const avatarEl = document.getElementById('topbar-avatar');
+      const userEl   = document.getElementById('topbar-username');
+      const profEl   = document.getElementById('topbar-profile');
+      if(avatarEl) avatarEl.textContent = av;
+      if(userEl)   userEl.textContent   = usr.nome.split(' ')[0];
+      if(profEl)   profEl.textContent   = perfilLabels[usr.perfil]||usr.perfil;
+    } catch(e) { console.warn('Topbar:', e); }
+
+    try { addAudit(usr.login, 'Login no sistema', '🔐'); } catch(e) {}
+    try { aplicarVisibilidadeSidebar(); } catch(e) { console.warn('Sidebar:', e); }
+    try { toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!'); } catch(e) {}
+
+    // Renderiza módulos — cada um isolado para não travar se um falhar
+    const renders = [
+      ()=>renderOrcamentos(), ()=>renderPedidos(), ()=>renderMix(),
+      ()=>renderClientes(), ()=>renderIndustrias(), ()=>renderRedes(),
+      ()=>renderDashboard(), ()=>renderLogistica(), ()=>renderSaldo(),
+      ()=>renderComissoes(), ()=>renderFaturamento(), ()=>popularSelectsDinamicos()
+    ];
+    renders.forEach(fn => { try { fn(); } catch(e) { console.warn('Render error:', e); } });
+
+    try {
+      const tsEl = document.getElementById('sync-ts');
+      if(tsEl) tsEl.textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
+    } catch(e) {}
+
+  } catch(err) {
+    alert('Erro inesperado no login: ' + err.message + '\n\nAbra o console do navegador (F12) para mais detalhes.');
+    console.error('[Login]', err);
   }
-  usuarioLogado = usr;
-  usr.ultimoAcesso = new Date().toLocaleString('pt-BR').slice(0,14);
-  el('login-screen').classList.add('hidden');
-  // Update topbar
-  const av = usr.nome.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  el('topbar-avatar').textContent = av;
-  el('topbar-username').textContent = usr.nome.split(' ')[0];
-  el('topbar-profile').textContent = perfilLabels[usr.perfil]||usr.perfil;
-  addAudit(usr.login, 'Login no sistema', '🔐');
-  // Aplicar visibilidade da sidebar conforme permissões
-  aplicarVisibilidadeSidebar();
-  toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!');
-  renderOrcamentos(); renderPedidos(); renderMix(); renderProdutos();
-  renderClientes(); renderIndustrias(); renderRedes(); renderDashboard();
-  renderLogistica(); renderSaldo(); renderComissoes(); renderFaturamento();
-  popularSelectsDinamicos();
-  el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
 }
 
 function fazerLogout() {
@@ -7373,6 +7422,30 @@ function fazerLogout() {
     // Restaura todos os nav-items para quando o próximo usuário logar
     document.querySelectorAll('.nav-item').forEach(n=>n.style.display='');
   }
+}
+
+function recuperarAcesso() {
+  if(!confirm(
+    '🔑 RECUPERAR ACESSO\n\n' +
+    'Isso irá redefinir o usuário administrador para:\n' +
+    '  Usuário: admin\n' +
+    '  Senha: admin123\n\n' +
+    'Todos os seus dados (pedidos, clientes, comissões etc.) serão PRESERVADOS.\n\n' +
+    'Deseja continuar?'
+  )) return;
+  // Garante que o admin padrão existe com senha resetada, sem apagar outros usuários
+  const idx = usuarios.findIndex(u => u.perfil === 'diretoria' || u.login === 'admin');
+  const adminReset = {id:'USR-001', nome:'Administrador', login:'admin', senha:'admin123', perfil:'diretoria', email:'', status:'ativo', ultimoAcesso:'—'};
+  if(idx >= 0) {
+    usuarios[idx] = {...usuarios[idx], ...adminReset};
+  } else {
+    usuarios.unshift(adminReset);
+  }
+  _salvarLocal();
+  el('login-user').value = 'admin';
+  el('login-pass').value = 'admin123';
+  el('login-err').style.display = 'none';
+  alert('✅ Acesso recuperado!\n\nUse:\n  Usuário: admin\n  Senha: admin123\n\nClique em Entrar.');
 }
 
 function aplicarVisibilidadeSidebar() {
@@ -8891,4 +8964,436 @@ function renderFatMensal() {
 
       return `<div class="card" style="border-top:3px solid ${CORES[ci%CORES.length]}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-          <span class="tag" 
+          <span class="tag" style="background:${CORES[ci%CORES.length]};color:${ci===0?'#000':'#fff'};font-size:11px">${esc(ind)}</span>
+          <div style="text-align:right">
+            <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">${fmt(totInd)}</div>
+            <div style="font-size:10px;color:#888">Total ${ano}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:2px;margin-bottom:10px">${barras}</div>
+        <div style="display:flex;gap:0;border-top:1px solid var(--cinza);padding-top:8px">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:11px;font-weight:600">${fmt(mediaFat)}</div>
+            <div style="font-size:9px;color:#aaa">Média/mês</div>
+          </div>
+          <div style="flex:1;text-align:center;border-left:1px solid var(--cinza)">
+            <div style="font-size:11px;font-weight:600">${mesesComFat}</div>
+            <div style="font-size:9px;color:#aaa">Meses ativos</div>
+          </div>
+          <div style="flex:1;text-align:center;border-left:1px solid var(--cinza)">
+            <div style="font-size:10px;font-weight:600">${melhorMes}</div>
+            <div style="font-size:9px;color:#aaa">Melhor mês</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+}
+
+function exportarFatMensal() {
+  const ano    = (el('fm-ano')||{}).value||'2026';
+  const MESES  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const INDS   = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].filter(Boolean).sort();
+  const wb = XLSX.utils.book_new();
+  const header = ['Indústria',...MESES.map(m=>m+'/'+ano.slice(2)),'TOTAL'];
+  const rows   = [header];
+  INDS.forEach(ind=>{
+    const row = [ind];
+    let tot = 0;
+    MESES.forEach((m,i)=>{
+      const mmPadded = String(i+1).padStart(2,'0');
+      const v = pedidos.filter(p=>p.nf&&p.industria===ind&&p.nf.data&&p.nf.data.startsWith(`${ano}-${mmPadded}`)).reduce((s,p)=>s+p.nf.liquida,0);
+      row.push(v); tot+=v;
+    });
+    row.push(tot);
+    rows.push(row);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:16},...MESES.map(()=>({wch:12})),{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'Fat_Mensal');
+  XLSX.writeFile(wb,`FatMensal_${ano}_TresVales.xlsx`);
+  toast('Excel exportado!');
+}
+
+/* ══════════════════════════════════════════════════════
+   SINCRONIZAÇÃO — FIREBASE REALTIME DATABASE (REST API)
+   Sem SDK, sem cartão — funciona direto no HTML
+══════════════════════════════════════════════════════ */
+
+let configSync = {
+  dbUrl: '',       // ex: https://SEU-PROJETO-default-rtdb.firebaseio.com
+  apiKey: '',      // da configuração do web app
+  autoSave: true,
+  realtime: true,
+  conectado: false,
+};
+
+let _rtdbPollInterval = null;
+let _rtdbLastTs = 0;
+
+function syncLog(msg, tipo='info') {
+  const logEl = el('sync-log');
+  const emptyEl = el('sync-log-empty');
+  if(!logEl) return;
+  if(emptyEl) emptyEl.style.display = 'none';
+  const cores = {info:'#1a5fa8', ok:'#2d7a3a', erro:'#c0392b', aviso:'#d97706'};
+  const hora = new Date().toLocaleTimeString('pt-BR');
+  logEl.innerHTML = `<div style="color:${cores[tipo]||'#666'};padding:2px 0">[${hora}] ${msg}</div>` + logEl.innerHTML;
+}
+
+function syncSetStatus(status, sub, cor) {
+  const cores = {conectado:'#2d7a3a', desconectado:'#ccc', sincronizando:'#d97706', erro:'#c0392b'};
+  const bg    = {conectado:'#e8f5e9', desconectado:'#f4f3ef', sincronizando:'#fff8e1', erro:'#fef2f2'};
+  if(el('sync-dot'))         el('sync-dot').style.background = cores[cor]||'#ccc';
+  if(el('sync-status-text')) el('sync-status-text').textContent = status;
+  if(el('sync-status-sub'))  el('sync-status-sub').textContent = sub;
+  if(el('sync-status-bar'))  el('sync-status-bar').style.background = bg[cor]||'#f4f3ef';
+  const badge = el('badge-sync');
+  if(badge) badge.style.display = cor==='sincronizando'?'inline':'none';
+}
+
+function syncHabilitarBotoes(sim) {
+  ['btn-push','btn-pull','btn-reset-cloud','btn-sync-now'].forEach(id=>{
+    const b = el(id); if(b) b.disabled = !sim;
+  });
+}
+
+// ── URL base para REST calls ──
+function rtdbUrl(path) {
+  const base = configSync.dbUrl.replace(/\/$/, '');
+  const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
+  return `${base}/${path}.json${auth}`;
+}
+
+// ── Conectar e testar ──
+async function firebaseConectar() {
+  const dbUrl  = (el('fb-dburl')||{}).value?.trim();
+  const apiKey = (el('fb-apikey')||{}).value?.trim() || '';
+
+  if(!dbUrl) {
+    feedbackFb('⚠️ Cole a URL do Realtime Database (ex: https://xxx-default-rtdb.firebaseio.com)', 'warning');
+    return;
+  }
+
+  feedbackFb('🔄 Conectando...', 'info');
+  syncSetStatus('Conectando...', 'Testando conexão...', 'sincronizando');
+
+  configSync.dbUrl  = dbUrl.replace(/\/$/, '');
+  configSync.apiKey = apiKey;
+
+  try {
+    // Teste de conexão — lê o nó raiz de ping
+    const res = await fetch(rtdbUrl('gestcom/ping'), {
+      method: 'PUT',
+      body: JSON.stringify({ts: Date.now(), user: usuarioLogado?.login||'test'}),
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status} — verifique a URL e as regras do banco`);
+
+    configSync.conectado = true;
+    syncSetStatus('✅ Conectado ao Realtime Database', dbUrl.replace('https://',''), 'conectado');
+    feedbackFb('✅ Conectado com sucesso!', 'success');
+    syncLog('Conectado ao Realtime Database: '+dbUrl, 'ok');
+    syncHabilitarBotoes(true);
+
+    // Salva credenciais localmente para reconexão automática
+    try { localStorage.setItem('gestcom_rtdb', JSON.stringify({dbUrl, apiKey})); } catch(e){}
+
+    // Carrega dados existentes da nuvem
+    await syncPull(true);
+
+    // Ativa polling em tempo real
+    if(configSync.realtime) ativarPollingRealtime();
+
+  } catch(err) {
+    syncSetStatus('❌ Erro de conexão', err.message, 'erro');
+    feedbackFb('❌ ' + err.message, 'danger');
+    syncLog('Erro: '+err.message, 'erro');
+    configSync.conectado = false;
+  }
+}
+
+function feedbackFb(msg, tipo) {
+  const d = el('fb-feedback'); if(!d) return;
+  const cls = {info:'alert-info', success:'alert-success', warning:'alert-warning', danger:'alert-danger'};
+  d.className = 'alert ' + (cls[tipo]||'alert-info');
+  d.textContent = msg;
+  d.style.display = 'block';
+}
+
+function firebaseDesconectar() {
+  if(_rtdbPollInterval) { clearInterval(_rtdbPollInterval); _rtdbPollInterval = null; }
+  configSync.conectado = false;
+  syncSetStatus('Desconectado', 'Configure o banco para sincronizar', 'desconectado');
+  syncHabilitarBotoes(false);
+  feedbackFb('Desconectado.', 'info');
+  syncLog('Desconectado do Realtime Database', 'aviso');
+  try { localStorage.removeItem('gestcom_rtdb'); } catch(e){}
+}
+
+// ── Serializa todos os dados ──
+function coletarDadosParaSync() {
+  return {
+    pedidos:        JSON.parse(JSON.stringify(pedidos)),
+    orcamentos:     JSON.parse(JSON.stringify(orcamentos)),
+    clientes:       JSON.parse(JSON.stringify(clientes)),
+    industrias:     JSON.parse(JSON.stringify(industrias)),
+    redes:          JSON.parse(JSON.stringify(redes)),
+    comissoes_data: JSON.parse(JSON.stringify(comissoes_data)),
+    logisticaData:  JSON.parse(JSON.stringify(logisticaData)),
+    sellOutData:    JSON.parse(JSON.stringify(sellOutData)),
+    metasData:      JSON.parse(JSON.stringify(metasData)),
+    regrasComerciais: JSON.parse(JSON.stringify(regrasComerciais)),
+    tratativas:     JSON.parse(JSON.stringify(tratativas)),
+    PRODUTOS_CAT:   JSON.parse(JSON.stringify(PRODUTOS_CAT)),
+    mixProdutos:    JSON.parse(JSON.stringify(mixProdutos)),
+    bonificacoesData: JSON.parse(JSON.stringify(bonificacoesData)),
+    usuarios:       JSON.parse(JSON.stringify(usuarios)),
+    // BUG FIX: persiste permissões de acesso granulares
+    userPerms:      JSON.parse(JSON.stringify(userPerms)),
+    configSistema:  JSON.parse(JSON.stringify(configSistema)),
+    _ts:      Date.now(),
+    _usuario: usuarioLogado?.login || 'sistema',
+  };
+}
+
+// ── Aplica dados recebidos ──
+function aplicarDadosDaNuvem(dados, silencioso=false) {
+  if(!dados || dados._apagado) return;
+  if(dados._ts && dados._ts <= _rtdbLastTs) return;
+  if(dados._usuario === usuarioLogado?.login && Date.now()-dados._ts < 3000) return;
+
+  _rtdbLastTs = dados._ts || Date.now();
+
+  if(Array.isArray(dados.pedidos))          pedidos = dados.pedidos;
+  if(Array.isArray(dados.orcamentos))       orcamentos = dados.orcamentos;
+  if(Array.isArray(dados.clientes))         clientes = dados.clientes;
+  if(Array.isArray(dados.industrias))       industrias = dados.industrias;
+  if(Array.isArray(dados.redes))            redes = dados.redes;
+  if(Array.isArray(dados.comissoes_data))   comissoes_data = dados.comissoes_data;
+  if(Array.isArray(dados.logisticaData))    logisticaData = dados.logisticaData;
+  // Migração pós-sync: reconstrói logística para pedidos sem entrada
+  pedidos.filter(p=>!p.excluido).forEach(p=>{
+    if(!logisticaData.find(l=>l.pedId===p.id))
+      logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
+        data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+  });
+  if(Array.isArray(dados.sellOutData))      sellOutData = dados.sellOutData;
+  if(Array.isArray(dados.metasData))        metasData = dados.metasData;
+  if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
+  if(Array.isArray(dados.tratativas))       tratativas = dados.tratativas;
+  if(Array.isArray(dados.mixProdutos))      mixProdutos = dados.mixProdutos;
+  if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
+  // BUG FIX: restaura permissões granulares persistidas
+  if(dados.userPerms && typeof dados.userPerms==='object') {
+    Object.keys(userPerms).forEach(k=>delete userPerms[k]);
+    Object.assign(userPerms, dados.userPerms);
+  }
+  // Restaura config do sistema
+  if(dados.configSistema && typeof dados.configSistema==='object') {
+    Object.assign(configSistema, dados.configSistema);
+  }
+  // Usuários — mescla da nuvem mas preserva o usuário logado atual
+  if(Array.isArray(dados.usuarios)) {
+    const loginAtual = usuarioLogado?.login;
+    usuarios = dados.usuarios;
+    // Se o usuário logado foi removido da nuvem, mantém ele localmente
+    if(loginAtual && !usuarios.find(u=>u.login===loginAtual)) {
+      const backup = {id:'USR-001',nome:'Administrador',login:'admin',senha:'admin123',perfil:'diretoria',email:'',status:'ativo',ultimoAcesso:'—'};
+      usuarios.push(backup);
+    }
+  }
+  if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==='object') {
+    Object.keys(PRODUTOS_CAT).forEach(k=>delete PRODUTOS_CAT[k]);
+    Object.assign(PRODUTOS_CAT, dados.PRODUTOS_CAT);
+  }
+
+  // Re-renderiza tudo
+  renderDashboard(); renderOrcamentos(); renderPedidos();
+  renderFaturamento(); renderMix(); renderProdutos();
+  renderClientes(); renderIndustrias(); renderRedes(); renderComissoes();
+  renderSaldo(); renderLogistica(); renderTratativas();
+  renderMetas(); renderRegras();
+  popularSelectsDinamicos(); atualizarBadgeTratativas();
+  // Re-aplica permissões na sidebar
+  if(usuarioLogado) aplicarVisibilidadeSidebar();
+
+  const hora = new Date().toLocaleTimeString('pt-BR');
+  if(el('sync-last-time')) el('sync-last-time').textContent = 'Última sync: '+hora;
+  if(!silencioso) toast('🔄 Dados atualizados da nuvem!');
+}
+
+// ── Enviar para o banco (PUT) ──
+async function syncPush(silencioso=false) {
+  if(!configSync.conectado) {
+    if(!silencioso) toast('⛔ Não conectado ao banco.','error'); return;
+  }
+  try {
+    if(!silencioso) syncSetStatus('Salvando...', 'Enviando para a nuvem...', 'sincronizando');
+    const dados = coletarDadosParaSync();
+    _rtdbLastTs = dados._ts; // marca o timestamp para evitar loop
+
+    const res = await fetch(rtdbUrl('gestcom/dados'), {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(dados),
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+
+    syncSetStatus('✅ Conectado ao Realtime Database', configSync.dbUrl.replace('https://',''), 'conectado');
+    const hora = new Date().toLocaleTimeString('pt-BR');
+    if(el('sync-last-time')) el('sync-last-time').textContent = 'Salvo: '+hora;
+    syncLog(`Dados enviados por ${dados._usuario}`, 'ok');
+    if(!silencioso) toast('☁️ Dados salvos na nuvem!');
+  } catch(err) {
+    syncSetStatus('⚠️ Erro ao salvar', err.message, 'erro');
+    syncLog('Erro ao salvar: '+err.message, 'erro');
+    if(!silencioso) toast('❌ Erro ao salvar: '+err.message,'error');
+  }
+}
+
+// ── Carregar do banco (GET) ──
+async function syncPull(silencioso=false) {
+  if(!configSync.conectado) {
+    if(!silencioso) toast('⛔ Não conectado ao banco.','error'); return;
+  }
+  try {
+    if(!silencioso) syncSetStatus('Carregando...', 'Buscando dados...', 'sincronizando');
+    const res = await fetch(rtdbUrl('gestcom/dados'));
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const dados = await res.json();
+
+    if(!dados) {
+      syncSetStatus('✅ Conectado', 'Banco vazio — envie seus dados', 'conectado');
+      syncLog('Banco vazio — nenhum dado ainda', 'aviso');
+      if(!silencioso) toast('Banco vazio. Use "Enviar dados" para começar.');
+      return;
+    }
+
+    aplicarDadosDaNuvem(dados, silencioso);
+    syncSetStatus('✅ Conectado ao Realtime Database', configSync.dbUrl.replace('https://',''), 'conectado');
+    syncLog(`Dados carregados (enviados por ${dados._usuario||'?'} às ${new Date(dados._ts||0).toLocaleTimeString('pt-BR')})`, 'ok');
+  } catch(err) {
+    syncSetStatus('⚠️ Erro ao carregar', err.message, 'erro');
+    syncLog('Erro ao carregar: '+err.message, 'erro');
+    if(!silencioso) toast('❌ Erro ao carregar: '+err.message,'error');
+  }
+}
+
+// ── Polling em tempo real (verifica a cada 5s se houve mudanças) ──
+function ativarPollingRealtime() {
+  if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
+  _rtdbPollInterval = setInterval(async ()=>{
+    if(!configSync.conectado) return;
+    try {
+      // Busca só o timestamp para não transferir tudo a cada poll
+      const res = await fetch(rtdbUrl('gestcom/dados/_ts'));
+      if(!res.ok) return;
+      const ts = await res.json();
+      if(ts && ts > _rtdbLastTs) {
+        syncLog('🔔 Mudança detectada na nuvem — carregando...', 'ok');
+        await syncPull(true);
+      }
+    } catch(e) { /* silencioso */ }
+  }, 5000);
+  syncLog('Polling em tempo real ativado (a cada 5s)', 'ok');
+}
+
+function toggleRealtime(swEl) {
+  swEl.classList.toggle('on');
+  configSync.realtime = swEl.classList.contains('on');
+  if(configSync.realtime && configSync.conectado) {
+    ativarPollingRealtime();
+    syncLog('Tempo real ativado', 'ok');
+  } else {
+    if(_rtdbPollInterval) { clearInterval(_rtdbPollInterval); _rtdbPollInterval=null; }
+    syncLog('Tempo real desativado', 'aviso');
+  }
+}
+
+function syncAgora() { syncPull(); }
+
+async function syncResetCloud() {
+  if(!confirm('⚠️ Isso apagará TODOS os dados da nuvem permanentemente.\n\nConfirmar?')) return;
+  if(!confirm('Segunda confirmação: apagar tudo da nuvem?')) return;
+  try {
+    await fetch(rtdbUrl('gestcom/dados'), {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({_apagado:true, _ts:Date.now(), _usuario:usuarioLogado?.login}),
+    });
+    syncLog('Dados da nuvem apagados', 'erro');
+    toast('Dados da nuvem apagados.');
+  } catch(err) { toast('Erro: '+err.message,'error'); }
+}
+
+async function tentarReconexaoAuto() {
+  // Credenciais do Firebase — Sistematresvales
+  const FIREBASE_DB_URL = '';
+  const FIREBASE_API_KEY = '';
+
+  try {
+    // Preenche os campos do painel de sincronização
+    if(el('fb-dburl'))  el('fb-dburl').value  = FIREBASE_DB_URL;
+    if(el('fb-apikey')) el('fb-apikey').value = FIREBASE_API_KEY;
+
+    // Verifica se há credenciais salvas no localStorage (prioridade)
+    const saved = localStorage.getItem('gestcom_rtdb');
+    if(saved) {
+      const creds = JSON.parse(saved);
+      if(creds.dbUrl) {
+        configSync.dbUrl  = creds.dbUrl;
+        configSync.apiKey = creds.apiKey || FIREBASE_API_KEY;
+        if(el('fb-dburl'))  el('fb-dburl').value  = creds.dbUrl;
+        if(el('fb-apikey')) el('fb-apikey').value = creds.apiKey || FIREBASE_API_KEY;
+      }
+    } else {
+      configSync.dbUrl  = FIREBASE_DB_URL;
+      configSync.apiKey = FIREBASE_API_KEY;
+    }
+
+    syncLog('Conectando ao Firebase automaticamente...', 'info');
+    await firebaseConectar();
+  } catch(e) {
+    syncLog('Conexão automática falhou: '+e.message, 'aviso');
+  }
+}
+
+/* ══════════════════════════
+   INIT
+══════════════════════════ */
+// 1. Restaura dados do localStorage (funciona offline, sem Firebase)
+(function(){
+  if(typeof _carregarLocal === 'function' && _carregarLocal()) {
+    popularSelectsDinamicos();
+    renderDashboard();
+  }
+})();
+// 2. Migração de segurança: garante logística para TODOS os pedidos existentes
+pedidos.filter(p=>!p.excluido).forEach(p=>{
+  if(!logisticaData.find(l=>l.pedId===p.id))
+    logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
+      data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+});
+el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
+atualizarBadgeTratativas();
+renderDashboard();
+// Garante que logística e saldo renderizam com dados do localStorage
+renderLogistica();
+renderSaldo();
+renderRedes();
+popularSelectsDinamicos();
+setTimeout(tentarReconexaoAuto, 800);
+</script>
+<!-- Modal Editar Item do Mix -->
+<div class="modal-bg" id="modal-mix-edit">
+  <div class="modal" style="width:560px">
+    <div class="modal-title">
+      ✏️ Editar Produto do Mix — <span id="mix-edit-cod" style="color:var(--amarelo);font-family:monospace"></span>
+      <button class="close-btn" onclick="closeModal('modal-mix-edit')">✕</button>
+    </div>
+    <input type="hidden" id="mix-edit-idx">
+    <div class="form-grid">
+      <div class="form-group full"><label>Descrição</label><input id="mix-edit-desc" placeholder="Descrição do produto"></div>
+      <div class="form-group"><label>Indústria</label><input id="mix-edit-ind" placeholder="Ex: LABOTRAT"></div>
+      <div class="form-group"><label>Curva ABC</label>
+        <select id="mix-edit-curva">
