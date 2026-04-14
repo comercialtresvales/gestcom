@@ -9333,3 +9333,43 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   // Usuários — mescla da nuvem mas preserva o usuário logado atual
   if(Array.isArray(dados.usuarios)) {
     const loginAtual = usuarioLogado?.login;
+   
+    const _loginAtual = usuarioLogado?.login;
+    const _usrAtual = _loginAtual ? usuarios.find(u=>u.login===_loginAtual) : null;
+    usuarios = dados.usuarios;
+    if(_usrAtual && \!usuarios.find(u=>u.login===_loginAtual)) usuarios.push(_usrAtual);
+  }
+  if(\!silencioso) {
+    ['renderPedidos','renderFaturamento','renderComissoes','renderSaldo','renderLogistica',
+     'renderDashboard','renderClientes','renderIndustrias','renderRedes','renderOrcamentos',
+     'renderMix','popularSelectsDinamicos','atualizarBadgeTratativas'
+    ].forEach(fn=>{try{window[fn]&&window[fn]();}catch(e){}});
+  }
+}
+async function syncPush(silencioso=false){
+  if(\!configSync.conectado||\!configSync.rtdbUrl) return;
+  try{const dados=coletarDadosParaSync();const res=await fetch(rtdbUrl('gestcom/dados'),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});if(\!res.ok)throw new Error('HTTP '+res.status);_rtdbLastTs=dados._ts;if(\!silencioso){syncLog('✅ Enviado','success');feedbackFb('Sincronizado\!','success');}}catch(e){if(\!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
+}
+async function syncPull(silencioso=false){
+  if(\!configSync.conectado||\!configSync.rtdbUrl) return;
+  try{const res=await fetch(rtdbUrl('gestcom/dados'));if(\!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(\!dados){if(\!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(\!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado\!','success');}}catch(e){if(\!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
+}
+let _rtdbPollInterval=null;
+function ativarPollingRealtime(){if(_rtdbPollInterval)clearInterval(_rtdbPollInterval);_rtdbPollInterval=setInterval(async()=>{if(\!configSync.conectado||\!usuarioLogado)return;try{const res=await fetch(rtdbUrl('gestcom/dados'));if(\!res.ok)return;const dados=await res.json();if(dados&&dados._ts&&dados._ts>(_rtdbLastTs||0)){aplicarDadosDaNuvem(dados,true);_rtdbLastTs=dados._ts;}}catch(e){}},5000);}
+function toggleRealtime(swEl){if(swEl.checked)ativarPollingRealtime();else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
+function syncAgora(){syncPull();}
+async function syncResetCloud(){if(\!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada\!');}
+async function tentarReconexaoAuto(){if(configSync.rtdbUrl&&\!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
+(function(){try{if(typeof _carregarLocal==='function'&&_carregarLocal()){try{popularSelectsDinamicos();}catch(e){}try{renderDashboard();}catch(e){}}}catch(e){}})();
+pedidos.filter(p=>\!p.excluido).forEach(p=>{if(\!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''}); });
+try{const ts=document.getElementById('sync-ts');if(ts)ts.textContent='Sistema ativo · '+new Date().toLocaleString('pt-BR');}catch(e){}
+try{atualizarBadgeTratativas();}catch(e){}
+try{renderDashboard();}catch(e){}
+try{renderLogistica();}catch(e){}
+try{renderSaldo();}catch(e){}
+try{renderRedes();}catch(e){}
+try{popularSelectsDinamicos();}catch(e){}
+setTimeout(tentarReconexaoAuto,800);
+</script>
+</body>
+</html>
