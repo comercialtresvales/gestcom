@@ -3868,33 +3868,111 @@ function salvarNFSemPedido() {
   toast(`🧾 NF ${num} registrada sem pedido! ${tipo==='venda'?'Comissão calculada automaticamente.':'Bonificação registrada.'}`);
 }
 
+// ─── Utilitário: adiciona N meses a uma data, retorna Date ───────────────────
+function _addMeses(date, n) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+// ─── Utilitário: adiciona N dias a uma data, retorna Date ────────────────────
+function _addDias(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+// ─── Utilitário: converte prazo "30D", "30/60D", "30+60" etc. → dias totais ─
+function _parsePrazoDias(prazoStr) {
+  if(!prazoStr) return 0;
+  const s = String(prazoStr).replace(/\s/g,'').toUpperCase();
+  // Remove sufixo D no final, ex: "60D" → "60", "30/60D" → "30/60"
+  const clean = s.endsWith('D') ? s.slice(0,-1) : s;
+  // Múltiplas parcelas: pega o MAIOR prazo (último vencimento)
+  const partes = clean.split(/[\/\+,]/).map(Number).filter(n=>!isNaN(n)&&n>0);
+  if(partes.length === 0) return 0;
+  return Math.max(...partes);
+}
+
+// ─── Utilitário: formata Date → "Mmm/AA" (ex: "Abr/26") ─────────────────────
+function _dateToMesLabel(date) {
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return meses[date.getMonth()]+'/'+(date.getFullYear()+'').slice(2);
+}
+
+// ─── Calcula o mês de previsão de recebimento da comissão ────────────────────
+// Faturamento : recebe no mês SEGUINTE ao da NF
+//   ex: NF jan/26 → comissão fev/26
+// Liquidez    : recebe no mês SEGUINTE ao vencimento do boleto
+//   ex: NF 14/01/26, prazo 60 dias → vencimento 14/03/26 → comissão abr/26
+function _calcMesPrevisaoComissao(dataNF, tipoCom, prazoCliente) {
+  // dataNF pode vir como "YYYY-MM-DD" ou Date
+  let dNF;
+  if(dataNF instanceof Date) {
+    dNF = dataNF;
+  } else if(typeof dataNF === 'string' && dataNF.length >= 7) {
+    // Garante parse local correto (evita offset UTC)
+    const parts = dataNF.split('-');
+    dNF = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]||1));
+  } else {
+    dNF = new Date(); // fallback: data atual
+  }
+
+  if(tipoCom === 'Liquidez') {
+    // 1. Calcula vencimento do boleto: data NF + prazo em dias
+    const dias = _parsePrazoDias(prazoCliente);
+    const dVenc = dias > 0 ? _addDias(dNF, dias) : dNF;
+    // 2. Mês de recebimento = mês SEGUINTE ao vencimento
+    const dRec = _addMeses(dVenc, 1);
+    return _dateToMesLabel(dRec);
+  } else {
+    // Faturamento: mês SEGUINTE ao mês da NF
+    const dRec = _addMeses(dNF, 1);
+    return _dateToMesLabel(dRec);
+  }
+}
+
 function gerarComissaoAuto(ped, baseLiq) {
   if(!baseLiq || baseLiq <= 0) return; // não gera comissão R$0
+
   // Busca a regra cadastrada para esta indústria/cliente, senão usa padrão 5%
   const regra = regrasComerciais.find(r=>r.ativo &&
     (r.industria==='Todas'||r.industria===ped.industria) &&
     (r.cliente==='Todos'||r.cliente===ped.cliente)
   ) || regrasComerciais.find(r=>r.ativo && r.industria===ped.industria);
   const pct = regra ? regra.pct : 5;
-  const tipo = regra ? regra.tipo : 'Faturamento';
+
+  // ── CORRIGIDO: busca tipoCom na indústria cadastrada ──────────────────────
+  const indCad = industrias.find(i => i.nome === ped.industria || i.id === ped.industria);
+  const tipo = indCad?.tipoCom || (regra?.tipo) || 'Faturamento';
+
+  // ── CORRIGIDO: busca prazo do cliente cadastrado ──────────────────────────
+  const cliCad = clientes.find(c => c.nome === ped.cliente || c.id === ped.cliente);
+  const prazoCliente = ped.cond || cliCad?.prazo || '';
+
+  // ── CORRIGIDO: usa data da NF (não data atual) ────────────────────────────
+  const dataNF = ped.nf?.data || ped.data || new Date();
+
+  // ── Calcula mês de previsão conforme regra ─────────────────────────────────
+  const mesLabel = _calcMesPrevisaoComissao(dataNF, tipo, prazoCliente);
+
   // Verifica se já existe comissão para este pedido (re-registro de NF)
   const existente = comissoes_data.find(c => c.pedido === ped.id);
   if(existente) {
     // Atualiza a comissão existente com os novos valores
     const idx = comissoes_data.indexOf(existente);
-    comissoes_data[idx] = {...existente, baseLiq, pct, valor: baseLiq*pct/100, tipo};
+    comissoes_data[idx] = {...existente, baseLiq, pct, valor: baseLiq*pct/100, tipo, mesPrevisao: mesLabel};
     return;
   }
+
   let comN = comissoes_data.length + 1;
   let comIdStr;
   do { comIdStr = 'COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr));
   const id = comIdStr;
-  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const d=new Date();
-  const mesLabel = meses[d.getMonth()]+'/'+(d.getFullYear()+'').slice(2);
-  comissoes_data.push({id,pedido:ped.id,cliente:ped.cliente,industria:ped.industria,
-    tipo,baseLiq,pct,valor:baseLiq*pct/100,
-    mesPrevisao:mesLabel,mesRecebimento:'',status:'Prevista'});
+
+  comissoes_data.push({id, pedido:ped.id, cliente:ped.cliente, industria:ped.industria,
+    tipo, baseLiq, pct, valor:baseLiq*pct/100,
+    mesPrevisao:mesLabel, mesRecebimento:'', status:'Prevista'});
 }
 
 // Registra bonificação como entrada separada (não gera comissão, não afeta saldo financeiro)
