@@ -4737,13 +4737,13 @@ function exportarComissoes(){
   const wb = XLSX.utils.book_new();
   const rows = [['COMISSÕES — COMERCIAL TRÊS VALES'],[''],
     ['#','Pedido','Cliente','Indústria','Tipo','Base NF Líq.','%','Valor Previsto','Valor Recebido','Diferença','Parcelas','Mês Previsão','Mês Recebimento','Status']];
-  comissoes_data.forEach(c=>{
+  comissoes_data.filter(c=>!c.excluido).forEach(c=>{
     const rec  = c.valorRecebido||0;
     const parc = (c.parcelas||[]).map(p=>`P: ${p.valor} (${p.mes})`).join(' | ');
     rows.push([c.id,c.pedido,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct+'%',c.valor,rec,c.valor-rec,parc,c.mesPrevisao||'',c.mesRecebimento||'',c.status]);
   });
-  rows.push(['','','','','','','','TOTAL PREVISTO:',comissoes_data.reduce((s,c)=>s+c.valor,0),'','','','','']);
-  rows.push(['','','','','','','','TOTAL RECEBIDO:',comissoes_data.reduce((s,c)=>s+(c.valorRecebido||0),0),'','','','','']);
+  rows.push(['','','','','','','','TOTAL PREVISTO:',comissoes_data.filter(c=>!c.excluido).reduce((s,c)=>s+c.valor,0),'','','','','']);
+  rows.push(['','','','','','','','TOTAL RECEBIDO:',comissoes_data.filter(c=>!c.excluido).reduce((s,c)=>s+(c.valorRecebido||0),0),'','','','','']);
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{wch:10},{wch:10},{wch:22},{wch:14},{wch:14},{wch:14},{wch:6},{wch:14},{wch:14},{wch:12},{wch:30},{wch:12},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Comissoes');
@@ -5692,16 +5692,21 @@ const IMPORT_COLS = {
     {key:'cliente',    label:'Cliente',          req:true,  hint:'Deve estar cadastrado no sistema'},
     {key:'industria',  label:'Indústria',         req:true,  hint:'Deve estar cadastrada no sistema'},
     {key:'tipo',       label:'Tipo',              req:false, hint:'venda ou bonificacao (padrão: venda)'},
-    {key:'data',       label:'Data',              req:false, hint:'AAAA-MM-DD'},
+    {key:'data',       label:'Data Pedido',       req:false, hint:'AAAA-MM-DD ou DD/MM/AAAA'},
     {key:'cond',       label:'Condição',          req:false, hint:'Ex: 28D, 30/60D'},
     {key:'status',     label:'Status',            req:false, hint:'Recebido, Implantado...'},
+    {key:'grupo',      label:'Grupo / Pedido',    req:false, hint:'Mesmo valor = mesmo pedido. Linhas com valores diferentes = pedidos diferentes'},
+    {key:'pct',        label:'% Comissão',        req:false, hint:'Ex: 3 (número sem %). Se vazio usa regra cadastrada'},
+    {key:'nf_numero',  label:'Número da NF',      req:false, hint:'Preencher para já registrar a NF na importação'},
+    {key:'nf_valor',   label:'Valor Faturado (NF)',req:false, hint:'Valor bruto da NF'},
+    {key:'nf_data',    label:'Data Faturamento',  req:false, hint:'Data da NF — AAAA-MM-DD ou DD/MM/AAAA'},
     {key:'obs',        label:'Observações',       req:false},
     {key:'cod',        label:'Cód. Produto',      req:false, hint:'Uma linha por item do pedido'},
     {key:'desc',       label:'Descrição Produto', req:false, hint:'Auto se produto cadastrado'},
     {key:'qtd',        label:'Qtd',               req:false, hint:'Quantidade do item'},
-    {key:'descPct',    label:'% Desconto',        req:false, hint:'Ex: 10 (sem %)'},
+    {key:'descPct',    label:'% Desconto Item',   req:false, hint:'Ex: 10 (sem %)'},
     {key:'precoUnit',  label:'Preço Unitário',    req:false, hint:'Se vazio, busca no catálogo'},
-    {key:'total',      label:'Total Item',        req:false, hint:'Se vazio, calcula automaticamente'},
+    {key:'total',      label:'Total Item / Valor Pedido', req:false, hint:'Se vazio, calcula automaticamente'},
   ],
 };
 
@@ -5710,7 +5715,7 @@ const _HMB = {'status':'status','situacao':'status','obs':'obs','observacoes':'o
 const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome','cnpj':'cnpj','cpf/cnpj':'cnpj','segmento':'segmento','perfil':'segmento','tipo cliente':'segmento','cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade','prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','rede':'rede','grupo':'rede'});
 const _HMI = Object.assign({},_HMB,{'nome':'nome','marca':'nome','laboratorio':'nome','fabricante':'nome','razao social':'razao','razao social completa':'razao','cnpj':'cnpj','% comissao':'pct','comissao %':'pct','pct':'pct','percentual':'pct','comissao':'pct','tipo comissao':'tipoCom','tipo com':'tipoCom'});
 const _HMP = Object.assign({},_HMB,{'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod','codigo produto':'cod','ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind','preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco','unidade':'unid','unid':'unid','un':'unid','categoria':'cat','cat':'cat','preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor','preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado','preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo','codigo mg':'codigoMG','cod mg':'codigoMG','codigo sp':'codigoSP','cod sp':'codigoSP','codigo ba':'codigoBA','cod ba':'codigoBA','codigo go':'codigoGO','cod go':'codigoGO','codigo rj':'codigoRJ','cod rj':'codigoRJ','codigo pr':'codigoPR','cod pr':'codigoPR','codigo sc':'codigoSC','cod sc':'codigoSC','codigo rs':'codigoRS','cod rs':'codigoRS','ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG','ean sp':'eanSP','ean sao paulo':'eanSP','ean ba':'eanBA','ean bahia':'eanBA','ean go':'eanGO','ean rj':'eanRJ','ean pr':'eanPR','ean sc':'eanSC','ean rs':'eanRS','canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais'});
-const _HMD = Object.assign({},_HMB,{'cliente':'cliente','razao social':'cliente','industria':'industria','nome industria':'industria','tipo':'tipo','tipo pedido':'tipo','data':'data','data pedido':'data','data emissao':'data','condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond','condicao pagamento':'cond','codigo':'cod','cod':'cod','cod produto':'cod','codigo produto':'cod','sku':'cod','ref':'cod','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','qtd':'qtd','quantidade':'qtd','quant':'qtd','qty':'qtd','desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct','desconto %':'descPct','preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit','preco':'precoUnit','total item':'total','total':'total','valor total':'total','subtotal':'total','valor':'total'});
+const _HMD = Object.assign({},_HMB,{'cliente':'cliente','razao social':'cliente','industria':'industria','nome industria':'industria','tipo':'tipo','tipo pedido':'tipo','data':'data','data pedido':'data','data emissao':'data','condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond','condicao pagamento':'cond','grupo':'grupo','pedido':'grupo','num pedido':'grupo','numero pedido':'grupo','id pedido':'grupo','codigo':'cod','cod':'cod','cod produto':'cod','codigo produto':'cod','sku':'cod','ref':'cod','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','qtd':'qtd','quantidade':'qtd','quant':'qtd','qty':'qtd','desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct','desconto %':'descPct','preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit','preco':'precoUnit','total item':'total','total':'total','valor total':'total','subtotal':'total','valor':'total','% comissao':'pct','comissao %':'pct','pct comissao':'pct','percentual comissao':'pct','taxa comissao':'pct','nf':'nf_numero','numero nf':'nf_numero','num nf':'nf_numero','nota fiscal':'nf_numero','nf numero':'nf_numero','numero da nf':'nf_numero','valor nf':'nf_valor','valor faturado':'nf_valor','valor nota':'nf_valor','valor nota fiscal':'nf_valor','vl nf':'nf_valor','nf valor':'nf_valor','data nf':'nf_data','data faturamento':'nf_data','data nota':'nf_data','data nota fiscal':'nf_data','dia faturado':'nf_data','dt nf':'nf_data','nf data':'nf_data','emissao nf':'nf_data'});
 const HEADER_MAP = _HMP; // compatibilidade com código existente
 
 function normHeader(h) {
@@ -5762,12 +5767,24 @@ function importarCadastro(tipo) {
 function importarArquivo(tipo){importarCadastro(tipo);}
 function importarNF(){
   importTipo='nf';
-  el('import-modal-titulo').textContent='Importar Nota Fiscal (PDF/XML)';
+  el('import-modal-titulo').textContent='Importar Nota Fiscal (XML NFe)';
   el('import-preview').style.display='none';
   const tpl = el('import-template-info');
-  if(tpl) tpl.innerHTML = `<div class="alert alert-info">Selecione um arquivo PDF ou XML de nota fiscal para importar.</div>`;
+  if(tpl) tpl.innerHTML = `
+    <div class="alert alert-info" style="margin-bottom:8px">
+      🧾 <strong>Selecione o arquivo XML da NF-e</strong> — o sistema lê automaticamente todos os dados:<br>
+      número, data, emitente, destinatário, itens, valores e condição de pagamento.<br>
+      Em seguida confirme a indústria e o cliente para criar o pedido.
+    </div>
+    <div class="alert alert-warning" style="font-size:11px">
+      ⚠️ Para PDF use a importação via planilha Excel. O XML é o formato oficial da NF-e e garante leitura 100% precisa.
+    </div>`;
   el('import-confirm-btn').style.display = 'none';
+  el('import-confirm-btn').textContent = '✅ Criar Pedido com esta NF';
   el('import-modelo-btn').style.display = 'none';
+  // Aceita somente XML e PDF no input de arquivo
+  const fi = el('import-file-input');
+  if(fi) fi.accept = '.xml,.pdf';
   openModal('modal-import');
 }
 
@@ -5782,6 +5799,11 @@ function handleImportFile(input) {
 
   if(ext === 'pdf') {
     _handlePDFImport(file);
+    return;
+  }
+
+  if(ext === 'xml') {
+    _handleXMLNFe(file);
     return;
   }
 
@@ -5806,7 +5828,7 @@ function handleImportFile(input) {
     return;
   }
 
-  _importPreviewMsg('⚠️ Formato não suportado. Use .xlsx, .xls, .csv ou .pdf', 'warning');
+  _importPreviewMsg('⚠️ Formato não suportado. Use .xml (NFe), .xlsx, .xls, .csv ou .pdf', 'warning');
 }
 
 function _processarDadosImport(data) {
@@ -5901,6 +5923,240 @@ function _processarDadosImport(data) {
     el('import-confirm-btn').style.display = 'inline-flex';
   }
   el('import-preview').style.display = 'block';
+}
+
+/* ══════════════════════════════════════════════════════
+   LEITOR DE NF-e XML — gera pedido + NF + comissão
+══════════════════════════════════════════════════════ */
+function _handleXMLNFe(file) {
+  _importPreviewMsg('📄 Lendo XML da Nota Fiscal...', 'info');
+  el('import-preview').style.display = 'block';
+  el('import-mapeamento').innerHTML = '';
+  el('import-preview-table').innerHTML = '';
+  el('import-confirm-btn').style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(e.target.result, 'text/xml');
+
+      const parseErr = xml.querySelector('parsererror');
+      if(parseErr) { _importPreviewMsg('❌ XML inválido ou corrompido.', 'danger'); return; }
+
+      // Helper: pega texto de um seletor CSS no XML
+      const gv = sel => xml.querySelector(sel)?.textContent?.trim() || '';
+      const gvAll = sel => [...xml.querySelectorAll(sel)];
+
+      // ── Identificação da NF ───────────────────────────
+      const nNF    = gv('nNF');
+      const serie  = gv('serie');
+      const dhEmi  = gv('dhEmi') || gv('dEmi') || '';
+      const dataNF = dhEmi ? dhEmi.substring(0,10) : today();
+      const chNFe  = gv('chNFe') || gv('Id')?.replace('NFe','') || '';
+
+      // ── Emitente (Indústria / Fornecedor) ─────────────
+      const emitNome  = gv('emit xNome') || gv('emit xFant') || '';
+      const emitFant  = gv('emit xFant') || '';
+      const emitCNPJ  = gv('emit CNPJ') || '';
+      const emitNomeEx = emitFant || emitNome;
+
+      // ── Destinatário (Cliente) ─────────────────────────
+      const destNome = gv('dest xNome') || '';
+      const destCNPJ = gv('dest CNPJ') || gv('dest CPF') || '';
+
+      // ── Valores ───────────────────────────────────────
+      const vNF   = parseFloat(gv('ICMSTot vNF') || gv('vNFe') || '0');
+      const vProd = parseFloat(gv('ICMSTot vProd') || '0');
+      const vDesc = parseFloat(gv('ICMSTot vDesc') || '0');
+      const vFret = parseFloat(gv('ICMSTot vFrete') || '0');
+
+      // ── Condição de pagamento ─────────────────────────
+      const dups = gvAll('dup');
+      let cond = '';
+      if(dups.length === 1) {
+        const vDup = parseFloat(dups[0].querySelector('vDup')?.textContent||'0');
+        const dDup = (dups[0].querySelector('dDup')?.textContent||'').substring(0,10);
+        if(dDup && dataNF) {
+          const d1 = new Date(dataNF), d2 = new Date(dDup);
+          const dias = Math.round((d2-d1)/(1000*60*60*24));
+          if(dias > 0) cond = dias+'D';
+        }
+      } else if(dups.length > 1) {
+        const prazos = dups.map(d=>{
+          const dDup = (d.querySelector('dDup')?.textContent||'').substring(0,10);
+          if(!dDup || !dataNF) return 0;
+          return Math.round((new Date(dDup)-new Date(dataNF))/(1000*60*60*24));
+        }).filter(n=>n>0);
+        if(prazos.length > 0) cond = prazos.join('/').replace(/(\d+)/g, '$1D');
+        else cond = dups.length + 'x';
+      }
+
+      // ── Itens da NF ───────────────────────────────────
+      const dets = gvAll('det');
+      const itens = dets.map(det => {
+        const cod      = det.querySelector('cProd')?.textContent?.trim() || '';
+        const desc     = det.querySelector('xProd')?.textContent?.trim() || '';
+        const qtd      = parseFloat(det.querySelector('qCom')?.textContent || '1');
+        const precoUnit= parseFloat(det.querySelector('vUnCom')?.textContent || '0');
+        const total    = parseFloat(det.querySelector('vProd')?.textContent || '0');
+        const ean      = det.querySelector('cEAN')?.textContent?.trim() || '';
+        // Tenta casar com catálogo pelo código ou EAN
+        const prodCat  = PRODUTOS_CAT[cod] || PRODUTOS_CAT[cod.replace(/^0+/,'')] || null;
+        const precoTab = prodCat?.preco || 0;
+        return { cod, desc, qtd, precoUnit, total, ean, precoTab, descPct:0, ind:'' };
+      });
+
+      // ── Tentativa de match com cadastros ──────────────
+      const normStr = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+      const emitN = normStr(emitNomeEx);
+      const destN = normStr(destNome);
+
+      const indMatch = industrias.find(i => {
+        const n = normStr(i.nome);
+        return emitN.includes(n.substring(0,8)) || n.includes(emitN.substring(0,8));
+      });
+      const cliMatch = clientes.find(c => {
+        const n = normStr(c.nome);
+        return destN.includes(n.substring(0,8)) || n.includes(destN.substring(0,8));
+      });
+
+      // ── Monta options dos selects ─────────────────────
+      const indOpts = '<option value="">-- Selecione --</option>' +
+        industrias.map(i=>`<option value="${esc(i.nome)}" ${indMatch?.nome===i.nome?'selected':''}>${esc(i.nome)}</option>`).join('');
+      const cliOpts = '<option value="">-- Selecione --</option>' +
+        clientes.map(c=>`<option value="${esc(c.nome)}" ${cliMatch?.nome===c.nome?'selected':''}>${esc(c.nome)}</option>`).join('');
+
+      // ── Preview HTML ──────────────────────────────────
+      el('import-preview-table').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div class="card" style="padding:12px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Identificação</div>
+            <div style="font-size:12px;line-height:2">
+              <b>NF:</b> ${esc(nNF)} ${serie?'(Série '+esc(serie)+')':''}<br>
+              <b>Data:</b> ${dataNF ? new Date(dataNF+'T12:00:00').toLocaleDateString('pt-BR') : '—'}<br>
+              <b>Valor Total NF:</b> <span class="bold verde">${fmt(vNF)}</span><br>
+              ${vDesc>0?`<b>Desconto:</b> <span class="vermelho">- ${fmt(vDesc)}</span><br>`:''}
+              ${cond?`<b>Cond. Pgto:</b> ${esc(cond)}<br>`:''}
+              ${chNFe?`<b>Chave:</b> <span style="font-size:9px;color:#aaa">${esc(chNFe.substring(0,20))}...</span>`:''}
+            </div>
+          </div>
+          <div class="card" style="padding:12px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏭 Emitente → Indústria</div>
+            <div style="font-size:11px;color:#555;margin-bottom:6px">${esc(emitNomeEx)} ${emitCNPJ?'<br><span style="color:#aaa">CNPJ: '+esc(emitCNPJ)+'</span>':''}</div>
+            <select id="nfe-ind-sel" style="width:100%;padding:6px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px">
+              ${indOpts}
+            </select>
+            ${!indMatch?'<div style="font-size:10px;color:var(--laranja);margin-top:4px">⚠️ Indústria não encontrada — selecione manualmente</div>':'<div style="font-size:10px;color:var(--verde);margin-top:4px">✅ Indústria identificada automaticamente</div>'}
+          </div>
+        </div>
+        <div class="card" style="padding:12px;margin-bottom:14px">
+          <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">👥 Destinatário → Cliente</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center">
+            <div style="font-size:11px;color:#555">${esc(destNome)} ${destCNPJ?'<br><span style="color:#aaa">CNPJ/CPF: '+esc(destCNPJ)+'</span>':''}</div>
+            <div>
+              <select id="nfe-cli-sel" style="width:100%;padding:6px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px">
+                ${cliOpts}
+              </select>
+              ${!cliMatch?'<div style="font-size:10px;color:var(--laranja);margin-top:4px">⚠️ Cliente não encontrado — selecione manualmente</div>':'<div style="font-size:10px;color:var(--verde);margin-top:4px">✅ Cliente identificado automaticamente</div>'}
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:10px 12px;background:#fafafa;font-size:11px;font-weight:700;color:#888;border-bottom:1px solid var(--cinza-medio)">
+            📦 ITENS DA NOTA FISCAL (${itens.length} item${itens.length!==1?'s':''})
+          </div>
+          <table style="width:100%;font-size:11px">
+            <thead><tr>
+              <th>Código</th><th>Descrição</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th>
+            </tr></thead>
+            <tbody>
+              ${itens.map(it=>`<tr>
+                <td class="mono">${esc(it.cod)}</td>
+                <td>${esc(it.desc)}</td>
+                <td style="text-align:right">${it.qtd}</td>
+                <td style="text-align:right">${fmt(it.precoUnit)}</td>
+                <td class="bold" style="text-align:right">${fmt(it.total)}</td>
+              </tr>`).join('')}
+              <tr style="background:#f4f3ef;font-weight:700">
+                <td colspan="4" style="text-align:right">TOTAL NF</td>
+                <td class="bold verde" style="text-align:right">${fmt(vNF)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;padding:10px 12px;background:#e3f2fd;border-radius:6px;font-size:12px;color:#1a5fa8">
+          ℹ️ Ao confirmar, o sistema criará um <strong>pedido + NF</strong> já vinculados e gerará a <strong>comissão automaticamente</strong> conforme as regras cadastradas.
+        </div>`;
+
+      // Salva dados parseados para o confirmar
+      window._nfeParsed = { nNF, serie, dataNF, emitNomeEx, emitCNPJ, destNome, destCNPJ, vNF, vDesc, cond, itens, chNFe };
+
+      _importPreviewMsg(
+        `✅ NF-e lida com sucesso! ${itens.length} item(s) · Valor: ${fmt(vNF)}` +
+        ((!indMatch||!cliMatch)?' <strong>— Selecione a(s) inconsistência(s) acima antes de confirmar.</strong>':''),
+        (!indMatch||!cliMatch) ? 'warning' : 'success'
+      );
+
+      el('import-confirm-btn').style.display = 'inline-flex';
+      el('import-confirm-btn').textContent = '✅ Criar Pedido com esta NF';
+      el('import-confirm-btn').onclick = confirmarImportNFe;
+
+    } catch(err) {
+      _importPreviewMsg('❌ Erro ao processar XML: ' + err.message, 'danger');
+      console.error('[NFe]', err);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function confirmarImportNFe() {
+  const p = window._nfeParsed; if(!p) return;
+  const ind = (el('nfe-ind-sel')?.value||'').trim();
+  const cli = (el('nfe-cli-sel')?.value||'').trim();
+  if(!ind) { toast('Selecione a Indústria (Emitente) antes de confirmar.','error'); return; }
+  if(!cli) { toast('Selecione o Cliente (Destinatário) antes de confirmar.','error'); return; }
+
+  const total = p.itens.reduce((s,i)=>s+i.total, 0) || p.vNF;
+  const pedId = _gerarIdPedido();
+
+  const nfObj = {
+    numero:      p.nNF,
+    data:        p.dataNF,
+    valorPedido: total,
+    valorNF:     p.vNF,
+    abatimentos: p.vDesc || 0,
+    devolucoes:  0, descFin: 0, nfd: 0, bonif: 0,
+    liquida:     Math.max(0, p.vNF - (p.vDesc||0)),
+    pdf: null, xml: null,
+    obs: 'Importado via XML NFe' + (p.chNFe ? ' · Chave: '+p.chNFe : '')
+  };
+
+  // Ajusta ind nos itens
+  const itensAdj = p.itens.map(it => ({...it, ind}));
+
+  const pedObj = {
+    id: pedId, tipo: 'venda', cliente: cli, industria: ind,
+    data: p.dataNF, cond: p.cond, status: 'Faturado total',
+    itens: itensAdj, total, obs: 'NF '+p.nNF+' importada via XML',
+    orcOrigem: '', nf: nfObj, _importado: true
+  };
+
+  pedidos.push(pedObj);
+  logisticaData.push({pedId, cliente: cli, industria: ind,
+    data: p.dataNF, transportadora: '', previsao: '', statusLog: 'Faturado', obs: ''});
+
+  // Gera comissão automática
+  gerarComissaoAuto(pedObj, nfObj.liquida);
+
+  addAudit(usuarioLogado?.login||'admin',
+    `NF-e ${p.nNF} importada via XML → Pedido ${pedId} criado (${cli} / ${ind} / ${fmt(p.vNF)})`, '🧾');
+  syncAutoSaveHook();
+  closeModal('modal-import');
+  renderPedidos(); renderFaturamento(); renderComissoes(); renderSaldo();
+  popularSelectsDinamicos(); renderDashboard();
+  window._nfeParsed = null;
+  toast(`🧾 NF ${p.nNF} importada! Pedido ${pedId} criado com comissão gerada automaticamente.`, 'success');
 }
 
 function _handlePDFImport(file) {
@@ -6092,96 +6348,171 @@ function confirmarImport() {
     syncAutoSaveHook();
 
   } else if(importTipo === 'pedido') {
-    // Agrupa linhas por cliente+industria+data (cada grupo = um pedido, múltiplas linhas = itens)
+    // Helper: converte qualquer valor monetário para float
+    const parseMoney = v => {
+      if(v===undefined||v===null||v==='') return 0;
+      if(typeof v === 'number') return isNaN(v) ? 0 : v;
+      let s = v.toString().replace(/R\$|\s/g,'').trim();
+      if(!s) return 0;
+      if(s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+      return parseFloat(s) || 0;
+    };
+
+    // Agrupa linhas por pedido
+    // Se tem coluna "grupo": usa ela como chave (mesmo valor = mesmo pedido)
+    // Se NÃO tem produto (cod vazio): cada linha é um pedido separado
+    // Se tem produto: agrupa por cliente+industria+data+cond (itens do mesmo pedido)
     const grupos = {};
+    let _grupoSeq = 0;
+
     importDados.forEach(row => {
       const cli = (row.cliente||'').trim();
       const ind = (row.industria||'').trim();
       if(!cli || !ind) { ignorados++; return; }
-      // Chave única do pedido: cliente+industria+data+cond (agrupa itens do mesmo pedido)
-      const chave = [cli, ind, row.data||'', row.cond||''].join('|');
-      // Aceita variações de "bonificacao" na importação
+
       const tipoRaw = (row.tipo||'').toLowerCase().trim()
         .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      const isBonifTipo = ['bonificacao','bonif','bonus','bonificação'].some(v => tipoRaw.includes(v));
+      const isBonifTipo = ['bonificacao','bonif','bonus','bonificacao'].some(v => tipoRaw.includes(v));
+
+      const temCod = !!(row.cod||'').toString().trim();
+      const temGrupo = !!(row.grupo||'').toString().trim();
+
+      // Chave: grupo explícito > produto (agrupa itens) > sequencial (linha individual)
+      let chave;
+      if(temGrupo) {
+        chave = [cli, ind, (row.grupo||'').trim()].join('|');
+      } else if(temCod) {
+        chave = [cli, ind, row.data||'', row.cond||'', 'PROD'].join('|');
+      } else {
+        // Sem produto e sem grupo: cada linha é um pedido separado
+        chave = [cli, ind, row.data||'', row.cond||'', '__SEQ__'+(++_grupoSeq)].join('|');
+      }
+
+      const _impRowTotal = parseMoney(row.total);
+      const _nfNum   = (row.nf_numero||'').toString().trim();
+      const _nfVal   = parseMoney(row.nf_valor);
+      const _nfData  = (row.nf_data||'').toString().trim();
+      const _pct     = parseMoney(row.pct);
+
       if(!grupos[chave]) {
         grupos[chave] = {
-          cliente:  cli,
+          cliente:   cli,
           industria: ind,
-          tipo:     isBonifTipo ? 'bonificacao' : 'venda',
-          data:     row.data || today(),
-          cond:     row.cond || '',
-          status:   row.status || 'Recebido',
-          obs:      row.obs   || '',
-          itens:    [],
-          _totalBruto: 0
+          tipo:      isBonifTipo ? 'bonificacao' : 'venda',
+          data:      row.data || today(),
+          cond:      row.cond || '',
+          status:    row.status || 'Recebido',
+          obs:       row.obs   || '',
+          itens:     [],
+          _totalBruto: 0,
+          nf_numero: _nfNum,
+          nf_valor:  _nfVal,
+          nf_data:   _nfData,
+          pct:       _pct
         };
+      } else {
+        // Atualiza campos de NF e % se vieram nessa linha (prioriza primeiro valor não vazio)
+        if(!grupos[chave].nf_numero && _nfNum) grupos[chave].nf_numero = _nfNum;
+        if(!grupos[chave].nf_valor  && _nfVal) grupos[chave].nf_valor  = _nfVal;
+        if(!grupos[chave].nf_data   && _nfData) grupos[chave].nf_data  = _nfData;
+        if(!grupos[chave].pct       && _pct)   grupos[chave].pct       = _pct;
       }
-      // Helper: converte qualquer valor monetário (número, BR "1.750,90", EN "1750.90") para float
-      const parseMoney = v => {
-        if(v===undefined||v===null||v==='') return 0;
-        // Se já é número (vindo direto do Excel), retorna direto
-        if(typeof v === 'number') return isNaN(v) ? 0 : v;
-        let s = v.toString().replace(/R\$|\s/g,'').trim();
-        if(!s) return 0;
-        // Formato BR: tem vírgula como decimal → remove pontos (milhar), troca vírgula por ponto
-        if(s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
-        return parseFloat(s) || 0;
-      };
-      // Acumula total da linha (útil quando não há código de produto)
-      const _impRowTotal = parseMoney(row.total);
+
       if(_impRowTotal>0) grupos[chave]._totalBruto=(grupos[chave]._totalBruto||0)+_impRowTotal;
-      // Se a linha tem produto, adiciona como item
+
       const cod = (row.cod||'').toString().trim().toUpperCase();
       if(cod) {
-        // Busca no catálogo usando o código exato e também sem zeros à esquerda
         const prodCat = PRODUTOS_CAT[cod] || PRODUTOS_CAT[cod.replace(/^0+/,'')] || null;
         const desc    = (row.desc||'').toString().trim() || (prodCat?.desc||cod);
-        const indItem = (row.industria||ind||'').trim() || (prodCat?.ind||'');
+        const indItem = ind || (prodCat?.ind||'');
         const qtd     = parseMoney(row.qtd) || 1;
         const descPct = parseMoney(row.descPct) || 0;
         const precoTab = prodCat ? prodCat.preco : 0;
-        // Preço unitário: PRIORIDADE para valor da planilha (pode vir como número direto do Excel)
         let precoUnit = parseMoney(row.precoUnit);
-        // Se não tem precoUnit mas tem total, deriva o unitário
         if(!precoUnit && _impRowTotal && qtd) precoUnit = _impRowTotal / qtd;
-        // Fallback: catálogo com desconto
-        if(!precoUnit && precoTab) precoUnit = parseFloat((precoTab * (1 - descPct/100)).toFixed(2));
-        // Total: da planilha ou calculado
-        let total = _impRowTotal > 0 ? _impRowTotal : parseFloat((precoUnit * qtd).toFixed(2));
+        if(!precoUnit && precoTab) precoUnit = parseFloat((precoTab*(1-descPct/100)).toFixed(2));
+        let total = _impRowTotal > 0 ? _impRowTotal : parseFloat((precoUnit*qtd).toFixed(2));
         grupos[chave].itens.push({cod, desc, ind:indItem, precoTab, qtd, descPct, precoUnit, total});
-      } else if(_impRowTotal > 0) {
-        // Linha sem código mas com total: cria item genérico para não perder o valor
+      } else if(_impRowTotal > 0 && !_nfNum) {
+        // Linha sem produto e sem NF: cria item genérico
         const descGen = (row.desc||'').trim() || 'Item importado';
         const qtdGen  = parseFloat((row.qtd||'1').toString().replace(',','.')) || 1;
         const unitGen = _impRowTotal / qtdGen;
-        grupos[chave].itens.push({cod:'IMPORT', desc:descGen, ind:ind, precoTab:0, qtd:qtdGen, descPct:0, precoUnit:unitGen, total:_impRowTotal});
+        grupos[chave].itens.push({cod:'IMPORT', desc:descGen, ind, precoTab:0, qtd:qtdGen, descPct:0, precoUnit:unitGen, total:_impRowTotal});
       }
     });
 
+    let comissoesGeradas = 0;
     Object.values(grupos).forEach(g => {
-      // Aceita pedidos sem itens (usa totalBruto da linha se disponível)
-      const total = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : (g._totalBruto||0);
+      const totalItens = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : 0;
+      // Total do pedido: itens > nf_valor > _totalBruto
+      const total = totalItens > 0 ? totalItens : (g.nf_valor > 0 ? g.nf_valor : (g._totalBruto||0));
       const pedId = _gerarIdPedido();
-      const pedObj = {id:pedId,tipo:g.tipo,cliente:g.cliente,industria:g.industria,
-        data:g.data,cond:g.cond,status:g.status,itens:g.itens,total,obs:g.obs,orcOrigem:'',nf:null,_importado:true};
+
+      // Monta NF se tiver número da NF
+      let nfObj = null;
+      let statusFinal = g.status;
+      if(g.nf_numero) {
+        const nfVal = g.nf_valor || total;
+        const nfLiq = nfVal; // sem abatimentos na importação
+        nfObj = {
+          numero:      g.nf_numero,
+          data:        g.nf_data || g.data || today(),
+          valorPedido: total,
+          valorNF:     nfVal,
+          abatimentos: 0, devolucoes: 0, descFin: 0, nfd: 0, bonif: 0,
+          liquida:     nfLiq,
+          pdf: null, xml: null, obs: 'Importado via planilha'
+        };
+        statusFinal = 'Faturado total';
+      }
+
+      const pedObj = {
+        id: pedId, tipo: g.tipo, cliente: g.cliente, industria: g.industria,
+        data: g.data, cond: g.cond, status: statusFinal,
+        itens: g.itens, total, obs: g.obs, orcOrigem: '', nf: nfObj, _importado: true
+      };
       pedidos.push(pedObj);
-      // Insere na logística imediatamente
-      logisticaData.push({pedId:pedId,cliente:g.cliente,industria:g.industria,
-        data:g.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+      logisticaData.push({pedId, cliente: g.cliente, industria: g.industria,
+        data: g.data, transportadora: '', previsao: '',
+        statusLog: nfObj ? 'Faturado' : 'Pedido Digitado', obs: ''});
+
+      // Gera comissão se tiver NF e for venda
+      if(nfObj && g.tipo !== 'bonificacao') {
+        const jaTemCom = comissoes_data.some(c=>c.pedido===pedId);
+        if(!jaTemCom) {
+          // Usa % da planilha se informado, senão usa regra cadastrada
+          if(g.pct > 0) {
+            const indCad = industrias.find(i=>i.nome===g.industria);
+            const tipo = indCad?.tipoCom || 'Faturamento';
+            const cliCad = clientes.find(c=>c.nome===g.cliente);
+            const prazo = g.cond || cliCad?.prazo || '';
+            const mesLabel = _calcMesPrevisaoComissao(nfObj.data, tipo, prazo);
+            let comN = comissoes_data.length+1;
+            let comIdStr;
+            do { comIdStr='COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr));
+            comissoes_data.push({id:comIdStr, pedido:pedId, cliente:g.cliente, industria:g.industria,
+              tipo, baseLiq:nfObj.liquida, pct:g.pct, valor:nfObj.liquida*g.pct/100,
+              mesPrevisao:mesLabel, mesRecebimento:'', status:'Prevista'});
+            comissoesGeradas++;
+          } else {
+            gerarComissaoAuto({...pedObj, nf:nfObj}, nfObj.liquida);
+            comissoesGeradas++;
+          }
+        }
+      }
       adicionados++;
     });
 
-    // Avisa sobre itens com preço zero
     const itensZero = Object.values(grupos).reduce((acc,g)=>acc+g.itens.filter(i=>i.precoUnit===0).length,0);
-    const aviso = itensZero > 0 ? ` ⚠️ ${itensZero} item(ns) com preço R$ 0,00 — edite o pedido para corrigir.` : '';
+    const aviso = itensZero > 0 ? ` ⚠️ ${itensZero} item(ns) com preço R$0 — edite para corrigir.` : '';
+    const msgCom = comissoesGeradas > 0 ? ` · ${comissoesGeradas} comissão(ões) gerada(s).` : '';
 
     closeModal('modal-import');
-    renderPedidos(); renderLogistica(); renderSaldo();
-    popularSelectsDinamicos();
-    renderDashboard();
-    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} pedido${adicionados!==1?'s':''}`, '📥');
-    toast(`✅ ${adicionados} pedido${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}${ignorados?' · '+ignorados+' ignorado'+(ignorados!==1?'s':''):''}${aviso}`, aviso?'warning':'success');
+    renderPedidos(); renderLogistica(); renderSaldo(); renderFaturamento();
+    renderComissoes(); popularSelectsDinamicos(); renderDashboard();
+    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} pedido${adicionados!==1?'s':''}${msgCom}`, '📥');
+    toast(`✅ ${adicionados} pedido${adicionados!==1?'s':''} importado${adicionados!==1?'s':''}${ignorados?' · '+ignorados+' ignorado'+(ignorados!==1?'s':''):''}${msgCom}${aviso}`, aviso?'warning':'success');
     syncAutoSaveHook();
 
   } else {
@@ -6916,7 +7247,7 @@ function renderDashboard() {
   const pedsMes = pedidos.filter(p => !p.excluido && p.data && p.data.startsWith(prefix) && (p.tipo||'venda')==='venda');
   const fatLiq  = pedidos.filter(p=>!p.excluido && p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+p.nf.liquida,0);
   const nfCount = pedidos.filter(p=>!p.excluido && p.nf && (p.tipo||'venda')==='venda').length;
-  const comPrev = comissoes_data.filter(c=>c.status==='Prevista'||c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
+  const comPrev = comissoes_data.filter(c=>!c.excluido&&(c.status==='Prevista'||c.status==='Atrasada')).reduce((s,c)=>s+c.valor,0);
   const orcAbertos = orcamentos.filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
 
   if(el('kpi-pedidos'))     el('kpi-pedidos').textContent     = pedsMes.length;
@@ -6924,7 +7255,7 @@ function renderDashboard() {
   if(el('kpi-faturamento')) el('kpi-faturamento').textContent = fmt(fatLiq);
   if(el('kpi-fat-sub'))     el('kpi-fat-sub').textContent     = `${nfCount} NF${nfCount!==1?'s':''} registrada${nfCount!==1?'s':''}`;
   if(el('kpi-comissao'))    el('kpi-comissao').textContent    = fmt(comPrev);
-  if(el('kpi-com-sub'))     el('kpi-com-sub').textContent     = `${comissoes_data.filter(c=>c.status==='Atrasada').length} em atraso`;
+  if(el('kpi-com-sub'))     el('kpi-com-sub').textContent     = `${comissoes_data.filter(c=>!c.excluido&&c.status==='Atrasada').length} em atraso`;
   if(el('kpi-orc'))         el('kpi-orc').textContent         = orcAbertos;
   if(el('kpi-orc-sub'))     el('kpi-orc-sub').textContent     = orcAbertos===0 ? 'Nenhum aberto' : `${orcAbertos} aguardando resposta`;
 
@@ -6946,7 +7277,7 @@ function renderDashboard() {
   // Comissões pendentes
   const ctbody = el('dash-com-tbody');
   if(ctbody) {
-    const pend = comissoes_data.filter(c=>c.status!=='Recebida').slice(0,5);
+    const pend = comissoes_data.filter(c=>!c.excluido&&c.status!=='Recebida').slice(0,5);
     ctbody.innerHTML = pend.length===0
       ? `<tr><td colspan="4" style="text-align:center;color:#aaa;padding:16px;font-size:12px">Nenhuma comissão pendente</td></tr>`
       : pend.map(c=>`<tr>
@@ -6989,7 +7320,7 @@ function renderDashboard() {
     const alertas = [];
     const vencendo = orcamentos.filter(o=>o.validade && o.validade <= today() && !['Cancelado','Convertido em pedido'].includes(o.status));
     if(vencendo.length>0) alertas.push(`<div class="alert alert-warning" style="margin-bottom:6px">⚠️ ${vencendo.length} orçamento${vencendo.length!==1?'s':''} com validade vencida</div>`);
-    const atrasadas = comissoes_data.filter(c=>c.status==='Atrasada');
+    const atrasadas = comissoes_data.filter(c=>!c.excluido&&c.status==='Atrasada');
     if(atrasadas.length>0) alertas.push(`<div class="alert alert-danger" style="margin-bottom:6px">💰 ${atrasadas.length} comissão${atrasadas.length!==1?'ões':''} em atraso</div>`);
     const excluidos = pedidos.filter(p=>p.excluido).length;
     if(excluidos>0) alertas.push(`<div class="alert alert-info" style="margin-bottom:6px">🚫 ${excluidos} pedido${excluidos!==1?'s':''} marcado${excluidos!==1?'s':''} como excluído${excluidos!==1?'s':''} — <a onclick="showPanel('pedidos',document.querySelector('[onclick*=pedidos]'))" style="cursor:pointer;text-decoration:underline;color:inherit">ver em Pedidos</a></div>`);
@@ -7366,7 +7697,7 @@ function exportarSellInOut() {
   const wb = XLSX.utils.book_new();
 
   // ── Aba 1: Comparativo Sell In × Sell Out (todos os dados, sem filtro) ──
-  const fats = pedidos.filter(p => p.nf);
+  const fats = pedidos.filter(p => p.nf && !p.excluido);
   const allClis = [...new Set([...fats.map(p => p.cliente), ...sellOutData.map(s => s.cliente)])];
   const allInds = [...new Set([...fats.map(p => p.industria), ...sellOutData.map(s => s.industria)])];
   const todosMeses = [...new Set([...sellOutData.map(s => s.mes), ...fats.map(p=>{
@@ -7481,7 +7812,7 @@ function renderRelatorios() {
   // Ranking clientes
   const rankCli = el('rel-rank-clientes'); if(!rankCli) return;
   const cliMap = {};
-  pedidos.filter(p=>p.nf).forEach(p=>{
+  pedidos.filter(p=>p.nf&&!p.excluido).forEach(p=>{
     cliMap[p.cliente] = (cliMap[p.cliente]||0) + p.nf.liquida;
   });
   const cliRank = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]);
@@ -7499,7 +7830,7 @@ function renderRelatorios() {
   // Ranking indústrias
   const rankInd = el('rel-rank-industrias'); if(!rankInd) return;
   const indMap = {};
-  pedidos.filter(p=>p.nf).forEach(p=>{
+  pedidos.filter(p=>p.nf&&!p.excluido).forEach(p=>{
     indMap[p.industria] = (indMap[p.industria]||0) + p.nf.liquida;
   });
   const indRank = Object.entries(indMap).sort((a,b)=>b[1]-a[1]);
@@ -7517,7 +7848,7 @@ function renderRelatorios() {
   // Ranking produtos
   const rankProd = el('rel-rank-produtos'); if(!rankProd) return;
   const prodMap = {};
-  pedidos.forEach(p=>(p.itens||[]).forEach(it=>{
+  pedidos.filter(p=>!p.excluido).forEach(p=>(p.itens||[]).forEach(it=>{
     prodMap[it.cod] = (prodMap[it.cod]||{desc:it.desc,total:0});
     prodMap[it.cod].total += it.total;
   }));
@@ -7536,9 +7867,9 @@ function renderRelatorios() {
 
   // Comissão prevista x recebida
   const comTable = el('rel-comissao-table');
-  const totPrev = comissoes_data.filter(c=>c.status==='Prevista').reduce((s,c)=>s+c.valor,0);
-  const totRec = comissoes_data.filter(c=>c.status==='Recebida').reduce((s,c)=>s+c.valor,0);
-  const totAtr = comissoes_data.filter(c=>c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
+  const totPrev = comissoes_data.filter(c=>!c.excluido&&c.status==='Prevista').reduce((s,c)=>s+c.valor,0);
+  const totRec = comissoes_data.filter(c=>!c.excluido&&c.status==='Recebida').reduce((s,c)=>s+c.valor,0);
+  const totAtr = comissoes_data.filter(c=>!c.excluido&&c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
   comTable.innerHTML = `
     <div class="mini-row"><span>✅ Recebida</span><span class="bold verde">${fmt(totRec)}</span></div>
     <div class="mini-row"><span>⏳ Prevista</span><span class="bold">${fmt(totPrev)}</span></div>
@@ -7547,7 +7878,7 @@ function renderRelatorios() {
       <span>Total Geral</span><span>${fmt(totPrev+totRec+totAtr)}</span>
     </div>
     <div style="margin-top:12px">
-      ${comissoes_data.map(c=>`<div class="mini-row">
+      ${comissoes_data.filter(c=>!c.excluido).map(c=>`<div class="mini-row">
         <span>${c.cliente} / <span class="tag" style="font-size:9px">${c.industria}</span></span>
         <span><span class="badge ${c.status==='Recebida'?'badge-verde':c.status==='Atrasada'?'badge-vermelho':'badge-amarelo'}">${c.status}</span> ${fmt(c.valor)}</span>
       </div>`).join('')}
@@ -7560,7 +7891,7 @@ function renderRelatorios() {
   const _nomsInd = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])];
   _nomsCli.forEach(cli=>{
     _nomsInd.forEach(ind=>{
-      const coms = comissoes_data.filter(c=>c.cliente===cli&&c.industria===ind);
+      const coms = comissoes_data.filter(c=>!c.excluido&&c.cliente===cli&&c.industria===ind);
       const prev = coms.filter(c=>c.status==='Prevista'||c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
       if(prev>0) saldos.push({cli,ind,prev});
     });
@@ -7573,13 +7904,13 @@ function renderRelatorios() {
       </div>`).join('');
 
   // Update KPIs
-  const totFat = pedidos.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida,0);
+  const totFat = pedidos.filter(p=>p.nf&&!p.excluido).reduce((s,p)=>s+p.nf.liquida,0);
   el('rel-kpi-fat').textContent = fmt(totFat);
-  const totComissao = comissoes_data.reduce((s,c)=>s+c.valor,0);
+  const totComissao = comissoes_data.filter(c=>!c.excluido).reduce((s,c)=>s+c.valor,0);
   el('rel-kpi-com').textContent = fmt(totComissao);
-  const fatPeds = pedidos.filter(p=>p.nf);
+  const fatPeds = pedidos.filter(p=>p.nf&&!p.excluido);
   el('rel-kpi-ticket').textContent = fatPeds.length>0 ? fmt(totFat/fatPeds.length) : 'R$ 0';
-  el('rel-kpi-bon').textContent = fmt(pedidos.filter(p=>p.nf).reduce((s,p)=>s+p.nf.bonif,0));
+  el('rel-kpi-bon').textContent = fmt(pedidos.filter(p=>p.nf&&!p.excluido).reduce((s,p)=>s+p.nf.bonif,0));
 }
 
 /* ══════════════════════════
@@ -7710,10 +8041,10 @@ function exportarTudo(){
   orcamentos.forEach(o=>r1.push([o.id,o.cliente,o.industria,o.data,o.total,o.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r1),'Orcamentos');
   const r2=[['#','Tipo','Cliente','Indústria','Data','Total Pedido','NF Líquida','Status']];
-  pedidos.forEach(p=>r2.push([p.id,p.tipo||'venda',p.cliente,p.industria,p.data,p.total,p.nf?p.nf.liquida:'',p.status]));
+  pedidos.filter(p=>!p.excluido).forEach(p=>r2.push([p.id,p.tipo||'venda',p.cliente,p.industria,p.data,p.total,p.nf?p.nf.liquida:'',p.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r2),'Pedidos');
   const r3=[['#','Pedido','Cliente','Indústria','Tipo','Base','%','Valor','Status']];
-  comissoes_data.forEach(c=>r3.push([c.id,c.pedido,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct,c.valor,c.status]));
+  comissoes_data.filter(c=>!c.excluido).forEach(c=>r3.push([c.id,c.pedido,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct,c.valor,c.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r3),'Comissoes');
   const r5=[['#','Pedido','Cliente','Indústria','Data','NF','Valor Pedido','Valor NF','Mês','Status']];
   bonificacoesData.forEach(b=>r5.push([b.id,b.pedido,b.cliente,b.industria,b.data,b.nf||'',b.valorPedido,b.valorNF,b.mes,b.status]));
@@ -7757,7 +8088,7 @@ function renderMetas() {
 
   // Calcular realizado a partir de pedidos faturados
   function getRealizadoInd(ind) {
-    return pedidos.filter(p=>p.nf&&p.industria===ind).reduce((s,p)=>s+p.nf.liquida,0);
+    return pedidos.filter(p=>p.nf&&!p.excluido&&p.industria===ind).reduce((s,p)=>s+p.nf.liquida,0);
   }
 
   const totMeta = lista.reduce((s,m)=>s+m.valor,0);
@@ -7844,8 +8175,8 @@ function abrirTratativa(tipo) {
   };
   el('trat-modal-titulo').textContent = titulos[tipo]||'Nova Tratativa';
 
-  const pedOpts = pedidos.map(p=>`<option value="${p.id}">${p.id} — ${esc(p.cliente)} / ${esc(p.industria)}</option>`).join('');
-  const nfOpts  = pedidos.filter(p=>p.nf).map(p=>`<option value="${p.nf.numero}">${p.nf.numero} (${esc(p.cliente)})</option>`).join('');
+  const pedOpts = pedidos.filter(p=>!p.excluido).map(p=>`<option value="${p.id}">${p.id} — ${esc(p.cliente)} / ${esc(p.industria)}</option>`).join('');
+  const nfOpts  = pedidos.filter(p=>p.nf&&!p.excluido).map(p=>`<option value="${p.nf.numero}">${p.nf.numero} (${esc(p.cliente)})</option>`).join('');
 
   const impactoMsg = {
     prorrogacao: 'alterar o prazo de vencimento do boleto e recalcular o mês de recebimento da comissão conforme a nova data.',
@@ -8560,425 +8891,4 @@ function renderFatMensal() {
 
       return `<div class="card" style="border-top:3px solid ${CORES[ci%CORES.length]}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-          <span class="tag" style="background:${CORES[ci%CORES.length]};color:${ci===0?'#000':'#fff'};font-size:11px">${esc(ind)}</span>
-          <div style="text-align:right">
-            <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">${fmt(totInd)}</div>
-            <div style="font-size:10px;color:#888">Total ${ano}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:2px;margin-bottom:10px">${barras}</div>
-        <div style="display:flex;gap:0;border-top:1px solid var(--cinza);padding-top:8px">
-          <div style="flex:1;text-align:center">
-            <div style="font-size:11px;font-weight:600">${fmt(mediaFat)}</div>
-            <div style="font-size:9px;color:#aaa">Média/mês</div>
-          </div>
-          <div style="flex:1;text-align:center;border-left:1px solid var(--cinza)">
-            <div style="font-size:11px;font-weight:600">${mesesComFat}</div>
-            <div style="font-size:9px;color:#aaa">Meses ativos</div>
-          </div>
-          <div style="flex:1;text-align:center;border-left:1px solid var(--cinza)">
-            <div style="font-size:10px;font-weight:600">${melhorMes}</div>
-            <div style="font-size:9px;color:#aaa">Melhor mês</div>
-          </div>
-        </div>
-      </div>`;
-    }).join('') + `</div>`;
-  }
-}
-
-function exportarFatMensal() {
-  const ano    = (el('fm-ano')||{}).value||'2026';
-  const MESES  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const INDS   = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].filter(Boolean).sort();
-  const wb = XLSX.utils.book_new();
-  const header = ['Indústria',...MESES.map(m=>m+'/'+ano.slice(2)),'TOTAL'];
-  const rows   = [header];
-  INDS.forEach(ind=>{
-    const row = [ind];
-    let tot = 0;
-    MESES.forEach((m,i)=>{
-      const mmPadded = String(i+1).padStart(2,'0');
-      const v = pedidos.filter(p=>p.nf&&p.industria===ind&&p.nf.data&&p.nf.data.startsWith(`${ano}-${mmPadded}`)).reduce((s,p)=>s+p.nf.liquida,0);
-      row.push(v); tot+=v;
-    });
-    row.push(tot);
-    rows.push(row);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:16},...MESES.map(()=>({wch:12})),{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws,'Fat_Mensal');
-  XLSX.writeFile(wb,`FatMensal_${ano}_TresVales.xlsx`);
-  toast('Excel exportado!');
-}
-
-/* ══════════════════════════════════════════════════════
-   SINCRONIZAÇÃO — FIREBASE REALTIME DATABASE (REST API)
-   Sem SDK, sem cartão — funciona direto no HTML
-══════════════════════════════════════════════════════ */
-
-let configSync = {
-  dbUrl: '',       // ex: https://SEU-PROJETO-default-rtdb.firebaseio.com
-  apiKey: '',      // da configuração do web app
-  autoSave: true,
-  realtime: true,
-  conectado: false,
-};
-
-let _rtdbPollInterval = null;
-let _rtdbLastTs = 0;
-
-function syncLog(msg, tipo='info') {
-  const logEl = el('sync-log');
-  const emptyEl = el('sync-log-empty');
-  if(!logEl) return;
-  if(emptyEl) emptyEl.style.display = 'none';
-  const cores = {info:'#1a5fa8', ok:'#2d7a3a', erro:'#c0392b', aviso:'#d97706'};
-  const hora = new Date().toLocaleTimeString('pt-BR');
-  logEl.innerHTML = `<div style="color:${cores[tipo]||'#666'};padding:2px 0">[${hora}] ${msg}</div>` + logEl.innerHTML;
-}
-
-function syncSetStatus(status, sub, cor) {
-  const cores = {conectado:'#2d7a3a', desconectado:'#ccc', sincronizando:'#d97706', erro:'#c0392b'};
-  const bg    = {conectado:'#e8f5e9', desconectado:'#f4f3ef', sincronizando:'#fff8e1', erro:'#fef2f2'};
-  if(el('sync-dot'))         el('sync-dot').style.background = cores[cor]||'#ccc';
-  if(el('sync-status-text')) el('sync-status-text').textContent = status;
-  if(el('sync-status-sub'))  el('sync-status-sub').textContent = sub;
-  if(el('sync-status-bar'))  el('sync-status-bar').style.background = bg[cor]||'#f4f3ef';
-  const badge = el('badge-sync');
-  if(badge) badge.style.display = cor==='sincronizando'?'inline':'none';
-}
-
-function syncHabilitarBotoes(sim) {
-  ['btn-push','btn-pull','btn-reset-cloud','btn-sync-now'].forEach(id=>{
-    const b = el(id); if(b) b.disabled = !sim;
-  });
-}
-
-// ── URL base para REST calls ──
-function rtdbUrl(path) {
-  const base = configSync.dbUrl.replace(/\/$/, '');
-  const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
-  return `${base}/${path}.json${auth}`;
-}
-
-// ── Conectar e testar ──
-async function firebaseConectar() {
-  const dbUrl  = (el('fb-dburl')||{}).value?.trim();
-  const apiKey = (el('fb-apikey')||{}).value?.trim() || '';
-
-  if(!dbUrl) {
-    feedbackFb('⚠️ Cole a URL do Realtime Database (ex: https://xxx-default-rtdb.firebaseio.com)', 'warning');
-    return;
-  }
-
-  feedbackFb('🔄 Conectando...', 'info');
-  syncSetStatus('Conectando...', 'Testando conexão...', 'sincronizando');
-
-  configSync.dbUrl  = dbUrl.replace(/\/$/, '');
-  configSync.apiKey = apiKey;
-
-  try {
-    // Teste de conexão — lê o nó raiz de ping
-    const res = await fetch(rtdbUrl('gestcom/ping'), {
-      method: 'PUT',
-      body: JSON.stringify({ts: Date.now(), user: usuarioLogado?.login||'test'}),
-    });
-    if(!res.ok) throw new Error(`HTTP ${res.status} — verifique a URL e as regras do banco`);
-
-    configSync.conectado = true;
-    syncSetStatus('✅ Conectado ao Realtime Database', dbUrl.replace('https://',''), 'conectado');
-    feedbackFb('✅ Conectado com sucesso!', 'success');
-    syncLog('Conectado ao Realtime Database: '+dbUrl, 'ok');
-    syncHabilitarBotoes(true);
-
-    // Salva credenciais localmente para reconexão automática
-    try { localStorage.setItem('gestcom_rtdb', JSON.stringify({dbUrl, apiKey})); } catch(e){}
-
-    // Carrega dados existentes da nuvem
-    await syncPull(true);
-
-    // Ativa polling em tempo real
-    if(configSync.realtime) ativarPollingRealtime();
-
-  } catch(err) {
-    syncSetStatus('❌ Erro de conexão', err.message, 'erro');
-    feedbackFb('❌ ' + err.message, 'danger');
-    syncLog('Erro: '+err.message, 'erro');
-    configSync.conectado = false;
-  }
-}
-
-function feedbackFb(msg, tipo) {
-  const d = el('fb-feedback'); if(!d) return;
-  const cls = {info:'alert-info', success:'alert-success', warning:'alert-warning', danger:'alert-danger'};
-  d.className = 'alert ' + (cls[tipo]||'alert-info');
-  d.textContent = msg;
-  d.style.display = 'block';
-}
-
-function firebaseDesconectar() {
-  if(_rtdbPollInterval) { clearInterval(_rtdbPollInterval); _rtdbPollInterval = null; }
-  configSync.conectado = false;
-  syncSetStatus('Desconectado', 'Configure o banco para sincronizar', 'desconectado');
-  syncHabilitarBotoes(false);
-  feedbackFb('Desconectado.', 'info');
-  syncLog('Desconectado do Realtime Database', 'aviso');
-  try { localStorage.removeItem('gestcom_rtdb'); } catch(e){}
-}
-
-// ── Serializa todos os dados ──
-function coletarDadosParaSync() {
-  return {
-    pedidos:        JSON.parse(JSON.stringify(pedidos)),
-    orcamentos:     JSON.parse(JSON.stringify(orcamentos)),
-    clientes:       JSON.parse(JSON.stringify(clientes)),
-    industrias:     JSON.parse(JSON.stringify(industrias)),
-    redes:          JSON.parse(JSON.stringify(redes)),
-    comissoes_data: JSON.parse(JSON.stringify(comissoes_data)),
-    logisticaData:  JSON.parse(JSON.stringify(logisticaData)),
-    sellOutData:    JSON.parse(JSON.stringify(sellOutData)),
-    metasData:      JSON.parse(JSON.stringify(metasData)),
-    regrasComerciais: JSON.parse(JSON.stringify(regrasComerciais)),
-    tratativas:     JSON.parse(JSON.stringify(tratativas)),
-    PRODUTOS_CAT:   JSON.parse(JSON.stringify(PRODUTOS_CAT)),
-    mixProdutos:    JSON.parse(JSON.stringify(mixProdutos)),
-    bonificacoesData: JSON.parse(JSON.stringify(bonificacoesData)),
-    usuarios:       JSON.parse(JSON.stringify(usuarios)),
-    // BUG FIX: persiste permissões de acesso granulares
-    userPerms:      JSON.parse(JSON.stringify(userPerms)),
-    configSistema:  JSON.parse(JSON.stringify(configSistema)),
-    _ts:      Date.now(),
-    _usuario: usuarioLogado?.login || 'sistema',
-  };
-}
-
-// ── Aplica dados recebidos ──
-function aplicarDadosDaNuvem(dados, silencioso=false) {
-  if(!dados || dados._apagado) return;
-  if(dados._ts && dados._ts <= _rtdbLastTs) return;
-  if(dados._usuario === usuarioLogado?.login && Date.now()-dados._ts < 3000) return;
-
-  _rtdbLastTs = dados._ts || Date.now();
-
-  if(Array.isArray(dados.pedidos))          pedidos = dados.pedidos;
-  if(Array.isArray(dados.orcamentos))       orcamentos = dados.orcamentos;
-  if(Array.isArray(dados.clientes))         clientes = dados.clientes;
-  if(Array.isArray(dados.industrias))       industrias = dados.industrias;
-  if(Array.isArray(dados.redes))            redes = dados.redes;
-  if(Array.isArray(dados.comissoes_data))   comissoes_data = dados.comissoes_data;
-  if(Array.isArray(dados.logisticaData))    logisticaData = dados.logisticaData;
-  // Migração pós-sync: reconstrói logística para pedidos sem entrada
-  pedidos.filter(p=>!p.excluido).forEach(p=>{
-    if(!logisticaData.find(l=>l.pedId===p.id))
-      logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
-        data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
-  });
-  if(Array.isArray(dados.sellOutData))      sellOutData = dados.sellOutData;
-  if(Array.isArray(dados.metasData))        metasData = dados.metasData;
-  if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
-  if(Array.isArray(dados.tratativas))       tratativas = dados.tratativas;
-  if(Array.isArray(dados.mixProdutos))      mixProdutos = dados.mixProdutos;
-  if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
-  // BUG FIX: restaura permissões granulares persistidas
-  if(dados.userPerms && typeof dados.userPerms==='object') {
-    Object.keys(userPerms).forEach(k=>delete userPerms[k]);
-    Object.assign(userPerms, dados.userPerms);
-  }
-  // Restaura config do sistema
-  if(dados.configSistema && typeof dados.configSistema==='object') {
-    Object.assign(configSistema, dados.configSistema);
-  }
-  // Usuários — mescla da nuvem mas preserva o usuário logado atual
-  if(Array.isArray(dados.usuarios)) {
-    const loginAtual = usuarioLogado?.login;
-    usuarios = dados.usuarios;
-    // Se o usuário logado foi removido da nuvem, mantém ele localmente
-    if(loginAtual && !usuarios.find(u=>u.login===loginAtual)) {
-      const backup = {id:'USR-001',nome:'Administrador',login:'admin',senha:'admin123',perfil:'diretoria',email:'',status:'ativo',ultimoAcesso:'—'};
-      usuarios.push(backup);
-    }
-  }
-  if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==='object') {
-    Object.keys(PRODUTOS_CAT).forEach(k=>delete PRODUTOS_CAT[k]);
-    Object.assign(PRODUTOS_CAT, dados.PRODUTOS_CAT);
-  }
-
-  // Re-renderiza tudo
-  renderDashboard(); renderOrcamentos(); renderPedidos();
-  renderFaturamento(); renderMix(); renderProdutos();
-  renderClientes(); renderIndustrias(); renderRedes(); renderComissoes();
-  renderSaldo(); renderLogistica(); renderTratativas();
-  renderMetas(); renderRegras();
-  popularSelectsDinamicos(); atualizarBadgeTratativas();
-  // Re-aplica permissões na sidebar
-  if(usuarioLogado) aplicarVisibilidadeSidebar();
-
-  const hora = new Date().toLocaleTimeString('pt-BR');
-  if(el('sync-last-time')) el('sync-last-time').textContent = 'Última sync: '+hora;
-  if(!silencioso) toast('🔄 Dados atualizados da nuvem!');
-}
-
-// ── Enviar para o banco (PUT) ──
-async function syncPush(silencioso=false) {
-  if(!configSync.conectado) {
-    if(!silencioso) toast('⛔ Não conectado ao banco.','error'); return;
-  }
-  try {
-    if(!silencioso) syncSetStatus('Salvando...', 'Enviando para a nuvem...', 'sincronizando');
-    const dados = coletarDadosParaSync();
-    _rtdbLastTs = dados._ts; // marca o timestamp para evitar loop
-
-    const res = await fetch(rtdbUrl('gestcom/dados'), {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(dados),
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-
-    syncSetStatus('✅ Conectado ao Realtime Database', configSync.dbUrl.replace('https://',''), 'conectado');
-    const hora = new Date().toLocaleTimeString('pt-BR');
-    if(el('sync-last-time')) el('sync-last-time').textContent = 'Salvo: '+hora;
-    syncLog(`Dados enviados por ${dados._usuario}`, 'ok');
-    if(!silencioso) toast('☁️ Dados salvos na nuvem!');
-  } catch(err) {
-    syncSetStatus('⚠️ Erro ao salvar', err.message, 'erro');
-    syncLog('Erro ao salvar: '+err.message, 'erro');
-    if(!silencioso) toast('❌ Erro ao salvar: '+err.message,'error');
-  }
-}
-
-// ── Carregar do banco (GET) ──
-async function syncPull(silencioso=false) {
-  if(!configSync.conectado) {
-    if(!silencioso) toast('⛔ Não conectado ao banco.','error'); return;
-  }
-  try {
-    if(!silencioso) syncSetStatus('Carregando...', 'Buscando dados...', 'sincronizando');
-    const res = await fetch(rtdbUrl('gestcom/dados'));
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const dados = await res.json();
-
-    if(!dados) {
-      syncSetStatus('✅ Conectado', 'Banco vazio — envie seus dados', 'conectado');
-      syncLog('Banco vazio — nenhum dado ainda', 'aviso');
-      if(!silencioso) toast('Banco vazio. Use "Enviar dados" para começar.');
-      return;
-    }
-
-    aplicarDadosDaNuvem(dados, silencioso);
-    syncSetStatus('✅ Conectado ao Realtime Database', configSync.dbUrl.replace('https://',''), 'conectado');
-    syncLog(`Dados carregados (enviados por ${dados._usuario||'?'} às ${new Date(dados._ts||0).toLocaleTimeString('pt-BR')})`, 'ok');
-  } catch(err) {
-    syncSetStatus('⚠️ Erro ao carregar', err.message, 'erro');
-    syncLog('Erro ao carregar: '+err.message, 'erro');
-    if(!silencioso) toast('❌ Erro ao carregar: '+err.message,'error');
-  }
-}
-
-// ── Polling em tempo real (verifica a cada 5s se houve mudanças) ──
-function ativarPollingRealtime() {
-  if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
-  _rtdbPollInterval = setInterval(async ()=>{
-    if(!configSync.conectado) return;
-    try {
-      // Busca só o timestamp para não transferir tudo a cada poll
-      const res = await fetch(rtdbUrl('gestcom/dados/_ts'));
-      if(!res.ok) return;
-      const ts = await res.json();
-      if(ts && ts > _rtdbLastTs) {
-        syncLog('🔔 Mudança detectada na nuvem — carregando...', 'ok');
-        await syncPull(true);
-      }
-    } catch(e) { /* silencioso */ }
-  }, 5000);
-  syncLog('Polling em tempo real ativado (a cada 5s)', 'ok');
-}
-
-function toggleRealtime(swEl) {
-  swEl.classList.toggle('on');
-  configSync.realtime = swEl.classList.contains('on');
-  if(configSync.realtime && configSync.conectado) {
-    ativarPollingRealtime();
-    syncLog('Tempo real ativado', 'ok');
-  } else {
-    if(_rtdbPollInterval) { clearInterval(_rtdbPollInterval); _rtdbPollInterval=null; }
-    syncLog('Tempo real desativado', 'aviso');
-  }
-}
-
-function syncAgora() { syncPull(); }
-
-async function syncResetCloud() {
-  if(!confirm('⚠️ Isso apagará TODOS os dados da nuvem permanentemente.\n\nConfirmar?')) return;
-  if(!confirm('Segunda confirmação: apagar tudo da nuvem?')) return;
-  try {
-    await fetch(rtdbUrl('gestcom/dados'), {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({_apagado:true, _ts:Date.now(), _usuario:usuarioLogado?.login}),
-    });
-    syncLog('Dados da nuvem apagados', 'erro');
-    toast('Dados da nuvem apagados.');
-  } catch(err) { toast('Erro: '+err.message,'error'); }
-}
-
-async function tentarReconexaoAuto() {
-  // Credenciais do Firebase — Sistematresvales
-  const FIREBASE_DB_URL = '';
-  const FIREBASE_API_KEY = '';
-
-  try {
-    // Preenche os campos do painel de sincronização
-    if(el('fb-dburl'))  el('fb-dburl').value  = FIREBASE_DB_URL;
-    if(el('fb-apikey')) el('fb-apikey').value = FIREBASE_API_KEY;
-
-    // Verifica se há credenciais salvas no localStorage (prioridade)
-    const saved = localStorage.getItem('gestcom_rtdb');
-    if(saved) {
-      const creds = JSON.parse(saved);
-      if(creds.dbUrl) {
-        configSync.dbUrl  = creds.dbUrl;
-        configSync.apiKey = creds.apiKey || FIREBASE_API_KEY;
-        if(el('fb-dburl'))  el('fb-dburl').value  = creds.dbUrl;
-        if(el('fb-apikey')) el('fb-apikey').value = creds.apiKey || FIREBASE_API_KEY;
-      }
-    } else {
-      configSync.dbUrl  = FIREBASE_DB_URL;
-      configSync.apiKey = FIREBASE_API_KEY;
-    }
-
-    syncLog('Conectando ao Firebase automaticamente...', 'info');
-    await firebaseConectar();
-  } catch(e) {
-    syncLog('Conexão automática falhou: '+e.message, 'aviso');
-  }
-}
-
-/* ══════════════════════════
-   INIT
-══════════════════════════ */
-// 1. Restaura dados do localStorage (funciona offline, sem Firebase)
-(function(){
-  if(typeof _carregarLocal === 'function' && _carregarLocal()) {
-    popularSelectsDinamicos();
-    renderDashboard();
-  }
-})();
-// 2. Migração de segurança: garante logística para TODOS os pedidos existentes
-pedidos.filter(p=>!p.excluido).forEach(p=>{
-  if(!logisticaData.find(l=>l.pedId===p.id))
-    logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
-      data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
-});
-el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
-atualizarBadgeTratativas();
-renderDashboard();
-// Garante que logística e saldo renderizam com dados do localStorage
-renderLogistica();
-renderSaldo();
-renderRedes();
-popularSelectsDinamicos();
-setTimeout(tentarReconexaoAuto, 800);
-</script>
-<!-- Modal Editar Item do Mix -->
-<div class="modal-bg" id="modal-mix-e
+          <span class="tag"
