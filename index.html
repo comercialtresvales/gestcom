@@ -4174,32 +4174,170 @@ function abrirCompare(pedId) {
     </div>
 
     <!-- Anexar NF -->
-    <div style="margin-top:14px;padding:12px;background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px">
-      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Anexar Arquivos da NF</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <div>
-          <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">PDF da NF</label>
-          <input type="file" accept=".pdf" onchange="anexarArquivoNF('${pedId}','pdf',this)" style="font-size:12px">
+    <div style="margin-top:14px;padding:14px;background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📎 Inserir Nota Fiscal para Comparação</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="border:2px dashed var(--cinza-medio);border-radius:8px;padding:14px;text-align:center;background:#fff">
+          <div style="font-size:20px;margin-bottom:4px">📄</div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px">PDF da NF</div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px">Anexa o PDF para visualização</div>
+          <label style="cursor:pointer;display:inline-block">
+            <span class="btn btn-outline btn-sm">Selecionar PDF</span>
+            <input type="file" accept=".pdf" onchange="anexarArquivoNF('${pedId}','pdf',this)" style="display:none">
+          </label>
+          <div id="cmp-pdf-status-${pedId}" style="margin-top:8px;font-size:11px">
+            ${n&&n.pdf?`<span class="badge badge-verde">✓ ${esc(n.pdf.length>30?n.pdf.substring(0,30)+'...':n.pdf)}</span>`:'<span style="color:#aaa">Nenhum arquivo</span>'}
+          </div>
+          ${n&&n.pdfData?`<div style="margin-top:8px"><a href="${n.pdfData}" target="_blank" class="btn btn-info btn-xs">👁️ Visualizar PDF</a></div>`:''}
         </div>
-        <div>
-          <label style="font-size:11px;color:#888;display:block;margin-bottom:4px">XML da NF</label>
-          <input type="file" accept=".xml" onchange="anexarArquivoNF('${pedId}','xml',this)" style="font-size:12px">
+        <div style="border:2px dashed var(--cinza-medio);border-radius:8px;padding:14px;text-align:center;background:#fff">
+          <div style="font-size:20px;margin-bottom:4px">🗂️</div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px">XML da NF-e</div>
+          <div style="font-size:11px;color:#888;margin-bottom:8px">Lê e compara automaticamente</div>
+          <label style="cursor:pointer;display:inline-block">
+            <span class="btn btn-outline btn-sm">Selecionar XML</span>
+            <input type="file" accept=".xml" onchange="anexarArquivoNF('${pedId}','xml',this)" style="display:none">
+          </label>
+          <div id="cmp-xml-status-${pedId}" style="margin-top:8px;font-size:11px">
+            ${n&&n.xml?`<span class="badge badge-verde">✓ ${esc(n.xml.length>30?n.xml.substring(0,30)+'...':n.xml)}</span>`:'<span style="color:#aaa">Nenhum arquivo</span>'}
+          </div>
         </div>
       </div>
-      ${n&&n.pdf?`<div class="badge badge-verde" style="margin-top:8px">✓ PDF anexado: ${n.pdf}</div>`:''}
-      ${n&&n.xml?`<div class="badge badge-verde" style="margin-top:4px">✓ XML anexado: ${n.xml}</div>`:''}
+      <div id="cmp-xml-compare-${pedId}" style="margin-top:12px"></div>
+      ${n&&n.pdfData?`
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">VISUALIZAÇÃO DO PDF</div>
+        <iframe src="${n.pdfData}" style="width:100%;height:400px;border:1px solid var(--cinza-medio);border-radius:6px"></iframe>
+      </div>`:''}
     </div>
   `;
   openModal('modal-nf-compare');
 }
 
 function anexarArquivoNF(pedId, tipo, input) {
-  const file=input.files[0];if(!file)return;
-  pedidos=pedidos.map(p=>{
-    if(p.id===pedId&&p.nf){return{...p,nf:{...p.nf,[tipo]:file.name}};}
-    return p;
-  });
-  toast(`${tipo.toUpperCase()} da NF anexado: ${file.name}`);
+  const file = input.files[0]; if(!file) return;
+  const ped  = pedidos.find(p=>p.id===pedId); if(!ped) return;
+  const reader = new FileReader();
+
+  if(tipo === 'pdf') {
+    reader.onload = e => {
+      const dataUrl = e.target.result; // base64 data URL
+      pedidos = pedidos.map(p => {
+        if(p.id !== pedId) return p;
+        const nfAtual = p.nf || {};
+        return {...p, nf: {...nfAtual, pdf: file.name, pdfData: dataUrl}};
+      });
+      syncAutoSaveHook();
+      // Atualiza status visual
+      const statusEl = document.getElementById('cmp-pdf-status-'+pedId);
+      if(statusEl) statusEl.innerHTML = `<span class="badge badge-verde">✓ ${esc(file.name)}</span>
+        <div style="margin-top:6px"><a href="${dataUrl}" target="_blank" class="btn btn-info btn-xs">👁️ Visualizar PDF</a></div>
+        <div style="margin-top:8px"><iframe src="${dataUrl}" style="width:100%;height:380px;border:1px solid var(--cinza-medio);border-radius:6px"></iframe></div>`;
+      toast('✅ PDF da NF anexado — visualização disponível abaixo.', 'success');
+    };
+    reader.readAsDataURL(file);
+
+  } else if(tipo === 'xml') {
+    reader.onload = e => {
+      try {
+        const parser = new DOMParser();
+        const xml    = parser.parseFromString(e.target.result, 'text/xml');
+        const parseErr = xml.querySelector('parsererror');
+        if(parseErr) { toast('❌ XML inválido ou corrompido.','error'); return; }
+
+        const gv = sel => xml.querySelector(sel)?.textContent?.trim()||'';
+        const parseMon = v => parseFloat(v)||0;
+
+        // Lê dados do XML NFe
+        const nNF    = gv('nNF');
+        const serie  = gv('serie');
+        const dhEmi  = (gv('dhEmi')||gv('dEmi')||'').substring(0,10);
+        const vNF    = parseMon(gv('ICMSTot vNF')||gv('vNFe'));
+        const vProd  = parseMon(gv('ICMSTot vProd'));
+        const vDesc  = parseMon(gv('ICMSTot vDesc'));
+        const vFrete = parseMon(gv('ICMSTot vFrete'));
+        const vIPI   = parseMon(gv('ICMSTot vIPI'));
+        const emitNome = gv('emit xNome')||gv('emit xFant')||'';
+        const destNome = gv('dest xNome')||'';
+        const chNFe  = gv('chNFe')||'';
+
+        // Atualiza o pedido com o XML
+        pedidos = pedidos.map(p => {
+          if(p.id !== pedId) return p;
+          const nfAtual = p.nf || {};
+          return {...p, nf: {...nfAtual, xml: file.name, xmlNNF: nNF, xmlValor: vNF, xmlData: dhEmi, xmlEmit: emitNome, xmlDest: destNome}};
+        });
+        syncAutoSaveHook();
+
+        // Status visual
+        const statusEl = document.getElementById('cmp-xml-status-'+pedId);
+        if(statusEl) statusEl.innerHTML = `<span class="badge badge-verde">✓ NF-e ${nNF} lida</span>`;
+
+        // Monta comparação detalhada
+        const nReg = ped.nf || {};
+        const diffValor  = Math.abs(vNF - (nReg.valorNF||0));
+        const diffLiq    = Math.abs((vNF-vDesc) - (nReg.liquida||0));
+        const diffNum    = nReg.numero && nReg.numero !== nNF;
+        const diffData   = nReg.data && dhEmi && nReg.data !== dhEmi;
+
+        const row = (label, valXML, valReg, isMoney=true, warn=false) => {
+          const match = isMoney
+            ? Math.abs((parseFloat(valXML)||0) - (parseFloat(valReg)||0)) < 0.02
+            : String(valXML||'').trim() === String(valReg||'').trim();
+          const cor = match ? 'var(--verde)' : 'var(--vermelho)';
+          const ico = match ? '✅' : '⚠️';
+          return `<tr>
+            <td style="font-size:12px;padding:6px 8px">${label}</td>
+            <td style="font-size:12px;padding:6px 8px;font-weight:600">${isMoney?fmt(parseFloat(valXML)||0):esc(valXML||'—')}</td>
+            <td style="font-size:12px;padding:6px 8px">${isMoney?fmt(parseFloat(valReg)||0):esc(valReg||'—')}</td>
+            <td style="font-size:12px;padding:6px 8px;color:${cor};font-weight:700">${ico} ${match?'OK':'DIVERGÊNCIA'}</td>
+          </tr>`;
+        };
+
+        const temDivergencia = diffValor > 0.02 || diffLiq > 0.02 || diffNum || diffData;
+
+        const compareEl = document.getElementById('cmp-xml-compare-'+pedId);
+        if(compareEl) compareEl.innerHTML = `
+          <div style="background:${temDivergencia?'#fef9ec':'#f0fdf4'};border:1px solid ${temDivergencia?'#f5c500':'#86efac'};border-radius:8px;padding:12px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:${temDivergencia?'#7a5800':'#166534'}">
+              ${temDivergencia?'⚠️ DIVERGÊNCIAS ENCONTRADAS — VERIFIQUE OS ITENS ABAIXO':'✅ TODOS OS VALORES CONFEREM COM O REGISTRADO'}
+            </div>
+            <div style="font-size:11px;color:#888;margin-bottom:8px">
+              XML: NF ${nNF}${serie?' Série '+serie:''} · ${dhEmi?new Date(dhEmi+'T12:00:00').toLocaleDateString('pt-BR'):''} · Emitente: ${esc(emitNome)}
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr style="background:#f4f3ef">
+                <th style="padding:6px 8px;text-align:left;font-size:11px">Campo</th>
+                <th style="padding:6px 8px;text-align:left;font-size:11px">XML (NF real)</th>
+                <th style="padding:6px 8px;text-align:left;font-size:11px">Registrado no sistema</th>
+                <th style="padding:6px 8px;text-align:left;font-size:11px">Status</th>
+              </tr></thead>
+              <tbody>
+                ${row('Número da NF', nNF, nReg.numero||'—', false)}
+                ${row('Data Emissão', dhEmi, nReg.data||'—', false)}
+                ${row('Valor Total NF', vNF, nReg.valorNF||0)}
+                ${vDesc>0?row('Desconto XML', vDesc, nReg.abatimentos||0):''}
+                ${row('NF Líquida (NF−Desc)', vNF-vDesc, nReg.liquida||0)}
+                ${vFrete>0?`<tr><td style="padding:6px 8px;font-size:12px">Frete (XML)</td><td class="bold" style="padding:6px 8px;font-size:12px">${fmt(vFrete)}</td><td colspan="2" style="padding:6px 8px;font-size:11px;color:#888">Informativo</td></tr>`:''}
+              </tbody>
+            </table>
+            ${temDivergencia?`<div style="margin-top:10px;font-size:11px;color:#7a5800">
+              💡 Se necessário, abra o pedido e corrija os valores da NF, ou registre uma Tratativa para documentar a diferença.
+            </div>`:''}
+          </div>`;
+
+        toast(temDivergencia
+          ? '⚠️ XML lido — divergências encontradas. Verifique a comparação abaixo.'
+          : '✅ XML lido — todos os valores conferem com o registrado!',
+          temDivergencia ? 'warning' : 'success');
+
+      } catch(err) {
+        toast('❌ Erro ao processar XML: ' + err.message, 'error');
+        console.error('[XML NF]', err);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
 }
 
 function exportarComparacaoPDF() { toast('PDF da comparação exportado!'); }
@@ -9195,205 +9333,3 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   // Usuários — mescla da nuvem mas preserva o usuário logado atual
   if(Array.isArray(dados.usuarios)) {
     const loginAtual = usuarioLogado?.login;
-    usuarios = dados.usuarios;
-    // Se o usuário logado foi removido da nuvem, mantém ele localmente
-    if(loginAtual && !usuarios.find(u=>u.login===loginAtual)) {
-      const backup = {id:'USR-001',nome:'Administrador',login:'admin',senha:'admin123',perfil:'diretoria',email:'',status:'ativo',ultimoAcesso:'—'};
-      usuarios.push(backup);
-    }
-  }
-  if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==='object') {
-    Object.keys(PRODUTOS_CAT).forEach(k=>delete PRODUTOS_CAT[k]);
-    Object.assign(PRODUTOS_CAT, dados.PRODUTOS_CAT);
-  }
-
-  // Re-renderiza tudo
-  renderDashboard(); renderOrcamentos(); renderPedidos();
-  renderFaturamento(); renderMix(); renderProdutos();
-  renderClientes(); renderIndustrias(); renderRedes(); renderComissoes();
-  renderSaldo(); renderLogistica(); renderTratativas();
-  renderMetas(); renderRegras();
-  popularSelectsDinamicos(); atualizarBadgeTratativas();
-  // Re-aplica permissões na sidebar
-  if(usuarioLogado) aplicarVisibilidadeSidebar();
-
-  const hora = new Date().toLocaleTimeString('pt-BR');
-  if(el('sync-last-time')) el('sync-last-time').textContent = 'Última sync: '+hora;
-  if(!silencioso) toast('🔄 Dados atualizados da nuvem!');
-}
-
-// ── Enviar para o banco (PUT) ──
-async function syncPush(silencioso=false) {
-  if(!configSync.conectado) {
-    if(!silencioso) toast('⛔ Não conectado ao banco.','error'); return;
-  }
-  try {
-    if(!silencioso) syncSetStatus('Salvando...', 'Enviando para a nuvem...', 'sincronizando');
-    const dados = coletarDadosParaSync();
-    _rtdbLastTs = dados._ts; // marca o timestamp para evitar loop
-
-    const res = await fetch(rtdbUrl('gestcom/dados'), {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(dados),
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-
-    syncSetStatus('✅ Conectado ao Realtime Database', configSync.dbUrl.replace('https://',''), 'conectado');
-    const hora = new Date().toLocaleTimeString('pt-BR');
-    if(el('sync-last-time')) el('sync-last-time').textContent = 'Salvo: '+hora;
-    syncLog(`Dados enviados por ${dados._usuario}`, 'ok');
-    if(!silencioso) toast('☁️ Dados salvos na nuvem!');
-  } catch(err) {
-    syncSetStatus('⚠️ Erro ao salvar', err.message, 'erro');
-    syncLog('Erro ao salvar: '+err.message, 'erro');
-    if(!silencioso) toast('❌ Erro ao salvar: '+err.message,'error');
-  }
-}
-
-// ── Carregar do banco (GET) ──
-async function syncPull(silencioso=false) {
-  if(!configSync.conectado) {
-    if(!silencioso) toast('⛔ Não conectado ao banco.','error'); return;
-  }
-  try {
-    if(!silencioso) syncSetStatus('Carregando...', 'Buscando dados...', 'sincronizando');
-    const res = await fetch(rtdbUrl('gestcom/dados'));
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const dados = await res.json();
-
-    if(!dados) {
-      syncSetStatus('✅ Conectado', 'Banco vazio — envie seus dados', 'conectado');
-      syncLog('Banco vazio — nenhum dado ainda', 'aviso');
-      if(!silencioso) toast('Banco vazio. Use "Enviar dados" para começar.');
-      return;
-    }
-
-    aplicarDadosDaNuvem(dados, silencioso);
-    syncSetStatus('✅ Conectado ao Realtime Database', configSync.dbUrl.replace('https://',''), 'conectado');
-    syncLog(`Dados carregados (enviados por ${dados._usuario||'?'} às ${new Date(dados._ts||0).toLocaleTimeString('pt-BR')})`, 'ok');
-  } catch(err) {
-    syncSetStatus('⚠️ Erro ao carregar', err.message, 'erro');
-    syncLog('Erro ao carregar: '+err.message, 'erro');
-    if(!silencioso) toast('❌ Erro ao carregar: '+err.message,'error');
-  }
-}
-
-// ── Polling em tempo real (verifica a cada 5s se houve mudanças) ──
-function ativarPollingRealtime() {
-  if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
-  _rtdbPollInterval = setInterval(async ()=>{
-    if(!configSync.conectado) return;
-    try {
-      // Busca só o timestamp para não transferir tudo a cada poll
-      const res = await fetch(rtdbUrl('gestcom/dados/_ts'));
-      if(!res.ok) return;
-      const ts = await res.json();
-      if(ts && ts > _rtdbLastTs) {
-        syncLog('🔔 Mudança detectada na nuvem — carregando...', 'ok');
-        await syncPull(true);
-      }
-    } catch(e) { /* silencioso */ }
-  }, 5000);
-  syncLog('Polling em tempo real ativado (a cada 5s)', 'ok');
-}
-
-function toggleRealtime(swEl) {
-  swEl.classList.toggle('on');
-  configSync.realtime = swEl.classList.contains('on');
-  if(configSync.realtime && configSync.conectado) {
-    ativarPollingRealtime();
-    syncLog('Tempo real ativado', 'ok');
-  } else {
-    if(_rtdbPollInterval) { clearInterval(_rtdbPollInterval); _rtdbPollInterval=null; }
-    syncLog('Tempo real desativado', 'aviso');
-  }
-}
-
-function syncAgora() { syncPull(); }
-
-async function syncResetCloud() {
-  if(!confirm('⚠️ Isso apagará TODOS os dados da nuvem permanentemente.\n\nConfirmar?')) return;
-  if(!confirm('Segunda confirmação: apagar tudo da nuvem?')) return;
-  try {
-    await fetch(rtdbUrl('gestcom/dados'), {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({_apagado:true, _ts:Date.now(), _usuario:usuarioLogado?.login}),
-    });
-    syncLog('Dados da nuvem apagados', 'erro');
-    toast('Dados da nuvem apagados.');
-  } catch(err) { toast('Erro: '+err.message,'error'); }
-}
-
-async function tentarReconexaoAuto() {
-  // Credenciais do Firebase — Sistematresvales
-  const FIREBASE_DB_URL = '';
-  const FIREBASE_API_KEY = '';
-
-  try {
-    // Preenche os campos do painel de sincronização
-    if(el('fb-dburl'))  el('fb-dburl').value  = FIREBASE_DB_URL;
-    if(el('fb-apikey')) el('fb-apikey').value = FIREBASE_API_KEY;
-
-    // Verifica se há credenciais salvas no localStorage (prioridade)
-    const saved = localStorage.getItem('gestcom_rtdb');
-    if(saved) {
-      const creds = JSON.parse(saved);
-      if(creds.dbUrl) {
-        configSync.dbUrl  = creds.dbUrl;
-        configSync.apiKey = creds.apiKey || FIREBASE_API_KEY;
-        if(el('fb-dburl'))  el('fb-dburl').value  = creds.dbUrl;
-        if(el('fb-apikey')) el('fb-apikey').value = creds.apiKey || FIREBASE_API_KEY;
-      }
-    } else {
-      configSync.dbUrl  = FIREBASE_DB_URL;
-      configSync.apiKey = FIREBASE_API_KEY;
-    }
-
-    syncLog('Conectando ao Firebase automaticamente...', 'info');
-    await firebaseConectar();
-  } catch(e) {
-    syncLog('Conexão automática falhou: '+e.message, 'aviso');
-  }
-}
-
-/* ══════════════════════════
-   INIT
-══════════════════════════ */
-// 1. Restaura dados do localStorage (funciona offline, sem Firebase)
-(function(){
-  if(typeof _carregarLocal === 'function' && _carregarLocal()) {
-    popularSelectsDinamicos();
-    renderDashboard();
-  }
-})();
-// 2. Migração de segurança: garante logística para TODOS os pedidos existentes
-pedidos.filter(p=>!p.excluido).forEach(p=>{
-  if(!logisticaData.find(l=>l.pedId===p.id))
-    logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
-      data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
-});
-el('sync-ts').textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
-atualizarBadgeTratativas();
-renderDashboard();
-// Garante que logística e saldo renderizam com dados do localStorage
-renderLogistica();
-renderSaldo();
-renderRedes();
-popularSelectsDinamicos();
-setTimeout(tentarReconexaoAuto, 800);
-</script>
-<!-- Modal Editar Item do Mix -->
-<div class="modal-bg" id="modal-mix-edit">
-  <div class="modal" style="width:560px">
-    <div class="modal-title">
-      ✏️ Editar Produto do Mix — <span id="mix-edit-cod" style="color:var(--amarelo);font-family:monospace"></span>
-      <button class="close-btn" onclick="closeModal('modal-mix-edit')">✕</button>
-    </div>
-    <input type="hidden" id="mix-edit-idx">
-    <div class="form-grid">
-      <div class="form-group full"><label>Descrição</label><input id="mix-edit-desc" placeholder="Descrição do produto"></div>
-      <div class="form-group"><label>Indústria</label><input id="mix-edit-ind" placeholder="Ex: LABOTRAT"></div>
-      <div class="form-group"><label>Curva ABC</label>
-        <select id="mix-edit-curva">
