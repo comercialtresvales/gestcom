@@ -3089,20 +3089,23 @@ function excluirPedido(id) {
     if (!confirm(`⚠️ ATENÇÃO: Excluir PERMANENTEMENTE o pedido ${id}?\n\nEsta ação não pode ser desfeita e o pedido não poderá ser recuperado.`)) return;
     pedidos = pedidos.filter(x => x.id !== id);
     logisticaData = logisticaData.filter(x => x.pedId !== id);
-    addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} excluído PERMANENTEMENTE (${p.cliente} / ${p.industria})`, '🗑️');
+    comissoes_data = comissoes_data.filter(x => x.pedido !== id);
+    addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} excluído PERMANENTEMENTE (${p.cliente} / ${p.industria}) — comissão vinculada removida`, '🗑️');
     syncAutoSaveHook();
     renderPedidos();
+    renderComissoes();
     renderDashboard();
-    toast(`Pedido ${id} removido permanentemente.`);
+    toast(`Pedido ${id} removido permanentemente. Comissão vinculada também excluída.`);
     return;
   }
   if (!confirm(`Marcar o pedido ${id} como EXCLUÍDO?\n\nO pedido deixará de aparecer no Saldo, Pedido×NF e Dashboard.\nVocê poderá reativá-lo a qualquer momento.`)) return;
   pedidos = pedidos.map(x => x.id === id ? {...x, excluido: true, statusAnterior: x.status, status: 'Excluído'} : x);
-  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} marcado como excluído (${p.cliente} / ${p.industria})`, '🚫');
+  comissoes_data = comissoes_data.map(x => x.pedido === id ? {...x, excluido: true} : x);
+  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} marcado como excluído (${p.cliente} / ${p.industria}) — comissão vinculada ocultada`, '🚫');
   syncAutoSaveHook();
   renderPedidos();
   renderDashboard();
-  toast(`Pedido ${id} marcado como excluído. Use "Reativar" para desfazer.`);
+  toast(`Pedido ${id} marcado como excluído. Comissão ocultada. Use "Reativar" para desfazer.`);
 }
 
 function reativarPedido(id) {
@@ -3110,11 +3113,13 @@ function reativarPedido(id) {
   if (!p || !p.excluido) return;
   if (!confirm(`Reativar o pedido ${id}?\n\nEle voltará a aparecer no Saldo, Pedido×NF e Dashboard.`)) return;
   pedidos = pedidos.map(x => x.id === id ? {...x, excluido: false, status: x.statusAnterior || 'Cancelado'} : x);
-  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} reativado (${p.cliente} / ${p.industria})`, '✅');
+  comissoes_data = comissoes_data.map(x => x.pedido === id ? {...x, excluido: false} : x);
+  addAudit(usuarioLogado?.login || 'admin', `Pedido ${id} reativado (${p.cliente} / ${p.industria}) — comissão vinculada restaurada`, '✅');
   syncAutoSaveHook();
   renderPedidos();
+  renderComissoes();
   renderDashboard();
-  toast(`Pedido ${id} reativado com sucesso!`);
+  toast(`Pedido ${id} reativado com sucesso! Comissão restaurada.`);
 }
 
 /* ══════════════════════════
@@ -4416,6 +4421,7 @@ function renderComissoes() {
   const tbody    = el('com-tbody'); if(!tbody) return;
 
   let list = comissoes_data.filter(c=>{
+    if(c.excluido) return false; // oculta comissões vinculadas a pedidos excluídos
     if(busca && !c.cliente.toLowerCase().includes(busca) && !c.industria.toLowerCase().includes(busca)) return false;
     if(filtInd && c.industria!==filtInd) return false;
     if(filtSt  && c.status!==filtSt)    return false;
@@ -4473,10 +4479,23 @@ function renderComissoes() {
                 : ''
               }
               <button class="btn btn-outline btn-xs" onclick="editarComissao('${c.id}')" title="Editar mês e dados">✏️</button>
+              <button class="btn btn-danger btn-xs" onclick="excluirComissao('${c.id}')" title="Excluir comissão">🗑️</button>
             </div>
           </td>
         </tr>`;
       }).join('');
+}
+
+function excluirComissao(id) {
+  const c = comissoes_data.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Excluir permanentemente a comissão ${id}?\n\nCliente: ${c.cliente}\nIndústria: ${c.industria}\nValor: ${fmt(c.valor)}\n\nEsta ação não pode ser desfeita.`)) return;
+  comissoes_data = comissoes_data.filter(x => x.id !== id);
+  addAudit(usuarioLogado?.login || 'admin', `Comissão ${id} excluída manualmente (${c.cliente} / ${c.industria} / ${fmt(c.valor)})`, '🗑️');
+  syncAutoSaveHook();
+  renderComissoes();
+  renderDashboard();
+  toast(`Comissão ${id} excluída com sucesso.`);
 }
 
 // Abre modal para lançar recebimento (total ou parcial)
@@ -4707,6 +4726,7 @@ function editarComissao(comId) {
   if(!novoMes) return;
   comissoes_data = comissoes_data.map(x=>x.id===comId?{...x,mesPrevisao:novoMes.trim()}:x);
   renderComissoes();
+  syncAutoSaveHook();
   toast('Mês de previsão atualizado.');
 }
 
@@ -7942,7 +7962,10 @@ function salvarTratativa() {
   }
 
   const ped = pedidos.find(p=>p.id===pedId);
-  const id  = 'TRAT-'+String(tratativas.length+1).padStart(3,'0');
+  let tN = tratativas.length + 1;
+  let tratIdStr;
+  do { tratIdStr = 'TRAT-'+String(tN).padStart(3,'0'); tN++; } while(tratativas.some(x=>x.id===tratIdStr));
+  const id = tratIdStr;
   const agora = new Date().toLocaleString('pt-BR').slice(0,14);
 
   const trat = {
@@ -8109,10 +8132,41 @@ function cancelarTratativa(id) {
     if(t.tipo==='bonificacao') pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,bonif:Math.max(0,(p.nf.bonif||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
     if(t.tipo==='devolucao')   pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,devolucoes:Math.max(0,(p.nf.devolucoes||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
     if(t.tipo==='abatimento')  pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,abatimentos:Math.max(0,(p.nf.abatimentos||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
-    comissoes_data=comissoes_data.map(c=>{if(c.pedido===t.pedido){const nb=c.baseLiq+t.valor;return{...c,baseLiq:nb,valor:nb*c.pct/100};}return c;});
+    // Reverter erro: restaura valorNF e liquida para o valor do pedido original
+    if(t.tipo==='erro'&&t.valorCorrigido>0) {
+      pedidos=pedidos.map(p=>{
+        if(p.id!==t.pedido||!p.nf) return p;
+        const valorOriginal = p.total; // valor original do pedido
+        return {...p,nf:{...p.nf,valorNF:valorOriginal,liquida:valorOriginal}};
+      });
+      comissoes_data=comissoes_data.map(c=>{
+        if(c.pedido!==t.pedido) return c;
+        const ped2 = pedidos.find(p=>p.id===t.pedido);
+        const baseOriginal = ped2?.total || c.baseLiq;
+        return {...c,baseLiq:baseOriginal,valor:baseOriginal*c.pct/100};
+      });
+    }
+    if(['bonificacao','devolucao','abatimento'].includes(t.tipo)) {
+      comissoes_data=comissoes_data.map(c=>{if(c.pedido===t.pedido){const nb=c.baseLiq+t.valor;return{...c,baseLiq:nb,valor:nb*c.pct/100};}return c;});
+    }
+  }
+  // Reverter prorrogação: restaura mês de previsão original da comissão
+  if(t.tipo==='prorrogacao' && t.novoMesCom) {
+    const indCad = industrias.find(i=>i.nome===ped?.industria);
+    const cliCad = clientes.find(c=>c.nome===ped?.cliente);
+    const tipoCom = indCad?.tipoCom || 'Faturamento';
+    const prazo = ped?.cond || cliCad?.prazo || '';
+    const dataNF = ped?.nf?.data || ped?.data || new Date();
+    const mesOriginal = _calcMesPrevisaoComissao(dataNF, tipoCom, prazo);
+    comissoes_data=comissoes_data.map(c=>{
+      if(c.pedido===t.pedido) return {...c,mesPrevisao:mesOriginal};
+      return c;
+    });
+    pedidos=pedidos.map(p=>p.id===t.pedido?{...p,novaDataVenc:''}:p);
   }
   tratativas=tratativas.map(x=>x.id===id?{...x,status:'cancelada'}:x);
   addAudit(usuarioLogado?.login||'admin',`Tratativa ${id} cancelada`,'🔁');
+  syncAutoSaveHook();
   renderTratativas(); renderFaturamento(); renderSaldo(); renderComissoes();
   toast('Tratativa cancelada e impacto revertido.');
 }
@@ -8927,49 +8981,4 @@ popularSelectsDinamicos();
 setTimeout(tentarReconexaoAuto, 800);
 </script>
 <!-- Modal Editar Item do Mix -->
-<div class="modal-bg" id="modal-mix-edit">
-  <div class="modal" style="width:560px">
-    <div class="modal-title">
-      ✏️ Editar Produto do Mix — <span id="mix-edit-cod" style="color:var(--amarelo);font-family:monospace"></span>
-      <button class="close-btn" onclick="closeModal('modal-mix-edit')">✕</button>
-    </div>
-    <input type="hidden" id="mix-edit-idx">
-    <div class="form-grid">
-      <div class="form-group full"><label>Descrição</label><input id="mix-edit-desc" placeholder="Descrição do produto"></div>
-      <div class="form-group"><label>Indústria</label><input id="mix-edit-ind" placeholder="Ex: LABOTRAT"></div>
-      <div class="form-group"><label>Curva ABC</label>
-        <select id="mix-edit-curva">
-          <option value="A">A</option><option value="B">B</option><option value="C">C</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Preço Tabela (R$)</label>
-        <input type="text" inputmode="decimal" id="mix-edit-tabela" placeholder="0,00" oninput="mixEditCalcNeg()">
-      </div>
-      <div class="form-group"><label>% Desconto</label>
-        <input type="number" id="mix-edit-desc-pct" placeholder="0" min="0" max="100" oninput="mixEditCalcNeg()">
-      </div>
-      <div class="form-group"><label>Última Compra</label>
-        <input id="mix-edit-ultima" placeholder="Ex: Jan/26">
-      </div>
-      <div class="form-group"><label>Status no Mix</label>
-        <select id="mix-edit-ativo">
-          <option value="ativo">Ativo</option>
-          <option value="inativo">Inativo</option>
-        </select>
-      </div>
-      <div class="form-group full"><label>Observações</label>
-        <input id="mix-edit-obs" placeholder="Condições especiais, restrições...">
-      </div>
-    </div>
-    <div id="mix-edit-neg-preview" style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px 14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--verde);margin-bottom:14px;text-align:center">
-      Preço negociado: R$ 0,00
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="closeModal('modal-mix-edit')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarMixEdit()">💾 Salvar Alterações</button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+<div class="modal-bg" id="modal-mix-e
