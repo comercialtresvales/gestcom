@@ -9437,7 +9437,7 @@ let configSync = {
   conectado: false,
 };
 
-let _rtdbPollInterval = null;
+window._rtdbPollInterval = null;
 let _rtdbLastTs = 0;
 
 function syncLog(msg, tipo='info') {
