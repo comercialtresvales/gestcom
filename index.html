@@ -9505,7 +9505,7 @@ async function firebaseConectar() {
     syncHabilitarBotoes(true);
 
     // Salva credenciais localmente para reconexão automática
-    try { localStorage.setItem('gestcom_rtdb', JSON.stringify({dbUrl, apiKey})); } catch(e){}
+    try { localStorage.setItem('gestcom_rtdb', JSON.stringify({dbUrl, apiKey, realtime: configSync.realtime})); } catch(e){}
 
     // Carrega dados existentes da nuvem
     await syncPull(true);
@@ -9609,7 +9609,7 @@ async function syncPull(silencioso=false){
   try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
 function ativarPollingRealtime(){if(_rtdbPollInterval)clearInterval(_rtdbPollInterval);_rtdbPollInterval=setInterval(async()=>{if(!configSync.conectado||!usuarioLogado)return;try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)return;const dados=await res.json();if(dados&&dados._ts&&dados._ts>(_rtdbLastTs||0)){aplicarDadosDaNuvem(dados,true);_rtdbLastTs=dados._ts;}}catch(e){}},5000);}
-function toggleRealtime(swEl){if(swEl.checked)ativarPollingRealtime();else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
+function toggleRealtime(swEl){const ativo=swEl.classList.contains('on');configSync.realtime=ativo;try{const saved=localStorage.getItem('gestcom_rtdb');if(saved){const obj=JSON.parse(saved);obj.realtime=ativo;localStorage.setItem('gestcom_rtdb',JSON.stringify(obj));}}catch(e){}if(ativo)ativarPollingRealtime();else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
 function syncAgora(){syncPull();}
 async function syncResetCloud(){if(!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada!');}
 async function tentarReconexaoAuto(){if(configSync.dbUrl&&!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
@@ -10695,8 +10695,9 @@ function atualizarTextoAutoSave(swEl) {
   try {
     const saved = localStorage.getItem('gestcom_rtdb');
     if (!saved) return;
-    const { dbUrl, apiKey } = JSON.parse(saved);
+    const { dbUrl, apiKey, realtime } = JSON.parse(saved);
     if (!dbUrl) return;
+    if (typeof realtime === 'boolean') configSync.realtime = realtime;
     // Preenche os campos se existirem
     const inputUrl = el('fb-dburl');
     const inputKey = el('fb-apikey');
