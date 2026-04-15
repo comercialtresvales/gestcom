@@ -231,6 +231,7 @@ tr:last-child td{border-bottom:none;}
 
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px;}
+@keyframes syncPulse{from{opacity:1}to{opacity:.4}}
 
 /* LOGIN */
 .login-screen{position:fixed;inset:0;background:var(--preto);display:flex;align-items:center;justify-content:center;z-index:9999;}
@@ -376,7 +377,7 @@ tr:last-child td{border-bottom:none;}
   </div>
 
   <div class="sb-foot">
-    <div>GestCom v5.0</div>
+    <div>GestCom v6.0</div>
     <div style="color:var(--amarelo)">Comercial Três Vales</div>
   </div>
 </nav>
@@ -387,6 +388,7 @@ tr:last-child td{border-bottom:none;}
     <div class="topbar-title" id="topbar-title">Dashboard Comercial</div>
     <div class="topbar-actions">
       <span id="sync-ts" style="font-size:11px;color:#aaa"></span>
+      <span id="sync-saving-indicator" style="display:none;font-size:11px;font-weight:700;color:var(--verde);animation:syncPulse 1s infinite alternate">● Salvando...</span>
       <div style="position:relative">
         <div class="topbar-user" onclick="toggleUserMenu()">
           <div class="user-avatar" id="topbar-avatar">AD</div>
@@ -2642,11 +2644,28 @@ function _carregarLocal() {
   }
 }
 function salvarDados() { _salvarLocal(); } // compatibilidade
+function _mostrarIndicadorSalvando(mostrar) {
+  const ind = el('sync-saving-indicator');
+  if (!ind) return;
+  if (mostrar) {
+    ind.style.display = 'inline';
+  } else {
+    ind.style.display = 'none';
+    // Atualiza o timestamp após salvar
+    _atualizarUltimoSalvo();
+  }
+}
+
 function syncAutoSaveHook() {
   _salvarLocal(); // sempre salva localmente
   if(configSync.autoSave && configSync.conectado) {
     clearTimeout(window._syncDebounce);
-    window._syncDebounce = setTimeout(()=>syncPush(true), 1500);
+    // Mostra indicador imediatamente
+    _mostrarIndicadorSalvando(true);
+    window._syncDebounce = setTimeout(async () => {
+      await syncPush(true);
+      _mostrarIndicadorSalvando(false);
+    }, 1500);
   }
 }
 
@@ -3413,7 +3432,8 @@ function pedCalcItem() {
   }
 
   const unitFinal = unitManual || precoRef;
-  if(el('ped-add-total')) el('ped-add-total').value = fmt(unitFinal * qtd);
+  // Total = precoUnit × qtd × (1 - descPct/100)
+  if(el('ped-add-total')) el('ped-add-total').value = fmt(unitFinal * qtd * (1 - descPct/100));
 
   // Badge de origem do preço
   const badge = el('ped-add-preco-badge');
@@ -3450,7 +3470,8 @@ function pedAddItem() {
   const unitManual = parseFloat(unitManualRaw)||0;
   const precoRef = precoTab*(1-descPct/100);
   let precoUnit = unitManual || precoRef;
-  const total = precoUnit*qtd;
+  // Total = precoUnit × qtd × (1 - descPct/100)
+  const total = parseFloat((precoUnit * qtd * (1 - descPct/100)).toFixed(2));
   if(!cod||!desc){alert('Preencha código e descrição.');return;}
   // Avisa sobre preço zero mas deixa inserir (não bloqueia mais com confirm)
   if(precoUnit === 0) {
@@ -3512,21 +3533,24 @@ function pedAtualizarItem(i, campo, valor) {
   const it = pedItens[i]; if(!it) return;
   if(campo === 'qtd') {
     it.qtd = parseFloat(valor)||1;
-    it.total = parseFloat((it.precoUnit * it.qtd).toFixed(2));
+    // Total = precoUnit × qtd × (1 - descPct/100)
+    it.total = parseFloat((it.precoUnit * it.qtd * (1 - (it.descPct||0)/100)).toFixed(2));
   } else if(campo === 'descPct') {
     it.descPct = parseFloat(valor)||0;
-    // Só recalcula precoUnit pelo desconto se precoTab disponível
+    // Se precoTab disponível, recalcula precoUnit pelo desconto
     if(it.precoTab > 0) {
       it.precoUnit = parseFloat((it.precoTab * (1 - it.descPct/100)).toFixed(2));
     }
-    it.total = parseFloat((it.precoUnit * it.qtd).toFixed(2));
+    // Total = precoUnit × qtd × (1 - descPct/100)
+    it.total = parseFloat((it.precoUnit * it.qtd * (1 - it.descPct/100)).toFixed(2));
   } else if(campo === 'precoUnit') {
     it.precoUnit = parsePrecoBR(valor);
     // Recalcula % desconto a partir do novo preço manual (só se precoTab disponível)
     if(it.precoTab > 0) {
       it.descPct = parseFloat(Math.max(0,(1 - it.precoUnit/it.precoTab)*100).toFixed(2));
     }
-    it.total = parseFloat((it.precoUnit * it.qtd).toFixed(2));
+    // Total = precoUnit × qtd × (1 - descPct/100)
+    it.total = parseFloat((it.precoUnit * it.qtd * (1 - (it.descPct||0)/100)).toFixed(2));
   }
   const totEl = el('ped-it-tot-'+i);
   if(totEl) totEl.textContent = fmt(it.total);
@@ -6714,12 +6738,17 @@ function confirmarImport() {
       const temCod = !!(row.cod||'').toString().trim();
       const temGrupo = !!(row.grupo||'').toString().trim();
 
-      // Chave: grupo explícito > produto (agrupa itens) > sequencial (linha individual)
+      // Chave: grupo explícito > produto (agrupa itens por cli+ind+tipo+data+cond) > sequencial (linha individual)
       let chave;
       if(temGrupo) {
         chave = [cli, ind, (row.grupo||'').trim()].join('|');
       } else if(temCod) {
-        chave = [cli, ind, row.data||'', row.cond||'', 'PROD'].join('|');
+        // Agrupa todos os itens do mesmo cliente+indústria+tipo+data+cond num único pedido
+        // Se data/cond estiverem vazios, considera iguais (não separa por linha vazia)
+        const dataKey = (row.data||'').trim() || '__SEMDATA__';
+        const condKey = (row.cond||'').trim() || '__SEMCOND__';
+        const tipoKey = isBonifTipo ? 'bonificacao' : 'venda';
+        chave = [cli, ind, tipoKey, dataKey, condKey].join('|');
       } else {
         // Sem produto e sem grupo: cada linha é um pedido separado
         chave = [cli, ind, row.data||'', row.cond||'', '__SEQ__'+(++_grupoSeq)].join('|');
@@ -10670,7 +10699,7 @@ function atualizarTextoAutoSave(swEl) {
   } catch(e) {}
 })();
 
-console.info('[GestCom v5.1] ✅ Firebase melhorado: indicador salvar, diagnóstico, reconexão automática.');
+console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
 
 </script>
 </body>
