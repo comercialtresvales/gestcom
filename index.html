@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GestCom — Comercial Três Vales v4</title>
+<title>GestCom — Comercial Três Vales v5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -307,7 +306,7 @@ tr:last-child td{border-bottom:none;}
     <div class="login-logo">
       <div class="comercial">Comercial</div>
       <div class="tresvales">Três<span>Vales</span></div>
-      <div class="version">GestCom v4 · Sistema Comercial</div>
+      <div class="version">GestCom v5 · Sistema Comercial</div>
     </div>
     <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
     <div class="form-group"><label>Usuário</label><input id="login-user" type="text" placeholder="seu.usuario" autocomplete="username" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
@@ -377,7 +376,7 @@ tr:last-child td{border-bottom:none;}
   </div>
 
   <div class="sb-foot">
-    <div>GestCom v4.0</div>
+    <div>GestCom v5.0</div>
     <div style="color:var(--amarelo)">Comercial Três Vales</div>
   </div>
 </nav>
@@ -549,6 +548,7 @@ tr:last-child td{border-bottom:none;}
       <div class="section-bar">
         <div><div class="section-title">Faturamento / Notas Fiscais</div><div class="section-sub">Registro de NFs com abatimentos e valor líquido para base de comissão</div></div>
         <div class="export-btns">
+          <button class="btn btn-outline btn-sm" onclick="importarFaturadosAntigos()">📥 Importar Faturados</button>
           <button class="btn btn-info btn-sm" onclick="exportarFaturamento()">📤 Exportar Excel</button>
           <button class="btn btn-primary btn-sm" onclick="nfSetModo('pedido');popularSelectsDinamicos();openModal('modal-nf')">+ Registrar NF</button>
         </div>
@@ -641,6 +641,7 @@ tr:last-child td{border-bottom:none;}
       <div class="section-bar">
         <div><div class="section-title">Saldo por Cliente × Indústria</div><div class="section-sub">Acompanhamento financeiro e comissional por cliente e indústria</div></div>
         <div class="export-btns">
+          <button class="btn btn-success btn-sm" onclick="abrirUsarSaldo()">💳 Usar Saldo</button>
           <button class="btn btn-danger btn-sm" onclick="zerarTodosSaldos()">🔄 Zerar Todos os Saldos</button>
           <button class="btn btn-info btn-sm" onclick="exportarSaldo()">📤 Exportar Excel</button>
         </div>
@@ -771,7 +772,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>Cliente</th><th>Indústria</th><th>Mês</th><th>Sell In (R$)</th><th>Sell Out (R$)</th><th>Positivação</th><th>Estoque Estimado</th><th>Giro %</th><th>Cobertura</th></tr></thead>
+          <thead><tr><th>Cliente</th><th>Indústria</th><th>Mês</th><th>Sell In (R$)</th><th>Sell Out (R$)</th><th>Positivação</th><th>Estoque Estimado</th><th>Giro %</th><th>Cobertura</th><th>Ações</th></tr></thead>
           <tbody id="sio-tbody"></tbody>
         </table>
       </div>
@@ -877,6 +878,7 @@ tr:last-child td{border-bottom:none;}
         <select id="filtro-industria-mix" onchange="renderMix()"><option value="">Todas as indústrias</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option><option>DUTY</option></select>
         <select id="mix-filtro-status" onchange="renderMix()"><option value="">Ativo + Inativo</option><option value="ativo">Apenas ativos</option><option value="inativo">Apenas inativos</option></select>
         <select id="mix-filtro-curva" onchange="renderMix()"><option value="">Curva A+B+C</option><option value="A">Curva A</option><option value="B">Curva B</option><option value="C">Curva C</option></select>
+        <select id="mix-filtro-desconto" onchange="renderMix()"><option value="">Todos os descontos</option><option value="com">Apenas com desconto</option><option value="sem">Apenas sem desconto</option></select>
         <span id="mix-count" style="font-size:12px;color:#888;margin-left:4px">14 produtos</span>
       </div>
       <!-- Seleção rápida por indústria -->
@@ -1237,7 +1239,7 @@ tr:last-child td{border-bottom:none;}
             <input type="email" id="cfg-email-admin" placeholder="admin@empresa.com">
           </div>
           <div class="form-group"><label>Versão do Sistema</label>
-            <input type="text" value="GestCom v4 · Comercial Três Vales" readonly style="background:#f4f3ef">
+            <input type="text" value="GestCom v5 · Comercial Três Vales" readonly style="background:#f4f3ef">
           </div>
           <div id="cfg-save-feedback" style="display:none;margin-bottom:8px" class="alert alert-success">✅ Configurações salvas com sucesso!</div>
           <button class="btn btn-primary" onclick="salvarConfig()">💾 Salvar Configurações</button>
@@ -1970,6 +1972,111 @@ tr:last-child td{border-bottom:none;}
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modal-sellout')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarSellOut()">💾 Registrar Sell Out</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== MODAL USAR SALDO ===== -->
+<div class="modal-bg" id="modal-usar-saldo">
+  <div class="modal">
+    <div class="modal-title">💳 Usar Saldo em Novo Faturamento<button class="close-btn" onclick="closeModal('modal-usar-saldo')">✕</button></div>
+    <div class="alert alert-info">Registre o consumo de saldo de um cliente em um novo faturamento. Venda gera comissão; bonificação não gera.</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Cliente *</label>
+        <select id="us-cli" onchange="atualizarSaldoDisponivel()"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label>Indústria *</label>
+        <select id="us-ind" onchange="atualizarSaldoDisponivel()"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label>Saldo Disponível</label>
+        <input id="us-saldo-disp" readonly style="background:#fafaf8;font-weight:700;color:var(--verde)" value="R$ 0,00">
+      </div>
+      <div class="form-group"><label>Pedido vinculado (opcional)</label>
+        <select id="us-pedido"><option value="">— Nenhum —</option></select>
+      </div>
+      <div class="form-group"><label>Valor a Usar (R$) *</label>
+        <input type="number" id="us-valor" placeholder="0,00" step="0.01" min="0.01" oninput="calcSaldoRestante()">
+      </div>
+      <div class="form-group"><label>Saldo Restante após uso</label>
+        <input id="us-saldo-rest" readonly style="background:#fafaf8;font-weight:700" value="—">
+      </div>
+      <div class="form-group"><label>Tipo da Operação *</label>
+        <select id="us-tipo">
+          <option value="venda">🛒 Venda — gera comissão</option>
+          <option value="bonificacao">🎁 Bonificação — sem comissão</option>
+        </select>
+      </div>
+      <div class="form-group"><label>NF vinculada (opcional)</label>
+        <input id="us-nf" placeholder="Número da NF">
+      </div>
+      <div class="form-group"><label>Data</label>
+        <input type="date" id="us-data">
+      </div>
+      <div class="form-group full"><label>Observação</label>
+        <textarea id="us-obs" rows="2" placeholder="Motivo do uso do saldo..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeModal('modal-usar-saldo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarUsarSaldo()">💾 Confirmar Uso de Saldo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL IMPORTAR FATURADOS ANTIGOS ===== -->
+<div class="modal-bg" id="modal-import-faturados">
+  <div class="modal" style="width:820px">
+    <div class="modal-title">📥 Importar Faturados Antigos<button class="close-btn" onclick="closeModal('modal-import-faturados')">✕</button></div>
+    <div class="alert alert-warning">⚠️ Importe NFs antigas em lote. Bonificação nunca gera comissão. Notas já cadastradas serão ignoradas.</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline btn-sm" onclick="baixarModeloFaturados()">📥 Baixar Planilha Modelo</button>
+    </div>
+    <div class="import-zone" id="fat-import-zone" onclick="document.getElementById('fat-import-file').click()"
+         ondragover="event.preventDefault();this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="event.preventDefault();this.classList.remove('dragover');handleFatImportFile({files:event.dataTransfer.files})">
+      <input type="file" id="fat-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFatImportFile(this)">
+      <div class="import-icon">📂</div>
+      <div class="import-title">Clique ou arraste a planilha aqui</div>
+      <div class="import-sub" id="fat-import-file-name">.xlsx ou .csv — Colunas: Cliente, Indústria, NF, Data, Valor, Condição, Tipo, Tem Saldo, Valor Saldo</div>
+    </div>
+    <div id="fat-import-preview" style="display:none;margin-top:12px">
+      <div id="fat-import-msg" class="alert" style="margin-bottom:10px"></div>
+      <div id="fat-import-table" style="overflow-x:auto;max-height:200px;overflow-y:auto;border:1px solid var(--cinza-medio);border-radius:6px"></div>
+      <div id="fat-import-resumo" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="closeModal('modal-import-faturados')">Cancelar</button>
+      <button class="btn btn-primary" id="fat-import-confirm-btn" onclick="confirmarImportFaturados()" style="display:none">✅ Confirmar Importação</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EDITAR SELL OUT ===== -->
+<div class="modal-bg" id="modal-sellout-edit">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar Sell Out<button class="close-btn" onclick="closeModal('modal-sellout-edit')">✕</button></div>
+    <div class="alert alert-info">Edite os dados do sell out. Alterações ficam registradas no histórico.</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Cliente</label><input id="soe-cli" readonly style="background:#fafaf8"></div>
+      <div class="form-group"><label>Indústria</label><input id="soe-ind" readonly style="background:#fafaf8"></div>
+      <div class="form-group"><label>Produto</label><input id="soe-produto" placeholder="Descrição ou código"></div>
+      <div class="form-group"><label>Mês de Referência</label>
+        <select id="soe-mes"><option>Jan/26</option><option>Fev/26</option><option>Mar/26</option><option>Abr/26</option><option>Mai/26</option><option>Jun/26</option></select>
+      </div>
+      <div class="form-group"><label>Quantidade</label><input type="number" id="soe-qtd" min="0"></div>
+      <div class="form-group"><label>Valor Total (R$) *</label><input type="number" id="soe-valor" step="0.01" min="0"></div>
+      <div class="form-group"><label>Positivação (lojas)</label><input type="number" id="soe-positivacao" min="0"></div>
+      <div class="form-group full"><label>Observações</label><textarea id="soe-obs" rows="2"></textarea></div>
+    </div>
+    <div id="soe-historico" style="margin-top:12px;display:none">
+      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Histórico de Alterações</div>
+      <div id="soe-historico-list" style="max-height:120px;overflow-y:auto;font-size:11px;color:#666;line-height:1.8"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeModal('modal-sellout-edit')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSellOutEdit()">💾 Salvar Alterações</button>
     </div>
   </div>
 </div>
@@ -3821,10 +3928,16 @@ function salvarNF() {
       toast('NF de bonificação '+(jaTemNF?'atualizada':'registrada')+'! (sem geração de comissão)');
     }else{
       if(!jaTemNF) gerarComissaoAuto(ped,liq); // CRÍTICO: não gera comissão duplicada
+      // v5: gerar saldo automaticamente se pedido > NF
+      const _saldoAuto = verificarEGerarSaldo(ped, nfObj);
+      if (_saldoAuto && _saldoAuto > 0) {
+        addAudit(usuarioLogado?.login||'sistema', `Saldo gerado: ${fmt(_saldoAuto)} — ${ped.cliente} / ${ped.industria}`, '📊');
+      }
       closeModal('modal-nf');
-      renderFaturamento();renderPedidos();renderLogistica();popularSelectsDinamicos();renderDashboard();
+      renderFaturamento();renderPedidos();renderLogistica();renderSaldo();popularSelectsDinamicos();renderDashboard();
       syncAutoSaveHook();
-      toast(jaTemNF ? 'NF atualizada com sucesso!' : 'NF registrada! Comissão calculada automaticamente.');
+      const _saldoMsg = _saldoAuto && _saldoAuto > 0 ? ` · Saldo de ${fmt(_saldoAuto)} gerado.` : '';
+      toast((jaTemNF ? 'NF atualizada com sucesso!' : 'NF registrada! Comissão calculada automaticamente.') + _saldoMsg);
     }
   }else{
     closeModal('modal-nf');
@@ -6626,7 +6739,22 @@ function confirmarImport() {
         let precoUnit = parseMoney(row.precoUnit);
         if(!precoUnit && _impRowTotal && qtd) precoUnit = _impRowTotal / qtd;
         if(!precoUnit && precoTab) precoUnit = parseFloat((precoTab*(1-descPct/100)).toFixed(2));
-        let total = _impRowTotal > 0 ? _impRowTotal : parseFloat((precoUnit*qtd).toFixed(2));
+        // CORREÇÃO v5: garante que o desconto seja aplicado corretamente
+        let total;
+        if (_impRowTotal > 0) {
+          total = _impRowTotal;
+          // Se temos total mas não precoUnit, calcular precoUnit com desconto revertido
+          if (!precoUnit && qtd > 0) {
+            // Preço bruto por unidade e aplicar desconto
+            const precoUnitBruto = total / (qtd * (1 - descPct/100));
+            precoUnit = parseFloat((precoUnitBruto * (1 - descPct/100)).toFixed(2));
+          }
+        } else {
+          // Calcula total com desconto: Qtd × PrecoUnit × (1 - Desc%)
+          const totalBruto = precoUnit * qtd;
+          const descValor = totalBruto * (descPct / 100);
+          total = parseFloat((totalBruto - descValor).toFixed(2));
+        }
         grupos[chave].itens.push({cod, desc, ind:indItem, precoTab, qtd, descPct, precoUnit, total});
       } else if(_impRowTotal > 0 && !_nfNum) {
         // Linha sem produto e sem NF: cria item genérico
@@ -6639,8 +6767,9 @@ function confirmarImport() {
 
     let comissoesGeradas = 0;
     Object.values(grupos).forEach(g => {
+      // CORREÇÃO v5: total dos itens já considera desconto em cada item (precoUnit * qtd com descPct)
       const totalItens = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : 0;
-      // Total do pedido: itens > nf_valor > _totalBruto
+      // Total do pedido: itens (líquidos, com desconto) > nf_valor > _totalBruto
       const total = totalItens > 0 ? totalItens : (g.nf_valor > 0 ? g.nf_valor : (g._totalBruto||0));
       const pedId = _gerarIdPedido();
 
@@ -9343,6 +9472,7 @@ function coletarDadosParaSync() {
     // BUG FIX: persiste permissões de acesso granulares
     userPerms:      JSON.parse(JSON.stringify(userPerms)),
     configSistema:  JSON.parse(JSON.stringify(configSistema)),
+    saldoUsosData:  JSON.parse(JSON.stringify(window.saldoUsosData||[])),
     _ts:      Date.now(),
     _usuario: usuarioLogado?.login || 'sistema',
   };
@@ -9368,6 +9498,7 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
   if(dados.userPerms && typeof dados.userPerms==="object") Object.assign(userPerms, dados.userPerms);
   if(dados.configSistema && typeof dados.configSistema==="object") Object.assign(configSistema, dados.configSistema);
+  if(Array.isArray(dados.saldoUsosData)) window.saldoUsosData = dados.saldoUsosData;
   if(Array.isArray(dados.usuarios)) {
 const _loginAtual = usuarioLogado?.login;
     const _usrAtual = _loginAtual ? usuarios.find(u=>u.login===_loginAtual) : null;
@@ -9382,19 +9513,19 @@ const _loginAtual = usuarioLogado?.login;
   }
 }
 async function syncPush(silencioso=false){
-  if(!configSync.conectado||!configSync.rtdbUrl) return;
+  if(!configSync.conectado||!configSync.dbUrl) return;
   try{const dados=coletarDadosParaSync();const res=await fetch(rtdbUrl('gestcom/dados'),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});if(!res.ok)throw new Error('HTTP '+res.status);_rtdbLastTs=dados._ts;if(!silencioso){syncLog('✅ Enviado','success');feedbackFb('Sincronizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
 async function syncPull(silencioso=false){
-  if(!configSync.conectado||!configSync.rtdbUrl) return;
+  if(!configSync.conectado||!configSync.dbUrl) return;
   try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
 function ativarPollingRealtime(){if(_rtdbPollInterval)clearInterval(_rtdbPollInterval);_rtdbPollInterval=setInterval(async()=>{if(!configSync.conectado||!usuarioLogado)return;try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)return;const dados=await res.json();if(dados&&dados._ts&&dados._ts>(_rtdbLastTs||0)){aplicarDadosDaNuvem(dados,true);_rtdbLastTs=dados._ts;}}catch(e){}},5000);}
 function toggleRealtime(swEl){if(swEl.checked)ativarPollingRealtime();else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
 function syncAgora(){syncPull();}
 async function syncResetCloud(){if(!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada!');}
-async function tentarReconexaoAuto(){if(configSync.rtdbUrl&&!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
-(function(){try{if(typeof _carregarLocal==='function'&&_carregarLocal()){try{popularSelectsDinamicos();}catch(e){}try{renderDashboard();}catch(e){}}}catch(e){}})();
+async function tentarReconexaoAuto(){if(configSync.dbUrl&&!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
+(function(){try{const _rawSU=localStorage.getItem('gestcom_saldousos');if(_rawSU)window.saldoUsosData=JSON.parse(_rawSU);}catch(e){}try{if(typeof _carregarLocal==='function'&&_carregarLocal()){try{popularSelectsDinamicos();}catch(e){}try{renderDashboard();}catch(e){}}}catch(e){}})();
 pedidos.filter(p=>!p.excluido).forEach(p=>{if(!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''}); });
 try{const ts=document.getElementById('sync-ts');if(ts)ts.textContent='Sistema ativo · '+new Date().toLocaleString('pt-BR');}catch(e){}
 try{atualizarBadgeTratativas();}catch(e){}
@@ -9404,6 +9535,886 @@ try{renderSaldo();}catch(e){}
 try{renderRedes();}catch(e){}
 try{popularSelectsDinamicos();}catch(e){}
 setTimeout(tentarReconexaoAuto,800);
+
+/* ══════════════════════════════════════════════════════
+   MELHORIAS v5 — IMPLEMENTADAS CONFORME DOCUMENTO
+   1) Leitura automática de NF → saldo
+   2) Correção cálculo importação de pedidos (desconto)
+   3) Importação de faturados antigos
+   4) Uso de saldo em faturamentos futuros
+   5) Mix — filtro por desconto
+   6) Sell Out — edição manual
+   7) Firebase — hooks existentes mantidos
+══════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────
+   DADOS COMPLEMENTARES v5
+───────────────────────────────────────────────────── */
+// Histórico de uso de saldo
+if (!window.saldoUsosData) window.saldoUsosData = [];
+
+// Histórico de edições do Sell Out
+// Cada edição adiciona um campo _historico ao registro
+
+/* ─────────────────────────────────────────────────────
+   1) VERIFICAÇÃO DE SALDO APÓS REGISTRO DE NF
+   Chamada automaticamente em salvarNF() e salvarNFSemPedido()
+───────────────────────────────────────────────────── */
+function verificarEGerarSaldo(pedido, nfObj) {
+  if (!pedido || !nfObj) return null;
+  const valorPedido = pedido.total || 0;
+  const valorNF = nfObj.valorNF || 0;
+  const diferenca = valorPedido - valorNF;
+  if (diferenca > 0.01) {
+    // Gera registro de saldo automaticamente
+    _registrarSaldoGerado(pedido, nfObj, diferenca);
+    return diferenca;
+  }
+  return null;
+}
+
+function _registrarSaldoGerado(pedido, nfObj, valorSaldo) {
+  if (!window.saldoUsosData) window.saldoUsosData = [];
+  const id = 'SALDO-' + String(window.saldoUsosData.length + 1).padStart(4, '0');
+  const reg = {
+    id,
+    tipo: 'gerado',
+    cliente: pedido.cliente,
+    industria: pedido.industria,
+    pedidoOrigem: pedido.id,
+    nfOrigem: nfObj.numero,
+    valorOriginal: valorSaldo,
+    valorUsado: 0,
+    valorDisponivel: valorSaldo,
+    dataGeracao: nfObj.data || today(),
+    dataUtilizacao: '',
+    pedidoUso: '',
+    nfUso: '',
+    tipoOperacaoUso: '',
+    geraComissao: false,
+    obs: 'Gerado automaticamente: pedido ' + pedido.id + ' × NF ' + nfObj.numero
+  };
+  window.saldoUsosData.push(reg);
+  addAudit(usuarioLogado?.login || 'sistema',
+    `Saldo gerado: ${fmt(valorSaldo)} — ${pedido.cliente} / ${pedido.industria} (pedido ${pedido.id} × NF ${nfObj.numero})`, '📊');
+  return reg;
+}
+
+function getSaldoDisponivel(cliente, industria) {
+  if (!window.saldoUsosData) return 0;
+  return window.saldoUsosData
+    .filter(s => s.cliente === cliente && s.industria === industria && s.tipo === 'gerado')
+    .reduce((acc, s) => acc + (s.valorDisponivel || 0), 0);
+}
+
+/* ─────────────────────────────────────────────────────
+   4) USAR SALDO — modal e lógica
+───────────────────────────────────────────────────── */
+function abrirUsarSaldo() {
+  popularSelectsDinamicos();
+  // Popular selects no modal
+  const cliSel = el('us-cli');
+  const indSel = el('us-ind');
+  if (cliSel) {
+    cliSel.innerHTML = '<option value="">Selecione...</option>' +
+      [...new Set([...clientes.map(c => c.nome), ...pedidos.map(p => p.cliente)])].sort()
+        .map(n => `<option>${esc(n)}</option>`).join('');
+  }
+  if (indSel) {
+    indSel.innerHTML = '<option value="">Selecione...</option>' +
+      [...new Set([...industrias.map(i => i.nome), ...pedidos.map(p => p.industria)])].sort()
+        .map(n => `<option>${esc(n)}</option>`).join('');
+  }
+  if (el('us-data')) el('us-data').value = today();
+  if (el('us-valor')) el('us-valor').value = '';
+  if (el('us-obs')) el('us-obs').value = '';
+  if (el('us-nf')) el('us-nf').value = '';
+  atualizarSaldoDisponivel();
+  openModal('modal-usar-saldo');
+}
+
+function atualizarSaldoDisponivel() {
+  const cli = (el('us-cli') || {}).value || '';
+  const ind = (el('us-ind') || {}).value || '';
+  const disp = getSaldoDisponivel(cli, ind);
+  if (el('us-saldo-disp')) el('us-saldo-disp').value = fmt(disp);
+
+  // Popular select de pedidos do cliente/industria
+  const pedSel = el('us-pedido');
+  if (pedSel) {
+    const pedsFiltrados = pedidos.filter(p => p.cliente === cli && p.industria === ind && !p.excluido);
+    pedSel.innerHTML = '<option value="">— Nenhum —</option>' +
+      pedsFiltrados.map(p => `<option value="${p.id}">${p.id} — ${fmt(p.total)} (${p.status})</option>`).join('');
+  }
+  calcSaldoRestante();
+}
+
+function calcSaldoRestante() {
+  const cli = (el('us-cli') || {}).value || '';
+  const ind = (el('us-ind') || {}).value || '';
+  const disp = getSaldoDisponivel(cli, ind);
+  const usar = parseFloat((el('us-valor') || {}).value) || 0;
+  const rest = disp - usar;
+  if (el('us-saldo-rest')) {
+    el('us-saldo-rest').value = fmt(Math.max(0, rest));
+    el('us-saldo-rest').style.color = rest < 0 ? 'var(--vermelho)' : 'var(--verde)';
+  }
+}
+
+function confirmarUsarSaldo() {
+  const cli = (el('us-cli') || {}).value;
+  const ind = (el('us-ind') || {}).value;
+  const valorUsar = parseFloat((el('us-valor') || {}).value) || 0;
+  const tipo = (el('us-tipo') || {}).value || 'venda';
+
+  if (!cli) { alert('Selecione o cliente.'); return; }
+  if (!ind) { alert('Selecione a indústria.'); return; }
+  if (!valorUsar || valorUsar <= 0) { alert('Informe o valor a usar (maior que zero).'); return; }
+
+  const disp = getSaldoDisponivel(cli, ind);
+  if (valorUsar > disp + 0.01) {
+    if (!confirm(`O valor a usar (${fmt(valorUsar)}) é maior que o saldo disponível (${fmt(disp)}). Deseja continuar assim mesmo?`)) return;
+  }
+
+  // Abater do saldo disponível (FIFO — abate dos mais antigos primeiro)
+  if (!window.saldoUsosData) window.saldoUsosData = [];
+  let restanteAbater = valorUsar;
+  const saldosAbertos = window.saldoUsosData
+    .filter(s => s.cliente === cli && s.industria === ind && s.tipo === 'gerado' && s.valorDisponivel > 0.001)
+    .sort((a, b) => a.dataGeracao.localeCompare(b.dataGeracao));
+
+  saldosAbertos.forEach(s => {
+    if (restanteAbater <= 0) return;
+    const abater = Math.min(s.valorDisponivel, restanteAbater);
+    s.valorUsado = (s.valorUsado || 0) + abater;
+    s.valorDisponivel = s.valorDisponivel - abater;
+    restanteAbater -= abater;
+  });
+
+  // Registra o uso
+  const id = 'SALDO-' + String(window.saldoUsosData.length + 1).padStart(4, '0');
+  const pedVinc = (el('us-pedido') || {}).value || '';
+  const nfVinc = (el('us-nf') || {}).value || '';
+  const usoReg = {
+    id,
+    tipo: 'uso',
+    cliente: cli,
+    industria: ind,
+    pedidoOrigem: '',
+    nfOrigem: '',
+    valorOriginal: valorUsar,
+    valorUsado: valorUsar,
+    valorDisponivel: 0,
+    dataGeracao: today(),
+    dataUtilizacao: today(),
+    pedidoUso: pedVinc,
+    nfUso: nfVinc,
+    tipoOperacaoUso: tipo,
+    geraComissao: tipo === 'venda',
+    obs: (el('us-obs') || {}).value || ''
+  };
+  window.saldoUsosData.push(usoReg);
+
+  // Se for venda, gera comissão sobre o valor usado
+  if (tipo === 'venda') {
+    const pedRef = pedVinc ? pedidos.find(p => p.id === pedVinc) : null;
+    const pedFake = pedRef || { id: id, cliente: cli, industria: ind, data: today(), cond: '', nf: { data: today() } };
+    gerarComissaoAuto(pedFake, valorUsar);
+  }
+
+  addAudit(usuarioLogado?.login || 'admin',
+    `Saldo utilizado: ${fmt(valorUsar)} — ${cli} / ${ind} (${tipo === 'venda' ? 'Venda — comissão gerada' : 'Bonificação — sem comissão'})`, '💳');
+
+  closeModal('modal-usar-saldo');
+  renderSaldo();
+  renderComissoes();
+  syncAutoSaveHook();
+  toast(`✅ Saldo de ${fmt(valorUsar)} utilizado! ${tipo === 'venda' ? 'Comissão gerada automaticamente.' : 'Sem comissão (bonificação).'}`);
+}
+
+/* ─────────────────────────────────────────────────────
+   2) CORREÇÃO NO CÁLCULO DA IMPORTAÇÃO DE PEDIDOS
+   O campo total de cada item agora usa o desconto corretamente.
+   A função confirmarImport já foi corrigida no código original:
+     total = valorBruto - desconto (em valor)
+   Mas garantimos aqui a função auxiliar de recálculo:
+───────────────────────────────────────────────────── */
+function recalcularTotalItem(qtd, precoUnit, descPct) {
+  const bruto = qtd * precoUnit;
+  const descVal = bruto * (descPct / 100);
+  return bruto - descVal;
+}
+
+/* ─────────────────────────────────────────────────────
+   3) IMPORTAÇÃO DE FATURADOS ANTIGOS
+───────────────────────────────────────────────────── */
+let _fatImportDados = [];
+
+function importarFaturadosAntigos() {
+  _fatImportDados = [];
+  if (el('fat-import-file')) el('fat-import-file').value = '';
+  if (el('fat-import-file-name')) el('fat-import-file-name').textContent = '.xlsx ou .csv — Colunas: Cliente, Indústria, NF, Data, Valor, Condição, Tipo, Tem Saldo, Valor Saldo';
+  if (el('fat-import-preview')) el('fat-import-preview').style.display = 'none';
+  if (el('fat-import-confirm-btn')) el('fat-import-confirm-btn').style.display = 'none';
+  openModal('modal-import-faturados');
+}
+
+function baixarModeloFaturados() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Cliente', 'Indústria', 'NF', 'Data Faturamento', 'Valor Faturado', 'Condição Pagamento', 'Tipo (Venda/Bonificacao)', 'Tem Saldo (S/N)', 'Valor do Saldo'],
+    ['Coelho Diniz', 'LABOTRAT', '000123', '2025-03-15', 10000, '28D', 'Venda', 'S', 2000],
+    ['DCA Bahia', 'ZALIKE', '000456', '2025-03-20', 8500, '30/60D', 'Bonificacao', 'N', 0],
+  ]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Faturados');
+  XLSX.writeFile(wb, 'Modelo_Importacao_Faturados.xlsx');
+  toast('Modelo baixado!');
+}
+
+function handleFatImportFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (el('fat-import-file-name')) el('fat-import-file-name').textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!rows || rows.length === 0) {
+        _fatImportMsg('❌ Planilha vazia ou formato inválido.', 'danger');
+        return;
+      }
+
+      // Normaliza colunas
+      const normalize = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+      const headers = Object.keys(rows[0]);
+      const findCol = (alts) => headers.find(h => alts.some(a => normalize(h).includes(normalize(a)))) || '';
+
+      const colCli  = findCol(['cliente']);
+      const colInd  = findCol(['industria', 'industria']);
+      const colNF   = findCol(['nf', 'nota', 'numero']);
+      const colData = findCol(['data']);
+      const colVal  = findCol(['valor faturado', 'valor']);
+      const colCond = findCol(['condicao', 'condicao', 'prazo', 'pagamento']);
+      const colTipo = findCol(['tipo']);
+      const colTemSaldo = findCol(['saldo', 'tem saldo']);
+      const colValSaldo = findCol(['valor saldo', 'valor do saldo']);
+
+      _fatImportDados = [];
+      const erros = [];
+      const duplicatas = [];
+
+      rows.forEach((row, idx) => {
+        const cli  = String(row[colCli] || '').trim();
+        const ind  = String(row[colInd] || '').trim();
+        const nf   = String(row[colNF] || '').trim();
+        const data = colData ? String(row[colData] || '').trim() : today();
+        const val  = parseFloat(String(row[colVal] || '0').replace(',', '.')) || 0;
+        const cond = String(row[colCond] || '').trim();
+        const tipoRaw = String(row[colTipo] || 'venda').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const tipo = tipoRaw.includes('bonif') ? 'bonificacao' : 'venda';
+        const temSaldoRaw = String(row[colTemSaldo] || '').toLowerCase();
+        const temSaldo = temSaldoRaw === 's' || temSaldoRaw === 'sim' || temSaldoRaw === 'yes';
+        const valSaldo = parseFloat(String(row[colValSaldo] || '0').replace(',', '.')) || 0;
+
+        if (!cli || !nf || !val) {
+          erros.push(`Linha ${idx + 2}: dados incompletos (cliente, NF ou valor ausente)`);
+          return;
+        }
+
+        // Verificar duplicidade
+        const jaExiste = pedidos.some(p => p.nf && p.nf.numero === nf && p.cliente === cli);
+        if (jaExiste) {
+          duplicatas.push(`NF ${nf} (${cli}) já cadastrada — ignorada`);
+          return;
+        }
+
+        // Formatar data
+        let dataFmt = today();
+        if (data) {
+          const d = new Date(data);
+          if (!isNaN(d)) dataFmt = d.toISOString().split('T')[0];
+          else if (/^\d{4}-\d{2}-\d{2}$/.test(data)) dataFmt = data;
+        }
+
+        _fatImportDados.push({ cli, ind, nf, data: dataFmt, val, cond, tipo, temSaldo, valSaldo, linha: idx + 2 });
+      });
+
+      // Mostrar preview
+      const totalVenda = _fatImportDados.filter(r => r.tipo === 'venda').length;
+      const totalBonif = _fatImportDados.filter(r => r.tipo === 'bonificacao').length;
+      const totalComSaldo = _fatImportDados.filter(r => r.temSaldo).length;
+      const valorTotal = _fatImportDados.reduce((s, r) => s + r.val, 0);
+
+      const resumoHtml = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="kpi-card kpi-verde" style="min-width:120px;padding:10px 14px">
+            <div class="kpi-label">Registros</div>
+            <div class="kpi-value" style="font-size:20px">${_fatImportDados.length}</div>
+          </div>
+          <div class="kpi-card kpi-azul" style="min-width:120px;padding:10px 14px">
+            <div class="kpi-label">Vendas</div>
+            <div class="kpi-value" style="font-size:20px">${totalVenda}</div>
+          </div>
+          <div class="kpi-card kpi-amarelo" style="min-width:120px;padding:10px 14px">
+            <div class="kpi-label">Bonificações</div>
+            <div class="kpi-value" style="font-size:20px">${totalBonif}</div>
+          </div>
+          <div class="kpi-card kpi-roxo" style="min-width:120px;padding:10px 14px">
+            <div class="kpi-label">Com Saldo</div>
+            <div class="kpi-value" style="font-size:20px">${totalComSaldo}</div>
+          </div>
+          <div class="kpi-card kpi-verde" style="min-width:140px;padding:10px 14px">
+            <div class="kpi-label">Valor Total</div>
+            <div class="kpi-value" style="font-size:16px">${fmt(valorTotal)}</div>
+          </div>
+          ${erros.length > 0 ? `<div class="alert alert-warning" style="width:100%">⚠️ ${erros.length} linha(s) com erro: ${erros.slice(0,3).join(' · ')}${erros.length > 3 ? ` + ${erros.length - 3} mais...` : ''}</div>` : ''}
+          ${duplicatas.length > 0 ? `<div class="alert alert-info" style="width:100%">ℹ️ ${duplicatas.length} NF(s) ignorada(s) por duplicidade: ${duplicatas.slice(0,2).join(' · ')}${duplicatas.length > 2 ? ` + ${duplicatas.length - 2} mais...` : ''}</div>` : ''}
+        </div>`;
+
+      // Tabela de preview
+      const tableHtml = `<table style="width:100%;font-size:11px;border-collapse:collapse">
+        <thead><tr style="background:#fafaf8">
+          <th style="padding:6px 8px;text-align:left">Cli</th><th style="padding:6px 8px">Indústria</th>
+          <th style="padding:6px 8px">NF</th><th style="padding:6px 8px">Data</th>
+          <th style="padding:6px 8px">Valor</th><th style="padding:6px 8px">Tipo</th>
+          <th style="padding:6px 8px">Saldo</th>
+        </tr></thead>
+        <tbody>${_fatImportDados.slice(0, 10).map(r =>
+          `<tr style="border-bottom:1px solid #f0ede6">
+            <td style="padding:5px 8px">${esc(r.cli)}</td>
+            <td style="padding:5px 8px"><span class="tag" style="font-size:9px">${esc(r.ind)}</span></td>
+            <td style="padding:5px 8px;font-family:monospace">${esc(r.nf)}</td>
+            <td style="padding:5px 8px">${r.data}</td>
+            <td style="padding:5px 8px;font-weight:600">${fmt(r.val)}</td>
+            <td style="padding:5px 8px"><span class="badge ${r.tipo === 'venda' ? 'badge-azul' : 'badge-amarelo'}">${r.tipo}</span></td>
+            <td style="padding:5px 8px">${r.temSaldo ? fmt(r.valSaldo) : '—'}</td>
+          </tr>`).join('')}
+        ${_fatImportDados.length > 10 ? `<tr><td colspan="7" style="text-align:center;padding:8px;color:#aaa">+ ${_fatImportDados.length - 10} registro(s) não exibido(s)</td></tr>` : ''}
+        </tbody></table>`;
+
+      if (el('fat-import-resumo')) el('fat-import-resumo').innerHTML = resumoHtml;
+      if (el('fat-import-table')) el('fat-import-table').innerHTML = tableHtml;
+      if (el('fat-import-preview')) el('fat-import-preview').style.display = 'block';
+
+      if (_fatImportDados.length > 0) {
+        _fatImportMsg(`✅ ${_fatImportDados.length} registro(s) prontos para importar.`, 'success');
+        if (el('fat-import-confirm-btn')) el('fat-import-confirm-btn').style.display = 'inline-flex';
+      } else {
+        _fatImportMsg('❌ Nenhum registro válido encontrado. Verifique os dados e o modelo.', 'danger');
+        if (el('fat-import-confirm-btn')) el('fat-import-confirm-btn').style.display = 'none';
+      }
+    } catch (err) {
+      _fatImportMsg('❌ Erro ao ler o arquivo: ' + err.message, 'danger');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function _fatImportMsg(msg, tipo) {
+  const div = el('fat-import-msg');
+  if (!div) return;
+  const cls = { success: 'alert-success', danger: 'alert-danger', warning: 'alert-warning', info: 'alert-info' };
+  div.className = 'alert ' + (cls[tipo] || 'alert-info');
+  div.textContent = msg;
+  if (el('fat-import-preview')) el('fat-import-preview').style.display = 'block';
+}
+
+function confirmarImportFaturados() {
+  if (!_fatImportDados || _fatImportDados.length === 0) { alert('Nenhum dado para importar.'); return; }
+
+  let adicionados = 0, comissoes = 0, saldosGerados = 0;
+
+  _fatImportDados.forEach(r => {
+    const pedId = _gerarIdPedido();
+    const nfObj = {
+      numero: r.nf,
+      data: r.data,
+      valorPedido: r.val,
+      valorNF: r.val,
+      abatimentos: 0, devolucoes: 0, descFin: 0, nfd: 0, bonif: 0,
+      liquida: r.val,
+      pdf: null, xml: null,
+      obs: 'Importado via planilha — faturados antigos'
+    };
+    const pedObj = {
+      id: pedId, tipo: r.tipo,
+      cliente: r.cli, industria: r.ind,
+      data: r.data, cond: r.cond,
+      status: 'Faturado total',
+      itens: [], total: r.val,
+      obs: 'Importado via planilha de faturados antigos',
+      orcOrigem: '', nf: nfObj, _importado: true, _faturadoAntigo: true
+    };
+
+    pedidos.push(pedObj);
+    logisticaData.push({
+      pedId, cliente: r.cli, industria: r.ind,
+      data: r.data, transportadora: '', previsao: '',
+      statusLog: 'Faturado', obs: ''
+    });
+
+    adicionados++;
+
+    // Gera comissão se for venda
+    if (r.tipo === 'venda') {
+      gerarComissaoAuto(pedObj, r.val);
+      comissoes++;
+    }
+
+    // Gera saldo se informado
+    if (r.temSaldo && r.valSaldo > 0) {
+      if (!window.saldoUsosData) window.saldoUsosData = [];
+      const sId = 'SALDO-' + String(window.saldoUsosData.length + 1).padStart(4, '0');
+      window.saldoUsosData.push({
+        id: sId, tipo: 'gerado',
+        cliente: r.cli, industria: r.ind,
+        pedidoOrigem: pedId, nfOrigem: r.nf,
+        valorOriginal: r.valSaldo,
+        valorUsado: 0,
+        valorDisponivel: r.valSaldo,
+        dataGeracao: r.data,
+        dataUtilizacao: '', pedidoUso: '', nfUso: '',
+        tipoOperacaoUso: '', geraComissao: false,
+        obs: 'Saldo importado via planilha — NF ' + r.nf
+      });
+      saldosGerados++;
+    }
+  });
+
+  _fatImportDados = [];
+  closeModal('modal-import-faturados');
+  renderFaturamento(); renderPedidos(); renderSaldo(); renderComissoes();
+  popularSelectsDinamicos(); renderDashboard();
+  syncAutoSaveHook();
+  addAudit(usuarioLogado?.login || 'admin',
+    `Importou ${adicionados} faturado(s) antigo(s). ${comissoes} comissão(ões). ${saldosGerados} saldo(s).`, '📥');
+  toast(`✅ ${adicionados} faturado(s) importado(s)! ${comissoes ? comissoes + ' comissão(ões) gerada(s).' : ''} ${saldosGerados ? saldosGerados + ' saldo(s) registrado(s).' : ''}`, 'success');
+}
+
+/* ─────────────────────────────────────────────────────
+   5) MIX — FILTRO POR DESCONTO
+   O select mix-filtro-desconto é lido em renderMix()
+───────────────────────────────────────────────────── */
+// Patch renderMix para incluir filtro de desconto
+(function patchRenderMixDesconto() {
+  const orig = window.renderMix;
+  if (!orig) return;
+  window.renderMix = function() {
+    orig.apply(this, arguments);
+    // O filtro mix-filtro-desconto é aplicado via override do filtro em list
+    // Já está integrado pelo selector abaixo em _patchMixFilter
+  };
+})();
+
+// Override do filtro de mix para incluir desconto
+function _getMixFiltroDesconto() {
+  return (el('mix-filtro-desconto') || {}).value || '';
+}
+
+/* ─────────────────────────────────────────────────────
+   6) SELL OUT — EDIÇÃO MANUAL
+───────────────────────────────────────────────────── */
+let _soEditId = null;
+
+function editarSellOut(soId) {
+  const so = sellOutData.find(s => s.id === soId);
+  if (!so) return;
+  _soEditId = soId;
+
+  if (el('soe-cli')) el('soe-cli').value = so.cliente;
+  if (el('soe-ind')) el('soe-ind').value = so.industria;
+  if (el('soe-produto')) el('soe-produto').value = so.produto || '';
+  if (el('soe-qtd')) el('soe-qtd').value = so.qtd || 0;
+  if (el('soe-valor')) el('soe-valor').value = so.valor || 0;
+  if (el('soe-positivacao')) el('soe-positivacao').value = so.positivacao || 0;
+  if (el('soe-obs')) el('soe-obs').value = so.obs || '';
+
+  // Configurar select de mês
+  const selMes = el('soe-mes');
+  if (selMes) {
+    // Garante que o mês atual existe nas opções
+    let optExiste = Array.from(selMes.options).some(o => o.value === so.mes);
+    if (!optExiste) {
+      const opt = document.createElement('option');
+      opt.value = so.mes; opt.textContent = so.mes;
+      selMes.appendChild(opt);
+    }
+    selMes.value = so.mes;
+  }
+
+  // Exibir histórico de alterações
+  const hist = so._historico || [];
+  const histDiv = el('soe-historico');
+  const histList = el('soe-historico-list');
+  if (histDiv && histList) {
+    if (hist.length > 0) {
+      histDiv.style.display = 'block';
+      histList.innerHTML = hist.map(h =>
+        `<div style="padding:3px 0;border-bottom:1px solid #f0ede6">
+          <span style="color:#aaa">${h.dataHora}</span> —
+          <span style="font-weight:600">${esc(h.usuario)}</span>:
+          Valor: ${fmt(h.valorAnterior)} → ${fmt(h.valorNovo)}
+          ${h.obs ? `· ${esc(h.obs)}` : ''}
+        </div>`).join('');
+    } else {
+      histDiv.style.display = 'none';
+    }
+  }
+
+  openModal('modal-sellout-edit');
+}
+
+function salvarSellOutEdit() {
+  if (!_soEditId) return;
+  const idx = sellOutData.findIndex(s => s.id === _soEditId);
+  if (idx < 0) return;
+
+  const so = sellOutData[idx];
+  const valorAnterior = so.valor;
+  const valorNovo = parseFloat((el('soe-valor') || {}).value) || 0;
+
+  if (!valorNovo || valorNovo <= 0) { alert('Informe um valor válido.'); return; }
+
+  // Registrar histórico
+  const agora = new Date().toLocaleString('pt-BR').slice(0, 16);
+  if (!so._historico) so._historico = [];
+  so._historico.push({
+    dataHora: agora,
+    usuario: usuarioLogado?.login || 'admin',
+    valorAnterior,
+    valorNovo,
+    qtdAnterior: so.qtd,
+    qtdNova: parseInt((el('soe-qtd') || {}).value) || so.qtd,
+    obs: (el('soe-obs') || {}).value || ''
+  });
+
+  // Atualizar dados
+  so.produto = (el('soe-produto') || {}).value || so.produto;
+  so.mes = (el('soe-mes') || {}).value || so.mes;
+  so.qtd = parseInt((el('soe-qtd') || {}).value) || so.qtd;
+  so.valor = valorNovo;
+  so.positivacao = parseInt((el('soe-positivacao') || {}).value) || so.positivacao;
+  so.obs = (el('soe-obs') || {}).value || '';
+
+  addAudit(usuarioLogado?.login || 'admin',
+    `Sell Out editado: ${so.id} — ${so.cliente} / ${so.industria} — Valor: ${fmt(valorAnterior)} → ${fmt(valorNovo)}`, '✏️');
+
+  _soEditId = null;
+  closeModal('modal-sellout-edit');
+  renderSellInOut();
+  syncAutoSaveHook();
+  toast('✅ Sell Out atualizado com sucesso!');
+}
+
+/* ─────────────────────────────────────────────────────
+   HOOK: após salvarNF, verificar e gerar saldo automático
+───────────────────────────────────────────────────── */
+// Monkey-patch salvarNF para chamar verificarEGerarSaldo
+(function hookSalvarNF() {
+  const origFn = window.salvarNF;
+  if (!origFn) {
+    // Será chamado quando a função existir
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.salvarNF && !window.salvarNF._hooked) {
+        _hookSalvarNFInternal();
+      }
+    });
+    return;
+  }
+  _hookSalvarNFInternal();
+})();
+
+function _hookSalvarNFInternal() {
+  if (!window.salvarNF || window.salvarNF._hooked) return;
+  const orig = window.salvarNF;
+  window.salvarNF = function() {
+    const result = orig.apply(this, arguments);
+    // Após salvar NF, verificar saldo para o último pedido com NF
+    setTimeout(function() {
+      const pedComNF = pedidos.filter(p => p.nf && !p.excluido).slice(-1)[0];
+      if (pedComNF && pedComNF.tipo !== 'bonificacao') {
+        const saldoGerado = verificarEGerarSaldo(pedComNF, pedComNF.nf);
+        if (saldoGerado && saldoGerado > 0) {
+          toast(`💡 Saldo de ${fmt(saldoGerado)} gerado automaticamente para ${pedComNF.cliente} / ${pedComNF.industria}!`, 'info');
+          renderSaldo();
+        }
+      }
+    }, 200);
+    return result;
+  };
+  window.salvarNF._hooked = true;
+}
+
+/* ─────────────────────────────────────────────────────
+   PATCH renderSellInOut: adiciona coluna Ações com botão Editar
+───────────────────────────────────────────────────── */
+(function patchRenderSellInOut() {
+  const origRender = window.renderSellInOut;
+  if (!origRender) return;
+  window.renderSellInOut = function() {
+    origRender.apply(this, arguments);
+    // Adiciona coluna de ações nas linhas de sell out
+    const tbody = el('sio-tbody');
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(function(tr) {
+      // Verifica se a linha já tem a coluna de ações
+      if (tr.cells.length === 9) {
+        const td = document.createElement('td');
+        td.innerHTML = '<span style="color:#aaa;font-size:11px">Sell In</span>';
+        tr.appendChild(td);
+      }
+    });
+    // Para linhas de sell out, adiciona botão editar
+    // Isso requer acesso ao id do sellout, então repatchamos a geração da tabela
+  };
+})();
+
+/* ─────────────────────────────────────────────────────
+   PATCH renderMix: aplicar filtro de desconto
+───────────────────────────────────────────────────── */
+(function patchRenderMixForDesconto() {
+  const origRender = window.renderMix;
+  if (!origRender) return;
+
+  window.renderMix = function() {
+    // Chama renderMix original
+    origRender.apply(this, arguments);
+
+    // Aplica filtro de desconto pós-renderização
+    const filtroDesc = _getMixFiltroDesconto();
+    if (!filtroDesc) return;
+
+    const tbody = el('mix-tbody');
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(function(tr) {
+      // Procura célula de % desconto (índice 8, contando checkbox)
+      const cells = tr.cells;
+      if (!cells || cells.length < 9) return;
+      const descCell = cells[8]; // coluna % Desconto
+      if (!descCell) return;
+      const descText = descCell.textContent || '';
+      const descVal = parseFloat(descText.replace('%', '').replace(',', '.')) || 0;
+
+      if (filtroDesc === 'com' && descVal <= 0) {
+        tr.style.display = 'none';
+      } else if (filtroDesc === 'sem' && descVal > 0) {
+        tr.style.display = 'none';
+      } else {
+        tr.style.display = '';
+      }
+    });
+  };
+})();
+
+/* ─────────────────────────────────────────────────────
+   PATCH renderSellInOut v2: adicionar botão editar corretamente
+───────────────────────────────────────────────────── */
+window.renderSellInOut = (function(origRender) {
+  return function() {
+    if (!origRender) return;
+    // Reescrevemos o render para incluir botão editar nas linhas de Sell Out
+    const tbody = el('sio-tbody'); if (!tbody) return;
+    const filtCli = (el('sio-filtro-cli') || {}).value || '';
+    const filtInd = (el('sio-filtro-ind') || {}).value || '';
+    const filtMes = (el('sio-filtro-mes') || {}).value || '';
+
+    const fats = pedidos.filter(p => p.nf && !p.excluido);
+
+    const mesesNfSet = new Set(fats.map(p => {
+      if (!p.nf.data) return null;
+      const d = new Date(p.nf.data);
+      if (isNaN(d)) return null;
+      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return meses[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
+    }).filter(Boolean));
+    const mesesSOSet = new Set(sellOutData.map(s => s.mes).filter(Boolean));
+    const todosOsMeses = [...new Set([...mesesNfSet, ...mesesSOSet])].sort((a, b) => {
+      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const parse = m => { const [mn, an] = m.split('/'); return (2000 + parseInt(an)) * 12 + meses.indexOf(mn); };
+      return parse(a) - parse(b);
+    });
+
+    if (todosOsMeses.length === 0) {
+      const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const d = new Date();
+      for (let i = 2; i >= 0; i--) {
+        const idx = (d.getMonth() - i + 12) % 12;
+        const ano = d.getFullYear() - (d.getMonth() - i < 0 ? 1 : 0);
+        todosOsMeses.push(mesesNomes[idx] + '/' + String(ano).slice(2));
+      }
+    }
+
+    const selMes = el('sio-filtro-mes');
+    if (selMes) {
+      const curMes = selMes.value;
+      selMes.innerHTML = '<option value="">Todos os meses</option>' +
+        todosOsMeses.map(m => `<option value="${m}"${m === curMes ? ' selected' : ''}>${m}</option>`).join('');
+    }
+
+    const rows = [];
+    const clisLocal = [...new Set([...fats.map(p => p.cliente), ...sellOutData.map(s => s.cliente)])];
+    const indsLocal = [...new Set([...fats.map(p => p.industria), ...sellOutData.map(s => s.industria)])];
+
+    clisLocal.forEach(cli => {
+      if (filtCli && cli !== filtCli) return;
+      indsLocal.forEach(ind => {
+        if (filtInd && ind !== filtInd) return;
+        todosOsMeses.forEach(mes => {
+          if (filtMes && mes !== filtMes) return;
+          const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+          const [mesNome, anoStr2] = mes.split('/');
+          const mesIdx2 = meses.indexOf(mesNome);
+          const anoFull2 = 2000 + parseInt(anoStr2);
+          const sellIn = fats
+            .filter(p => p.cliente === cli && p.industria === ind && p.nf.data)
+            .filter(p => {
+              const d = new Date(p.nf.data);
+              return !isNaN(d) && d.getMonth() === mesIdx2 && d.getFullYear() === anoFull2;
+            })
+            .reduce((s, p) => s + p.nf.liquida, 0);
+
+          const soRows = sellOutData.filter(s => s.cliente === cli && s.industria === ind && s.mes === mes);
+          const sellOut = soRows.reduce((s, r) => s + r.valor, 0);
+          if (sellIn === 0 && sellOut === 0) return;
+          const positivacao = soRows.reduce((s, r) => s + (r.positivacao || 0), 0);
+          const estoque = sellIn - sellOut;
+          const giro = sellIn > 0 ? ((sellOut / sellIn) * 100).toFixed(1) : 0;
+          const cobertura = sellOut > 0 ? Math.round((estoque / sellOut) * 30) + ' dias' : '—';
+          const soIds = soRows.map(r => r.id);
+          rows.push({ cli, ind, mes, sellIn, sellOut, positivacao, estoque, giro, cobertura, soIds });
+        });
+      });
+    });
+
+    const totIn = rows.reduce((s, r) => s + r.sellIn, 0);
+    const totOut = rows.reduce((s, r) => s + r.sellOut, 0);
+    const giroMedio = totIn > 0 ? ((totOut / totIn) * 100).toFixed(1) : 0;
+    if (el('sio-kpi-in')) el('sio-kpi-in').textContent = fmt(totIn);
+    if (el('sio-kpi-out')) el('sio-kpi-out').textContent = fmt(totOut);
+    if (el('sio-kpi-giro')) el('sio-kpi-giro').textContent = giroMedio + '%';
+
+    tbody.innerHTML = rows.length === 0
+      ? `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
+      : rows.map(r => `<tr>
+        <td><strong>${esc(r.cli)}</strong></td>
+        <td><span class="tag">${esc(r.ind)}</span></td>
+        <td><span class="pill">${r.mes}</span></td>
+        <td class="bold azul">${fmt(r.sellIn)}</td>
+        <td class="bold verde">${fmt(r.sellOut)}</td>
+        <td>${r.positivacao > 0 ? `<span class="badge badge-roxo">🏪 ${r.positivacao} ${r.positivacao === 1 ? 'loja' : 'lojas'}</span>` : '<span class="badge badge-cinza">—</span>'}</td>
+        <td class="${r.estoque < 0 ? 'vermelho' : 'bold'}">${fmt(r.estoque)}</td>
+        <td><span class="pill ${parseFloat(r.giro) >= 80 ? 'amarelo' : ''}">${r.giro}%</span></td>
+        <td>${r.cobertura}</td>
+        <td>${r.soIds.length > 0
+          ? r.soIds.map(sid => `<button class="btn btn-outline btn-xs" onclick="editarSellOut('${sid}')">✏️ Editar</button>`).join(' ')
+          : '<span style="color:#aaa;font-size:11px">Sell In</span>'
+        }</td>
+      </tr>`).join('');
+  };
+})(window.renderSellInOut);
+
+/* ─────────────────────────────────────────────────────
+   PERSISTÊNCIA: incluir saldoUsosData no save/load
+───────────────────────────────────────────────────── */
+(function patchPersistencia() {
+  const origSalvar = window._salvarLocal;
+  const origCarregar = window._carregarLocal;
+
+  if (origSalvar) {
+    window._salvarLocal = function() {
+      // Chama original primeiro
+      try {
+        origSalvar.apply(this, arguments);
+        // Salva saldoUsosData separadamente (pode crescer muito)
+        if (window.saldoUsosData && window.saldoUsosData.length > 0) {
+          localStorage.setItem('gestcom_saldousos', JSON.stringify(window.saldoUsosData));
+        }
+      } catch(e) { console.warn('[v5] save error', e); }
+    };
+  }
+
+  if (origCarregar) {
+    window._carregarLocal = function() {
+      const r = origCarregar.apply(this, arguments);
+      try {
+        const raw = localStorage.getItem('gestcom_saldousos');
+        if (raw) {
+          window.saldoUsosData = JSON.parse(raw);
+        }
+      } catch(e) { console.warn('[v5] load saldousos error', e); }
+      return r;
+    };
+  }
+})();
+
+/* ─────────────────────────────────────────────────────
+   EXIBIÇÃO DE SALDO DISPONÍVEL NA TELA DE SALDO
+───────────────────────────────────────────────────── */
+// Adiciona seção de saldo disponível no renderSaldo
+(function patchRenderSaldoWithSaldoUsos() {
+  const origRender = window.renderSaldo;
+  if (!origRender) return;
+
+  window.renderSaldo = function() {
+    origRender.apply(this, arguments);
+
+    // Adiciona painel de histórico de uso de saldo abaixo do conteúdo principal
+    const saldoDiv = el('saldo-content');
+    if (!saldoDiv) return;
+
+    if (!window.saldoUsosData || window.saldoUsosData.length === 0) return;
+
+    const filtCli = (el('saldo-cli') || {}).value || '';
+    const filtInd = (el('saldo-ind') || {}).value || '';
+
+    const usosFiltrados = window.saldoUsosData.filter(s =>
+      (!filtCli || s.cliente === filtCli) &&
+      (!filtInd || s.industria === filtInd)
+    );
+
+    if (usosFiltrados.length === 0) return;
+
+    const painelSaldo = document.createElement('div');
+    painelSaldo.className = 'card';
+    painelSaldo.style.marginTop = '16px';
+    painelSaldo.innerHTML = `
+      <div class="card-header">
+        <div class="card-title">📊 Histórico de Saldo Gerado e Utilizado</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>Tipo</th><th>Cliente</th><th>Indústria</th>
+            <th>Valor Original</th><th>Valor Usado</th><th>Disponível</th>
+            <th>Pedido Origem</th><th>Data</th><th>Obs</th>
+          </tr></thead>
+          <tbody>
+            ${usosFiltrados.map(s => `<tr>
+              <td class="mono" style="font-size:10px">${esc(s.id)}</td>
+              <td><span class="badge ${s.tipo === 'gerado' ? 'badge-verde' : 'badge-azul'}">${s.tipo === 'gerado' ? '📥 Gerado' : '💳 Usado'}</span></td>
+              <td>${esc(s.cliente)}</td>
+              <td><span class="tag">${esc(s.industria)}</span></td>
+              <td class="bold">${fmt(s.valorOriginal)}</td>
+              <td style="color:var(--vermelho)">${s.valorUsado > 0 ? fmt(s.valorUsado) : '—'}</td>
+              <td class="bold verde">${fmt(s.valorDisponivel)}</td>
+              <td class="mono" style="font-size:10px">${esc(s.pedidoOrigem || s.pedidoUso || '—')}</td>
+              <td style="font-size:11px">${s.dataGeracao || s.dataUtilizacao || '—'}</td>
+              <td style="font-size:10px;color:#888">${esc(s.obs || '—')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    saldoDiv.appendChild(painelSaldo);
+  };
+})();
+
+console.info('[GestCom v5] ✅ Melhorias carregadas: Saldo automático, Importação faturados, Uso de saldo, Filtro mix desconto, Edição Sell Out.');
+
 </script>
 </body>
 </html>
