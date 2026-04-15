@@ -6050,24 +6050,18 @@ const IMPORT_COLS = {
     {key:'obs',             label:'Observação',         req:false},
   ],
   pedido: [
-    {key:'cliente',    label:'Cliente',          req:true,  hint:'Deve estar cadastrado no sistema'},
-    {key:'industria',  label:'Indústria',         req:true,  hint:'Deve estar cadastrada no sistema'},
-    {key:'tipo',       label:'Tipo',              req:false, hint:'venda ou bonificacao (padrão: venda)'},
-    {key:'data',       label:'Data Pedido',       req:false, hint:'AAAA-MM-DD ou DD/MM/AAAA'},
-    {key:'cond',       label:'Condição',          req:false, hint:'Ex: 28D, 30/60D'},
-    {key:'status',     label:'Status',            req:false, hint:'Recebido, Implantado...'},
-    {key:'grupo',      label:'Grupo / Pedido',    req:false, hint:'Mesmo valor = mesmo pedido. Linhas com valores diferentes = pedidos diferentes'},
-    {key:'pct',        label:'% Comissão',        req:false, hint:'Ex: 3 (número sem %). Se vazio usa regra cadastrada'},
-    {key:'nf_numero',  label:'Número da NF',      req:false, hint:'Preencher para já registrar a NF na importação'},
-    {key:'nf_valor',   label:'Valor Faturado (NF)',req:false, hint:'Valor bruto da NF'},
-    {key:'nf_data',    label:'Data Faturamento',  req:false, hint:'Data da NF — AAAA-MM-DD ou DD/MM/AAAA'},
-    {key:'obs',        label:'Observações',       req:false},
-    {key:'cod',        label:'Cód. Produto',      req:false, hint:'Uma linha por item do pedido'},
-    {key:'desc',       label:'Descrição Produto', req:false, hint:'Auto se produto cadastrado'},
-    {key:'qtd',        label:'Qtd',               req:false, hint:'Quantidade do item'},
-    {key:'descPct',    label:'% Desconto Item',   req:false, hint:'Ex: 10 (sem %)'},
-    {key:'precoUnit',  label:'Preço Unitário',    req:false, hint:'Se vazio, busca no catálogo'},
-    {key:'total',      label:'Total Item / Valor Pedido', req:false, hint:'Se vazio, calcula automaticamente'},
+    {key:'cliente',   label:'Cliente',           req:true,  hint:'Deve estar cadastrado no sistema'},
+    {key:'industria', label:'Indústria',          req:true,  hint:'Deve estar cadastrada no sistema'},
+    {key:'tipo',      label:'Tipo',               req:false, hint:'venda ou bonificacao (padrão: venda)'},
+    {key:'data',      label:'Data Pedido',        req:false, hint:'DD/MM/AAAA'},
+    {key:'cond',      label:'Condição',           req:false, hint:'Ex: 60D, 90D, 28D'},
+    {key:'status',    label:'Status',             req:false, hint:'Recebido, Implantado...'},
+    {key:'cod',       label:'Cód. Produto',       req:false, hint:'Uma linha por item — mesmo cliente/indústria vira 1 pedido'},
+    {key:'desc',      label:'Descrição Produto',  req:false, hint:'Preenchido automaticamente se produto cadastrado'},
+    {key:'qtd',       label:'Qtd',                req:false, hint:'Quantidade do item'},
+    {key:'descPct',   label:'Desconto',           req:false, hint:'Ex: 10 (sem %)'},
+    {key:'precoUnit', label:'Preço Unitário',     req:false, hint:'Se vazio, busca no catálogo'},
+    {key:'total',     label:'Total Item',         req:false, hint:'Se vazio, calcula: Preço × Qtd × (1 - Desc%)'},
   ],
 };
 
@@ -6105,16 +6099,49 @@ function importarCadastro(tipo) {
   const cols = IMPORT_COLS[tipo];
   const tpl = el('import-template-info');
   if(cols && tpl) {
-    const colsHtml = cols.map(c=>
-      `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;background:${c.req?'#1a1a1a':'var(--cinza)'};color:${c.req?'var(--amarelo)':'#555'}">
-        ${c.label}${c.req?' *':''}
-        ${c.hint?`<span style="font-weight:400;color:${c.req?'#ccc':'#999'}"> — ${c.hint}</span>`:''}
-      </span>`
-    ).join('');
-    tpl.innerHTML = `<div class="alert alert-info" style="font-size:11px">
-      <strong>Colunas reconhecidas:</strong><br><div style="margin-top:6px;line-height:2">${colsHtml}</div>
-      <div style="margin-top:6px;color:#555">* obrigatório · o sistema reconhece cabeçalhos automaticamente · a primeira linha da planilha deve ser o cabeçalho</div>
-    </div>`;
+    if(tipo === 'pedido') {
+      // Layout especial para pedidos — tabela visual clara com ordem das colunas
+      const colRows = cols.map((c,i) => `
+        <tr style="background:${i%2===0?'#fff':'#fafaf8'}">
+          <td style="padding:5px 10px;font-weight:700;color:#555;font-size:11px;white-space:nowrap">${String.fromCharCode(65+i)}</td>
+          <td style="padding:5px 10px;font-weight:700;font-size:12px;color:${c.req?'#1a1a1a':'#444'}">${c.label}${c.req?' <span style="color:var(--vermelho)">*</span>':''}</td>
+          <td style="padding:5px 10px;font-size:11px;color:#888">${c.hint||''}</td>
+        </tr>`).join('');
+      tpl.innerHTML = `
+        <div style="background:#fff8e1;border:1px solid #f0d060;border-left:4px solid var(--amarelo);border-radius:6px;padding:12px 14px;margin-bottom:8px">
+          <div style="font-weight:700;font-size:12px;margin-bottom:6px">📋 Como montar sua planilha:</div>
+          <div style="font-size:11px;color:#7a5800;line-height:1.8">
+            ✅ <strong>Uma linha por produto</strong> — linhas do mesmo cliente + indústria viram <strong>1 pedido automático</strong><br>
+            ✅ <strong>A primeira linha deve ser o cabeçalho</strong> (os nomes das colunas)<br>
+            ✅ Tipo: escreva <strong>venda</strong> ou <strong>bonificacao</strong> · Condição: ex <strong>60D</strong>, <strong>90D</strong>, <strong>28D</strong><br>
+            ✅ Desconto: apenas o número, <strong>sem %</strong> (ex: <strong>10</strong> para 10%)
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid var(--cinza-medio);border-radius:6px;overflow:hidden">
+            <thead>
+              <tr style="background:#1a1a1a">
+                <th style="padding:7px 10px;text-align:left;color:#888;font-size:10px;font-weight:700;letter-spacing:.5px;width:28px">COL</th>
+                <th style="padding:7px 10px;text-align:left;color:var(--amarelo);font-size:11px;font-weight:700">NOME DA COLUNA</th>
+                <th style="padding:7px 10px;text-align:left;color:#aaa;font-size:11px;font-weight:400">COMO PREENCHER</th>
+              </tr>
+            </thead>
+            <tbody>${colRows}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#888">* obrigatório — baixe o modelo para ver um exemplo pronto</div>`;
+    } else {
+      const colsHtml = cols.map(c=>
+        `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;background:${c.req?'#1a1a1a':'var(--cinza)'};color:${c.req?'var(--amarelo)':'#555'}">
+          ${c.label}${c.req?' *':''}
+          ${c.hint?`<span style="font-weight:400;color:${c.req?'#ccc':'#999'}"> — ${c.hint}</span>`:''}
+        </span>`
+      ).join('');
+      tpl.innerHTML = `<div class="alert alert-info" style="font-size:11px">
+        <strong>Colunas reconhecidas:</strong><br><div style="margin-top:6px;line-height:2">${colsHtml}</div>
+        <div style="margin-top:6px;color:#555">* obrigatório · o sistema reconhece cabeçalhos automaticamente · a primeira linha da planilha deve ser o cabeçalho</div>
+      </div>`;
+    }
   } else if(tpl) {
     tpl.innerHTML = `<div class="alert alert-info">Selecione um arquivo Excel (.xlsx, .xls, .csv) ou PDF para importar.</div>`;
   }
@@ -6916,9 +6943,10 @@ function baixarModeloImport() {
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
     produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', '7891234560013', '7891234560012', '7891234560011', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
     pedido: [
-      ['Farmácia Central', 'LABOTRAT', 'venda', '2026-03-01', '28D', 'Recebido', '', 'LAB-001', 'Shampoo Hidratação 300ml', '2', '10', '16.20', '32.40'],
-      ['Farmácia Central', 'LABOTRAT', 'venda', '2026-03-01', '28D', 'Recebido', '', 'LAB-002', 'Condicionador Nutrição 250ml', '3', '0',  '18.00', '54.00'],
-      ['DCA Bahia',        'ZALIKE',   'bonificacao', '2026-03-05', '28D', 'Recebido', 'Bonif. campanha', 'ZAL-010', 'Kit Presente Premium', '1', '0', '45.00', '45.00'],
+      // Cliente       | Indústria | Tipo        | Data       | Condição | Status    | Cód.     | Descrição                   | Qtd | Desconto | Preço Unit | Total
+      ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Recebido', 'LAB-001', 'Shampoo Hidratação 300ml',    '2',  '10',      '18.00',    '32.40'],
+      ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Recebido', 'LAB-002', 'Condicionador Nutrição 250ml','3',  '0',       '18.00',    '54.00'],
+      ['DCA Bahia',        'ZALIKE',   'bonificacao',  '05/03/2026', '90D', 'Recebido', 'ZAL-010', 'Kit Presente Premium',        '1',  '0',       '45.00',    '45.00'],
     ],
   };
   const rows = [header];
@@ -6937,7 +6965,9 @@ function baixarModeloImport() {
       if(ws[cellAddr]) { ws[cellAddr].t = 's'; ws[cellAddr].z = '@'; }
     }
   }
-  ws['!cols'] = cols.map(()=>({wch:22}));
+  ws['!cols'] = importTipo === 'pedido'
+    ? [{wch:22},{wch:14},{wch:12},{wch:12},{wch:10},{wch:12},{wch:12},{wch:28},{wch:6},{wch:9},{wch:13},{wch:12}]
+    : cols.map(()=>({wch:22}));
   XLSX.utils.book_append_sheet(wb, ws, titulos[importTipo]||'Modelo');
   XLSX.writeFile(wb, `Modelo_Importacao_${titulos[importTipo]||importTipo}.xlsx`);
   toast('Modelo Excel baixado!');
