@@ -1110,18 +1110,25 @@ tr:last-child td{border-bottom:none;}
     <!-- ===== SINCRONIZAÇÃO ===== -->
     <div class="panel" id="panel-sync">
       <div class="section-title">☁️ Sincronização em Nuvem</div>
-      <div class="section-sub">Conecte ao Firebase para compartilhar dados em tempo real com toda a equipe</div>
+      <div class="section-sub">Firebase Realtime Database — dados salvos e compartilhados em tempo real com toda a equipe</div>
 
-      <!-- Barra de status -->
-      <div id="sync-status-bar" style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;margin-bottom:20px;background:#f4f3ef;border:1px solid var(--cinza-medio);transition:all .3s">
-        <div id="sync-dot" style="width:12px;height:12px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s"></div>
+      <!-- Barra de status principal -->
+      <div id="sync-status-bar" style="display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:12px;margin-bottom:20px;background:#f4f3ef;border:2px solid var(--cinza-medio);transition:all .3s">
+        <div id="sync-dot" style="width:14px;height:14px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s;box-shadow:0 0 0 3px rgba(0,0,0,.07)"></div>
         <div style="flex:1">
-          <div id="sync-status-text" style="font-weight:700;font-size:13px">Não conectado</div>
-          <div id="sync-status-sub" style="font-size:11px;color:#888;margin-top:1px">Configure o Firebase abaixo para sincronizar com a equipe</div>
+          <div id="sync-status-text" style="font-weight:700;font-size:14px">Não conectado</div>
+          <div id="sync-status-sub" style="font-size:12px;color:#888;margin-top:2px">Cole a URL do Firebase abaixo e clique em Conectar</div>
+        </div>
+        <div id="sync-saving-indicator" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--verde);font-weight:600">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--verde);animation:pulse-save 1s infinite"></div>
+          Salvando...
         </div>
         <div id="sync-last-time" style="font-size:11px;color:#aaa;white-space:nowrap"></div>
-        <button id="btn-sync-now" onclick="syncAgora()" style="display:none" class="btn btn-success btn-sm">🔄 Sincronizar</button>
+        <button id="btn-sync-now" onclick="syncAgora()" style="display:none" class="btn btn-success btn-sm">🔄 Sincronizar agora</button>
       </div>
+      <style>
+        @keyframes pulse-save { 0%,100%{opacity:1} 50%{opacity:.3} }
+      </style>
 
       <div class="grid-2" style="gap:20px;margin-bottom:20px">
 
@@ -1129,42 +1136,57 @@ tr:last-child td{border-bottom:none;}
         <div class="card" style="border-top:3px solid var(--amarelo)">
           <div class="card-header">
             <div class="card-title">🔥 Firebase Realtime Database</div>
-            <span class="badge badge-verde">Grátis · Sem cartão</span>
-          </div>
-          <div style="font-size:12px;color:#666;margin-bottom:16px;line-height:1.7">
-            Banco em tempo real do Google, <strong>100% gratuito</strong> e sem precisar de cartão de crédito.
-            Qualquer alteração feita por um usuário aparece para todos os outros em até 5 segundos.
+            <span class="badge badge-verde">100% Gratuito</span>
           </div>
 
           <div class="form-group">
             <label>URL do Realtime Database *</label>
-            <input id="fb-dburl" value="" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" autocomplete="off">
-            <div style="font-size:11px;color:#888;margin-top:3px">Encontrada no console Firebase → Realtime Database</div>
+            <input id="fb-dburl" placeholder="https://SEU-PROJETO-default-rtdb.firebaseio.com" autocomplete="off" style="font-family:monospace;font-size:12px">
+            <div style="font-size:11px;color:#888;margin-top:3px">Firebase Console → Realtime Database → copie a URL</div>
           </div>
+
+          <!-- API KEY — explicação clara -->
           <div class="form-group">
-            <label>API Key <span style="font-size:10px;font-weight:400;color:#888">(opcional — necessária se as regras exigirem autenticação)</span></label>
-            <input id="fb-apikey" value="" placeholder="Cole sua API Key aqui" autocomplete="off">
+            <label style="display:flex;align-items:center;gap:6px">
+              API Key
+              <span style="background:#fff3b0;color:#7a5800;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid #f0d060">Deixe em branco se as regras forem públicas</span>
+            </label>
+            <input id="fb-apikey" placeholder="Deixe vazio — só preencha se aparecer erro 401" autocomplete="off" style="font-family:monospace;font-size:12px">
+            <div style="font-size:11px;color:#888;margin-top:3px">
+              A API Key <strong>só é necessária</strong> se as regras do Firebase exigirem autenticação.
+              Se você configurou as regras como <code style="background:#f4f3ef;padding:1px 5px;border-radius:3px">".read":true, ".write":true</code>, deixe este campo <strong>vazio</strong>.
+            </div>
           </div>
+
           <div id="fb-feedback" style="display:none;margin-bottom:12px"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-primary" onclick="firebaseConectar()">🔌 Conectar</button>
             <button class="btn btn-outline btn-sm" onclick="firebaseDesconectar()">Desconectar</button>
+            <button class="btn btn-info btn-sm" onclick="testarConexaoFirebase()">🧪 Testar Conexão</button>
           </div>
         </div>
 
         <!-- Card passo a passo -->
         <div class="card">
-          <div class="card-header"><div class="card-title">📋 Como configurar (2 minutos)</div></div>
-          <div style="font-size:12px;line-height:2.2;color:#444">
-            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:6px">1</span>No Firebase Console → <strong>Bancos de dados → Realtime Database</strong></div>
-            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:6px">2</span>Copie a URL que aparece:<br>&nbsp;&nbsp;&nbsp;&nbsp;<code style="background:#f4f3ef;padding:2px 6px;border-radius:3px;font-size:11px">https://sistematresvales-default-rtdb.firebaseio.com</code></div>
-            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:6px">3</span>Cole no campo <strong>"URL do Realtime Database"</strong> ao lado</div>
-            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:6px">4</span>Clique em <strong>Conectar</strong></div>
-            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:6px">5</span>Clique em <strong>📤 Enviar dados para nuvem</strong></div>
-            <div><span style="background:var(--verde);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:6px">6</span>Compartilhe o arquivo HTML — todos conectam na mesma URL → <span style="color:var(--verde);font-weight:700">sincronizado! ✅</span></div>
+          <div class="card-header"><div class="card-title">📋 Como configurar (3 minutos)</div></div>
+          <div style="font-size:12px;line-height:2.4;color:#444">
+            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:8px;flex-shrink:0">1</span>Acesse <strong>console.firebase.google.com</strong> → crie um projeto</div>
+            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:8px;flex-shrink:0">2</span>Vá em <strong>Build → Realtime Database → Criar banco</strong></div>
+            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:8px;flex-shrink:0">3</span>Copie a URL: <code style="background:#f4f3ef;padding:2px 6px;border-radius:3px;font-size:10px">https://SEU-PROJETO-default-rtdb.firebaseio.com</code></div>
+            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:8px;flex-shrink:0">4</span>Vá em <strong>Regras</strong> e cole exatamente isso:</div>
+            <div style="background:#1a1a1a;color:#4caf50;font-family:monospace;font-size:11px;padding:10px 14px;border-radius:6px;margin:4px 0 8px 28px;line-height:1.8">
+              {<br>
+              &nbsp;&nbsp;"rules": {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;".read": true,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;".write": true<br>
+              &nbsp;&nbsp;}<br>
+              }
+            </div>
+            <div><span style="background:var(--amarelo);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:8px;flex-shrink:0">5</span>Cole a URL no campo ao lado → clique <strong>Conectar</strong> → <strong>API Key: deixe vazio</strong></div>
+            <div><span style="background:var(--verde);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;margin-right:8px;flex-shrink:0">6</span>Clique <strong>📤 Enviar dados para nuvem</strong> → pronto! ✅</div>
           </div>
-          <div class="alert alert-info" style="margin-top:12px;font-size:11px">
-            💡 <strong>Dica de segurança:</strong> Após conectar, vá em <strong>Regras</strong> no Realtime Database e defina uma senha ou limite o acesso por data para proteger os dados.
+          <div class="alert alert-warning" style="margin-top:10px;font-size:11px">
+            ⚠️ <strong>Regras abertas (.read/.write: true)</strong> são suficientes para uso interno. Se quiser restringir acesso externo, fale com seu desenvolvedor para configurar autenticação.
           </div>
         </div>
       </div>
@@ -1173,37 +1195,44 @@ tr:last-child td{border-bottom:none;}
       <div class="card" style="margin-bottom:16px">
         <div class="card-header"><div class="card-title">⚙️ Comportamento da Sincronização</div></div>
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
-          <div class="form-group" style="margin:0;min-width:220px">
+          <div class="form-group" style="margin:0;min-width:260px">
             <label>Auto-salvar na nuvem após cada alteração</label>
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-              <div id="sw-autosave" class="switch on" onclick="this.classList.toggle('on');configSync.autoSave=this.classList.contains('on')"></div>
-              <span style="font-size:12px;color:#666">Ativado — salva automaticamente</span>
+              <div id="sw-autosave" class="switch on" onclick="this.classList.toggle('on');configSync.autoSave=this.classList.contains('on');atualizarTextoAutoSave(this)"></div>
+              <span id="txt-autosave" style="font-size:12px;color:#666">✅ Ativado — cada ação salva automaticamente em até 1,5 s</span>
             </div>
           </div>
-          <div class="form-group" style="margin:0;min-width:220px">
-            <label>Receber atualizações em tempo real</label>
+          <div class="form-group" style="margin:0;min-width:260px">
+            <label>Receber atualizações em tempo real (a cada 5s)</label>
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
               <div id="sw-realtime" class="switch on" onclick="toggleRealtime(this)"></div>
-              <span style="font-size:12px;color:#666">Ativado — atualiza automaticamente</span>
+              <span style="font-size:12px;color:#666">✅ Ativado — atualiza dados da equipe automaticamente</span>
             </div>
           </div>
         </div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-success btn-sm" id="btn-push" onclick="syncPush()" disabled>📤 Enviar dados para nuvem</button>
-          <button class="btn btn-info btn-sm" id="btn-pull" onclick="syncPull()" disabled>📥 Carregar dados da nuvem</button>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-success btn-sm" id="btn-push" onclick="syncPush()" disabled>📤 Enviar todos os dados para nuvem</button>
+          <button class="btn btn-info btn-sm" id="btn-pull" onclick="syncPull()" disabled>📥 Baixar dados da nuvem</button>
+          <div id="sync-push-ts" style="font-size:11px;color:#888;margin-left:4px"></div>
           <button class="btn btn-danger btn-sm" id="btn-reset-cloud" onclick="syncResetCloud()" disabled style="margin-left:auto">🗑️ Apagar dados da nuvem</button>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:#888;line-height:1.6">
-          💡 <strong>Enviar</strong> sobrescreve os dados da nuvem com os dados locais atuais. 
-          <strong>Carregar</strong> sobrescreve os dados locais com os da nuvem. 
-          Com auto-salvar ativado, cada cadastro/edição é enviado automaticamente.
+        <div style="margin-top:10px;font-size:11px;color:#888;line-height:1.7;background:#f9f8f5;border-radius:6px;padding:10px 14px">
+          💡 <strong>Auto-salvar ativado?</strong> Cada vez que você cadastra, edita ou exclui qualquer dado, o sistema salva automaticamente na nuvem em 1,5 segundo — você verá o indicador <span style="color:var(--verde);font-weight:700">● Salvando...</span> piscar no topo.<br>
+          📥 <strong>Atualização automática?</strong> A cada 5 segundos o sistema verifica se alguém da equipe salvou algo novo e atualiza a tela.<br>
+          📤 <strong>Enviar para nuvem</strong> sobrescreve a nuvem com seus dados locais. <strong>Baixar da nuvem</strong> traz os dados mais recentes da equipe.
         </div>
+      </div>
+
+      <!-- Diagnóstico -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">🔍 Diagnóstico de Conexão</div><button class="btn btn-outline btn-sm" onclick="diagnosticarFirebase()">▶ Executar diagnóstico</button></div>
+        <div id="diag-resultado" style="font-size:12px;color:#666;line-height:2;min-height:40px">Clique em "Executar diagnóstico" para verificar se a conexão está funcionando.</div>
       </div>
 
       <!-- Log de sincronização -->
       <div class="card">
-        <div class="card-header"><div class="card-title">📋 Log de Sincronização</div><button class="btn btn-outline btn-sm" onclick="el('sync-log').innerHTML=''">Limpar</button></div>
-        <div id="sync-log" style="font-size:11px;font-family:monospace;color:#666;max-height:180px;overflow-y:auto;line-height:2"></div>
+        <div class="card-header"><div class="card-title">📋 Log de Sincronização</div><button class="btn btn-outline btn-sm" onclick="el('sync-log').innerHTML='';el('sync-log-empty').style.display='block'">Limpar</button></div>
+        <div id="sync-log" style="font-size:11px;font-family:monospace;color:#666;max-height:200px;overflow-y:auto;line-height:2"></div>
         <div id="sync-log-empty" style="font-size:12px;color:#aaa;padding:12px 0">Nenhuma atividade de sincronização ainda.</div>
       </div>
     </div>
@@ -10414,6 +10443,234 @@ window.renderSellInOut = (function(origRender) {
 })();
 
 console.info('[GestCom v5] ✅ Melhorias carregadas: Saldo automático, Importação faturados, Uso de saldo, Filtro mix desconto, Edição Sell Out.');
+
+
+/* ══════════════════════════════════════════════════════
+   FIREBASE SYNC MELHORADO — v5.1
+   - Indicador visual "Salvando..."
+   - Diagnóstico de conexão
+   - testarConexaoFirebase
+   - Auto-save com feedback visual
+   - Texto dinâmico dos switches
+══════════════════════════════════════════════════════ */
+
+// ── Mostra/oculta indicador "Salvando..." ───────────────────────────────────
+function _mostrarSalvando() {
+  const ind = el('sync-saving-indicator');
+  if (ind) {
+    ind.style.display = 'flex';
+    clearTimeout(window._savingTimer);
+    window._savingTimer = setTimeout(() => {
+      ind.style.display = 'none';
+      _atualizarUltimoSalvo();
+    }, 2500);
+  }
+}
+
+function _atualizarUltimoSalvo() {
+  const ts = el('sync-last-time');
+  if (ts && configSync.conectado) {
+    ts.textContent = 'Salvo às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  const pts = el('sync-push-ts');
+  if (pts) {
+    pts.textContent = 'Última sincronização: ' + new Date().toLocaleString('pt-BR').slice(0,16);
+  }
+}
+
+// ── Override syncAutoSaveHook para mostrar indicador visual ──────────────────
+(function patchSyncAutoSaveHook() {
+  const orig = window.syncAutoSaveHook;
+  if (!orig) return;
+  window.syncAutoSaveHook = function() {
+    orig.apply(this, arguments);
+    if (configSync.conectado && configSync.autoSave) {
+      _mostrarSalvando();
+    }
+  };
+})();
+
+// ── Override syncPush para mostrar indicador e atualizar timestamp ───────────
+(function patchSyncPushIndicator() {
+  const origPush = window.syncPush;
+  if (!origPush) return;
+  window.syncPush = async function(silencioso) {
+    if (configSync.conectado && configSync.autoSave) {
+      _mostrarSalvando();
+    }
+    await origPush.apply(this, arguments);
+    _atualizarUltimoSalvo();
+  };
+})();
+
+// ── testarConexaoFirebase — verifica leitura e escrita ───────────────────────
+async function testarConexaoFirebase() {
+  const feedDiv = el('fb-feedback');
+  const dbUrl = (el('fb-dburl') || {}).value?.trim() || configSync.dbUrl;
+  if (!dbUrl) {
+    feedbackFb('⚠️ Cole a URL do Firebase primeiro.', 'warning');
+    return;
+  }
+  feedbackFb('🔄 Testando conexão...', 'info');
+  try {
+    // Teste de escrita
+    const apiKey = (el('fb-apikey') || {}).value?.trim() || configSync.apiKey || '';
+    const auth = apiKey ? `?auth=${apiKey}` : '';
+    const base = dbUrl.replace(/\/$/, '');
+    const writeRes = await fetch(`${base}/gestcom/teste_conexao.json${auth}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ts: Date.now(), ok: true })
+    });
+    if (!writeRes.ok) {
+      const txt = await writeRes.text();
+      if (writeRes.status === 401 || txt.includes('Permission denied')) {
+        feedbackFb('❌ Erro 401 — Permissão negada. Você precisa configurar as regras do Firebase como ".read":true, ".write":true  OU preencher a API Key.', 'danger');
+        return;
+      }
+      throw new Error(`Escrita falhou: HTTP ${writeRes.status}`);
+    }
+    // Teste de leitura
+    const readRes = await fetch(`${base}/gestcom/teste_conexao.json${auth}`);
+    if (!readRes.ok) throw new Error(`Leitura falhou: HTTP ${readRes.status}`);
+    const data = await readRes.json();
+    if (data && data.ok) {
+      feedbackFb('✅ Conexão OK! Leitura e escrita funcionando. Pode clicar em Conectar.', 'success');
+    } else {
+      feedbackFb('⚠️ Escrita OK mas leitura retornou dado inesperado.', 'warning');
+    }
+  } catch (err) {
+    feedbackFb('❌ ' + err.message, 'danger');
+  }
+}
+
+// ── diagnosticarFirebase — diagnóstico completo ───────────────────────────────
+async function diagnosticarFirebase() {
+  const div = el('diag-resultado');
+  if (!div) return;
+  div.innerHTML = '<span style="color:#888">🔄 Executando diagnóstico...</span>';
+
+  const results = [];
+  const dbUrl = configSync.dbUrl || (el('fb-dburl') || {}).value?.trim() || '';
+  const apiKey = configSync.apiKey || (el('fb-apikey') || {}).value?.trim() || '';
+  const auth = apiKey ? `?auth=${apiKey}` : '';
+
+  // 1. URL configurada?
+  results.push({ ok: !!dbUrl, msg: dbUrl ? `URL configurada: <code>${dbUrl.replace('https://','')}</code>` : 'URL não configurada' });
+
+  // 2. Conectado?
+  results.push({ ok: configSync.conectado, msg: configSync.conectado ? 'Status: Conectado' : 'Status: Desconectado' });
+
+  // 3. Auto-save ativo?
+  results.push({ ok: configSync.autoSave, msg: configSync.autoSave ? 'Auto-save: Ativado' : 'Auto-save: Desativado' });
+
+  // 4. Polling realtime ativo?
+  results.push({ ok: !!window._rtdbPollInterval, msg: window._rtdbPollInterval ? 'Polling realtime: Ativo (atualiza a cada 5s)' : 'Polling realtime: Inativo' });
+
+  // 5. Teste de escrita ao vivo
+  if (dbUrl) {
+    try {
+      const base = dbUrl.replace(/\/$/, '');
+      const res = await fetch(`${base}/gestcom/diagnostico.json${auth}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ts: Date.now() })
+      });
+      if (res.ok) {
+        results.push({ ok: true, msg: 'Escrita no Firebase: ✅ Funcionando' });
+      } else {
+        const txt = await res.text().catch(() => '');
+        if (res.status === 401 || txt.includes('Permission denied')) {
+          results.push({ ok: false, msg: '❌ Escrita negada (401) — Configure as Regras do Firebase para ".write":true  ou informe a API Key' });
+        } else {
+          results.push({ ok: false, msg: `❌ Escrita falhou: HTTP ${res.status}` });
+        }
+      }
+    } catch (e) {
+      results.push({ ok: false, msg: `❌ Escrita: erro de rede — ${e.message}` });
+    }
+
+    // 6. Teste de leitura ao vivo
+    try {
+      const base = dbUrl.replace(/\/$/, '');
+      const res = await fetch(`${base}/gestcom/dados.json${auth}`);
+      if (res.ok) {
+        const data = await res.json();
+        const pedCount = data?.pedidos?.length || 0;
+        const ts = data?._ts ? new Date(data._ts).toLocaleString('pt-BR') : 'desconhecido';
+        results.push({ ok: true, msg: `Leitura da nuvem: ✅ OK — ${pedCount} pedido(s) na nuvem — último sync: ${ts}` });
+      } else {
+        results.push({ ok: false, msg: `❌ Leitura falhou: HTTP ${res.status}` });
+      }
+    } catch (e) {
+      results.push({ ok: false, msg: `❌ Leitura: erro de rede — ${e.message}` });
+    }
+  } else {
+    results.push({ ok: false, msg: 'Testes ao vivo: URL não configurada' });
+    results.push({ ok: false, msg: 'Testes ao vivo: URL não configurada' });
+  }
+
+  // 7. Dados locais
+  const totalPeds = pedidos.length;
+  const totalFats = pedidos.filter(p => p.nf).length;
+  results.push({ ok: true, msg: `Dados locais: ${totalPeds} pedido(s), ${totalFats} faturado(s), ${clientes.length} cliente(s), ${industrias.length} indústria(s)` });
+
+  div.innerHTML = results.map(r =>
+    `<div style="padding:3px 0;border-bottom:1px solid #f0ede6">
+      <span style="font-size:14px">${r.ok ? '✅' : '❌'}</span>
+      <span style="margin-left:6px">${r.msg}</span>
+    </div>`
+  ).join('');
+}
+
+// ── Texto dinâmico do switch auto-save ───────────────────────────────────────
+function atualizarTextoAutoSave(swEl) {
+  const txt = el('txt-autosave');
+  if (txt) {
+    txt.textContent = swEl.classList.contains('on')
+      ? '✅ Ativado — cada ação salva automaticamente em até 1,5 s'
+      : '⛔ Desativado — use o botão "Enviar para nuvem" manualmente';
+  }
+}
+
+// ── Restaurar credenciais salvas e reconectar automaticamente ────────────────
+(function autoReconectarFirebase() {
+  try {
+    const saved = localStorage.getItem('gestcom_rtdb');
+    if (!saved) return;
+    const { dbUrl, apiKey } = JSON.parse(saved);
+    if (!dbUrl) return;
+    // Preenche os campos se existirem
+    const inputUrl = el('fb-dburl');
+    const inputKey = el('fb-apikey');
+    if (inputUrl) inputUrl.value = dbUrl;
+    if (inputKey && apiKey) inputKey.value = apiKey;
+    // Reconecta silenciosamente
+    configSync.dbUrl  = dbUrl;
+    configSync.apiKey = apiKey || '';
+    setTimeout(async () => {
+      try {
+        const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
+        const base = configSync.dbUrl.replace(/\/$/, '');
+        const res = await fetch(`${base}/gestcom/ping.json${auth}`, {
+          method: 'PUT',
+          body: JSON.stringify({ ts: Date.now() })
+        });
+        if (res.ok) {
+          configSync.conectado = true;
+          syncSetStatus('✅ Reconectado automaticamente', configSync.dbUrl.replace('https://',''), 'conectado');
+          syncHabilitarBotoes(true);
+          syncLog('Reconexão automática OK', 'ok');
+          if (configSync.realtime) ativarPollingRealtime();
+          await syncPull(true);
+          _atualizarUltimoSalvo();
+        }
+      } catch(e) {
+        syncLog('Reconexão automática falhou: ' + e.message, 'aviso');
+      }
+    }, 1200);
+  } catch(e) {}
+})();
+
+console.info('[GestCom v5.1] ✅ Firebase melhorado: indicador salvar, diagnóstico, reconexão automática.');
 
 </script>
 </body>
