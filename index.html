@@ -1207,7 +1207,7 @@ tr:last-child td{border-bottom:none;}
           <div class="form-group" style="margin:0;min-width:260px">
             <label>Receber atualizações em tempo real (a cada 5s)</label>
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-              <div id="sw-realtime" class="switch on" onclick="toggleRealtime(this)"></div>
+              <div id="sw-realtime" class="switch on" onclick="toggleRealtime(this)" style="cursor:pointer"></div>
               <span style="font-size:12px;color:#666">✅ Ativado — atualiza dados da equipe automaticamente</span>
             </div>
           </div>
@@ -9609,7 +9609,7 @@ async function syncPull(silencioso=false){
   try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
 function ativarPollingRealtime(){if(_rtdbPollInterval)clearInterval(_rtdbPollInterval);_rtdbPollInterval=setInterval(async()=>{if(!configSync.conectado||!usuarioLogado)return;try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)return;const dados=await res.json();if(dados&&dados._ts&&dados._ts>(_rtdbLastTs||0)){aplicarDadosDaNuvem(dados,true);_rtdbLastTs=dados._ts;}}catch(e){}},5000);}
-function toggleRealtime(swEl){const ativo=swEl.classList.contains('on');configSync.realtime=ativo;try{const saved=localStorage.getItem('gestcom_rtdb');if(saved){const obj=JSON.parse(saved);obj.realtime=ativo;localStorage.setItem('gestcom_rtdb',JSON.stringify(obj));}}catch(e){}if(ativo)ativarPollingRealtime();else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
+function toggleRealtime(swEl){swEl.classList.toggle('on');const ativo=swEl.classList.contains('on');configSync.realtime=ativo;try{const saved=localStorage.getItem('gestcom_rtdb');if(saved){const obj=JSON.parse(saved);obj.realtime=ativo;localStorage.setItem('gestcom_rtdb',JSON.stringify(obj));}}catch(e){}if(ativo){if(configSync.conectado)ativarPollingRealtime();}else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
 function syncAgora(){syncPull();}
 async function syncResetCloud(){if(!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada!');}
 async function tentarReconexaoAuto(){if(configSync.dbUrl&&!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
@@ -10703,6 +10703,9 @@ function atualizarTextoAutoSave(swEl) {
     const inputKey = el('fb-apikey');
     if (inputUrl) inputUrl.value = dbUrl;
     if (inputKey && apiKey) inputKey.value = apiKey;
+    // Sincroniza o visual do switch realtime
+    const swRt = el("sw-realtime");
+    if (swRt) { if (configSync.realtime) swRt.classList.add("on"); else swRt.classList.remove("on"); }
     // Reconecta silenciosamente
     configSync.dbUrl  = dbUrl;
     configSync.apiKey = apiKey || '';
