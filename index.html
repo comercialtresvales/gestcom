@@ -10736,5 +10736,42 @@ function atualizarTextoAutoSave(swEl) {
 console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
 
 </script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const _fbApp = initializeApp({
+  apiKey: "AIzaSyC1eaTg2sXqyM9BMHZYJNCwwEydhwdVy6c",
+  authDomain: "sistematresvales.firebaseapp.com",
+  databaseURL: "https://sistematresvales-default-rtdb.firebaseio.com",
+  projectId: "sistematresvales",
+  storageBucket: "sistematresvales.firebasestorage.app",
+  messagingSenderId: "625055053193",
+  appId: "1:625055053193:web:d35e3a063a24c357c65d58"
+});
+
+const _fbAuth = getAuth(_fbApp);
+signInAnonymously(_fbAuth).catch(e => console.warn('[Auth]', e.message));
+
+onAuthStateChanged(_fbAuth, async (user) => {
+  if (!user) return;
+  try {
+    const token = await user.getIdToken();
+    window._fbAuthToken = token;
+    if (typeof configSync !== 'undefined') configSync.apiKey = token;
+    // Renova token a cada 50 minutos
+    setInterval(async () => {
+      try {
+        const t = await user.getIdToken(true);
+        window._fbAuthToken = t;
+        if (typeof configSync !== 'undefined') configSync.apiKey = t;
+      } catch(e) {}
+    }, 50 * 60 * 1000);
+    console.info('[Auth] OK. UID:', user.uid);
+  } catch(e) { console.warn('[Auth]', e.message); }
+});
+</script>
+
 </body>
 </html>
