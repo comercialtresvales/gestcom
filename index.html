@@ -10736,11 +10736,10 @@ function atualizarTextoAutoSave(swEl) {
 console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
 
 // ── Patch: usa token anônimo do Firebase em todas as chamadas ──
-const _rtdbUrlOrig = window.rtdbUrl;
 function rtdbUrl(path) {
-  const base = configSync.dbUrl.replace(/\/$/, '');
-  const token = window._fbAuthToken || configSync.apiKey || '';
-  const auth = token ? '?auth=' + token : '';
+  var base = configSync.dbUrl.replace(/\/$/, '');
+  var token = window._fbAuthToken || configSync.apiKey || '';
+  var auth = token ? '?auth=' + token : '';
   return base + '/' + path + '.json' + auth;
 }
 
