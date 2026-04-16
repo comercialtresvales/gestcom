@@ -9469,16 +9469,15 @@ function syncHabilitarBotoes(sim) {
 
 // ── URL base para REST calls ──
 function rtdbUrl(path) {
-  const base = configSync.dbUrl.replace(//$/, "");
-  const token = window._fbAuthToken || configSync.apiKey || "";
-  const auth = token ? "?auth=" + token : "";
-  return base + "/" + path + ".json" + auth;
+  const base = configSync.dbUrl.replace(/\/$/, '');
+  const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
+  return `${base}/${path}.json${auth}`;
 }
 
 // ── Conectar e testar ──
 async function firebaseConectar() {
-  const dbUrl  = (el("fb-dburl")||{}).value?.trim();
-  const apiKey = window._fbAuthToken || (el("fb-apikey")||{}).value?.trim() || "";
+  const dbUrl  = (el('fb-dburl')||{}).value?.trim();
+  const apiKey = (el('fb-apikey')||{}).value?.trim() || '';
 
   if(!dbUrl) {
     feedbackFb('⚠️ Cole a URL do Realtime Database (ex: https://xxx-default-rtdb.firebaseio.com)', 'warning');
@@ -10574,7 +10573,7 @@ async function testarConexaoFirebase() {
   feedbackFb('🔄 Testando conexão...', 'info');
   try {
     // Teste de escrita
-    const apiKey = window._fbAuthToken || configSync.apiKey || (el("fb-apikey") || {}).value?.trim() || "";
+    const apiKey = (el('fb-apikey') || {}).value?.trim() || configSync.apiKey || '';
     const auth = apiKey ? `?auth=${apiKey}` : '';
     const base = dbUrl.replace(/\/$/, '');
     const writeRes = await fetch(`${base}/gestcom/teste_conexao.json${auth}`, {
@@ -10696,33 +10695,25 @@ function atualizarTextoAutoSave(swEl) {
   try {
     const saved = localStorage.getItem('gestcom_rtdb');
     if (!saved) return;
-    const { dbUrl, realtime } = JSON.parse(saved);
+    const { dbUrl, apiKey, realtime } = JSON.parse(saved);
     if (!dbUrl) return;
     if (typeof realtime === 'boolean') configSync.realtime = realtime;
+    // Preenche os campos se existirem
     const inputUrl = el('fb-dburl');
+    const inputKey = el('fb-apikey');
     if (inputUrl) inputUrl.value = dbUrl;
+    if (inputKey && apiKey) inputKey.value = apiKey;
+    // Sincroniza o visual do switch realtime
     const swRt = el("sw-realtime");
     if (swRt) { if (configSync.realtime) swRt.classList.add("on"); else swRt.classList.remove("on"); }
-    configSync.dbUrl = dbUrl;
-
-    // Aguarda o token do Firebase Auth antes de reconectar
-    async function tentarReconectar(tentativa) {
-      tentativa = tentativa || 0;
-      const token = window._fbAuthToken;
-      if (!token) {
-        if (tentativa < 20) {
-          setTimeout(() => tentarReconectar(tentativa + 1), 500);
-        } else {
-          syncLog('Token de autenticação não disponível — reconexão cancelada.', 'aviso');
-        }
-        return;
-      }
-      configSync.apiKey = token;
-      const inputKey = el('fb-apikey');
-      if (inputKey) inputKey.value = '';
+    // Reconecta silenciosamente
+    configSync.dbUrl  = dbUrl;
+    configSync.apiKey = apiKey || '';
+    setTimeout(async () => {
       try {
+        const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
         const base = configSync.dbUrl.replace(/\/$/, '');
-        const res = await fetch(`${base}/gestcom/ping.json?auth=${token}`, {
+        const res = await fetch(`${base}/gestcom/ping.json${auth}`, {
           method: 'PUT',
           body: JSON.stringify({ ts: Date.now() })
         });
@@ -10738,22 +10729,82 @@ function atualizarTextoAutoSave(swEl) {
       } catch(e) {
         syncLog('Reconexão automática falhou: ' + e.message, 'aviso');
       }
-    }
-
-    setTimeout(() => tentarReconectar(0), 500);
+    }, 1200);
   } catch(e) {}
 })();
 
 console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
 
+// ── Patch: usa token anônimo do Firebase em todas as chamadas ──
+const _rtdbUrlOrig = window.rtdbUrl;
+function rtdbUrl(path) {
+  const base = configSync.dbUrl.replace(/\/$/, '');
+  const token = window._fbAuthToken || configSync.apiKey || '';
+  const auth = token ? '?auth=' + token : '';
+  return base + '/' + path + '.json' + auth;
+}
+
+// ── Patch: reconexão automática aguarda token anônimo ──
+(function patchAutoReconectar() {
+  const saved = localStorage.getItem('gestcom_rtdb');
+  if (!saved) return;
+  try {
+    const { dbUrl, realtime } = JSON.parse(saved);
+    if (!dbUrl) return;
+    if (typeof realtime === 'boolean') configSync.realtime = realtime;
+    const inputUrl = el('fb-dburl');
+    if (inputUrl) inputUrl.value = dbUrl;
+    const swRt = el('sw-realtime');
+    if (swRt) { if (configSync.realtime) swRt.classList.add('on'); else swRt.classList.remove('on'); }
+    configSync.dbUrl = dbUrl;
+
+    async function tentarReconectar(tentativa) {
+      const token = window._fbAuthToken;
+      if (!token) {
+        if (tentativa < 20) setTimeout(() => tentarReconectar(tentativa + 1), 500);
+        return;
+      }
+      configSync.apiKey = token;
+      try {
+        const base = configSync.dbUrl.replace(/\/$/, '');
+        const res = await fetch(base + '/gestcom/ping.json?auth=' + token, {
+          method: 'PUT',
+          body: JSON.stringify({ ts: Date.now() })
+        });
+        if (res.ok) {
+          configSync.conectado = true;
+          syncSetStatus('✅ Reconectado automaticamente', configSync.dbUrl.replace('https://',''), 'conectado');
+          syncHabilitarBotoes(true);
+          syncLog('Reconexão automática OK', 'ok');
+          if (configSync.realtime) ativarPollingRealtime();
+          await syncPull(true);
+          _atualizarUltimoSalvo();
+        }
+      } catch(e) { syncLog('Reconexão falhou: ' + e.message, 'aviso'); }
+    }
+    setTimeout(() => tentarReconectar(0), 500);
+  } catch(e) {}
+})();
+
+// ── Patch: firebaseConectar usa token anônimo ──
+(function patchFirebaseConectar() {
+  const orig = window.firebaseConectar;
+  if (!orig) return;
+  window.firebaseConectar = async function() {
+    const token = window._fbAuthToken;
+    if (token) configSync.apiKey = token;
+    await orig.apply(this, arguments);
+  };
+})();
+
 </script>
 
-<!-- ===== FIREBASE AUTH ANÔNIMO — SEGURANÇA ===== -->
+<!-- ===== FIREBASE AUTH ANÔNIMO ===== -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  const firebaseConfig = {
+  const app = initializeApp({
     apiKey: "AIzaSyC1eaTg2sXqyM9BMHZYJNCwwEydhwdVy6c",
     authDomain: "sistematresvales.firebaseapp.com",
     databaseURL: "https://sistematresvales-default-rtdb.firebaseio.com",
@@ -10761,42 +10812,27 @@ console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de
     storageBucket: "sistematresvales.firebasestorage.app",
     messagingSenderId: "625055053193",
     appId: "1:625055053193:web:d35e3a063a24c357c65d58"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-
-  // Faz login anônimo automático ao abrir o sistema
-  signInAnonymously(auth).catch(err => {
-    console.warn('[GestCom Auth] Falha no login anônimo:', err.message);
   });
 
-  // Quando o token estiver pronto, injeta no configSync automaticamente
+  const auth = getAuth(app);
+  signInAnonymously(auth).catch(e => console.warn('[Auth]', e.message));
+
   onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const token = await user.getIdToken();
-        // Injeta o token como apiKey para todas as chamadas REST do Firebase
-        if (typeof configSync !== 'undefined') {
-          configSync.apiKey = token;
-        }
-        window._fbAuthToken = token;
-        window._fbAuthUser = user;
-
-        // Renova o token a cada 50 minutos (expira em 60)
-        setInterval(async () => {
-          try {
-            const newToken = await user.getIdToken(true);
-            if (typeof configSync !== 'undefined') configSync.apiKey = newToken;
-            window._fbAuthToken = newToken;
-          } catch(e) { console.warn('[GestCom Auth] Erro renovando token:', e.message); }
-        }, 50 * 60 * 1000);
-
-        console.info('[GestCom Auth] ✅ Autenticado anonimamente. UID:', user.uid);
-      } catch(e) {
-        console.warn('[GestCom Auth] Erro obtendo token:', e.message);
-      }
-    }
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      window._fbAuthToken = token;
+      window._fbAuthUser = user;
+      if (typeof configSync !== 'undefined') configSync.apiKey = token;
+      setInterval(async () => {
+        try {
+          const t = await user.getIdToken(true);
+          window._fbAuthToken = t;
+          if (typeof configSync !== 'undefined') configSync.apiKey = t;
+        } catch(e) {}
+      }, 50 * 60 * 1000);
+      console.info('[Auth] Autenticado. UID:', user.uid);
+    } catch(e) { console.warn('[Auth]', e.message); }
   });
 </script>
 
