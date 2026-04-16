@@ -9477,8 +9477,8 @@ function rtdbUrl(path) {
 
 // ── Conectar e testar ──
 async function firebaseConectar() {
-  const dbUrl  = (el('fb-dburl')||{}).value?.trim();
-  const apiKey = (el('fb-apikey')||{}).value?.trim() || '';
+  const dbUrl  = (el("fb-dburl")||{}).value?.trim();
+  const apiKey = window._fbAuthToken || (el("fb-apikey")||{}).value?.trim() || "";
 
   if(!dbUrl) {
     feedbackFb('⚠️ Cole a URL do Realtime Database (ex: https://xxx-default-rtdb.firebaseio.com)', 'warning');
@@ -10574,7 +10574,7 @@ async function testarConexaoFirebase() {
   feedbackFb('🔄 Testando conexão...', 'info');
   try {
     // Teste de escrita
-    const apiKey = (el('fb-apikey') || {}).value?.trim() || configSync.apiKey || '';
+    const apiKey = window._fbAuthToken || configSync.apiKey || (el("fb-apikey") || {}).value?.trim() || "";
     const auth = apiKey ? `?auth=${apiKey}` : '';
     const base = dbUrl.replace(/\/$/, '');
     const writeRes = await fetch(`${base}/gestcom/teste_conexao.json${auth}`, {
