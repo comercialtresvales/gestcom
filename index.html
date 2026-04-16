@@ -9469,9 +9469,10 @@ function syncHabilitarBotoes(sim) {
 
 // ── URL base para REST calls ──
 function rtdbUrl(path) {
-  const base = configSync.dbUrl.replace(/\/$/, '');
-  const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
-  return `${base}/${path}.json${auth}`;
+  const base = configSync.dbUrl.replace(//$/, "");
+  const token = window._fbAuthToken || configSync.apiKey || "";
+  const auth = token ? "?auth=" + token : "";
+  return base + "/" + path + ".json" + auth;
 }
 
 // ── Conectar e testar ──
@@ -10695,25 +10696,33 @@ function atualizarTextoAutoSave(swEl) {
   try {
     const saved = localStorage.getItem('gestcom_rtdb');
     if (!saved) return;
-    const { dbUrl, apiKey, realtime } = JSON.parse(saved);
+    const { dbUrl, realtime } = JSON.parse(saved);
     if (!dbUrl) return;
     if (typeof realtime === 'boolean') configSync.realtime = realtime;
-    // Preenche os campos se existirem
     const inputUrl = el('fb-dburl');
-    const inputKey = el('fb-apikey');
     if (inputUrl) inputUrl.value = dbUrl;
-    if (inputKey && apiKey) inputKey.value = apiKey;
-    // Sincroniza o visual do switch realtime
     const swRt = el("sw-realtime");
     if (swRt) { if (configSync.realtime) swRt.classList.add("on"); else swRt.classList.remove("on"); }
-    // Reconecta silenciosamente
-    configSync.dbUrl  = dbUrl;
-    configSync.apiKey = apiKey || '';
-    setTimeout(async () => {
+    configSync.dbUrl = dbUrl;
+
+    // Aguarda o token do Firebase Auth antes de reconectar
+    async function tentarReconectar(tentativa) {
+      tentativa = tentativa || 0;
+      const token = window._fbAuthToken;
+      if (!token) {
+        if (tentativa < 20) {
+          setTimeout(() => tentarReconectar(tentativa + 1), 500);
+        } else {
+          syncLog('Token de autenticação não disponível — reconexão cancelada.', 'aviso');
+        }
+        return;
+      }
+      configSync.apiKey = token;
+      const inputKey = el('fb-apikey');
+      if (inputKey) inputKey.value = '';
       try {
-        const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
         const base = configSync.dbUrl.replace(/\/$/, '');
-        const res = await fetch(`${base}/gestcom/ping.json${auth}`, {
+        const res = await fetch(`${base}/gestcom/ping.json?auth=${token}`, {
           method: 'PUT',
           body: JSON.stringify({ ts: Date.now() })
         });
@@ -10729,7 +10738,9 @@ function atualizarTextoAutoSave(swEl) {
       } catch(e) {
         syncLog('Reconexão automática falhou: ' + e.message, 'aviso');
       }
-    }, 1200);
+    }
+
+    setTimeout(() => tentarReconectar(0), 500);
   } catch(e) {}
 })();
 
