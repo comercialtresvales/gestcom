@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -7759,17 +7758,17 @@ function fazerLogin() {
     if(!loginEl || !senhaEl) { alert('Erro: campos de login não encontrados.'); return; }
 
     const login = (loginEl.value||'').trim().toLowerCase();
-    const senha = senhaEl.value||'';
+    const senha = (senhaEl.value||'').trim();
 
     if(!login || !senha) {
       if(errEl) { errEl.textContent = 'Preencha usuário e senha.'; errEl.style.display='block'; }
       return;
     }
 
-    // Busca usuário — aceita status 'ativo' ou 'Ativo'
+    // Busca usuário — comparação case-insensitive no login e aceita status 'ativo' ou 'Ativo'
     const usr = usuarios.find(u =>
-      u.login === login &&
-      u.senha === senha &&
+      (u.login||'').trim().toLowerCase() === login &&
+      (u.senha||'').trim() === senha &&
       (u.status||'').toLowerCase() === 'ativo'
     );
 
