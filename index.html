@@ -9470,17 +9470,35 @@ function syncHabilitarBotoes(sim) {
 // ── URL base para REST calls ──
 function rtdbUrl(path) {
   const base = configSync.dbUrl.replace(/\/$/, '');
-  const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
+  const token = window._fbAuthToken || configSync.apiKey || '';
+  const auth = token ? `?auth=${token}` : '';
   return `${base}/${path}.json${auth}`;
 }
 
 // ── Conectar e testar ──
-async function firebaseConectar() {
-  const dbUrl  = (el('fb-dburl')||{}).value?.trim();
-  const apiKey = (el('fb-apikey')||{}).value?.trim() || '';
+async function async function firebaseConectar() {
+  const dbUrl = (el('fb-dburl')||{}).value?.trim();
 
   if(!dbUrl) {
-    feedbackFb('⚠️ Cole a URL do Realtime Database (ex: https://xxx-default-rtdb.firebaseio.com)', 'warning');
+    feedbackFb('⚠️ Cole a URL do Realtime Database', 'warning');
+    return;
+  }
+
+  feedbackFb('🔄 Aguardando autenticação...', 'info');
+
+  // Aguarda token JWT do signInAnonymously (até 8 segundos)
+  if(!window._fbAuthToken) {
+    await new Promise(resolve => {
+      let t = 0;
+      const check = setInterval(() => {
+        t++;
+        if(window._fbAuthToken || t > 16) { clearInterval(check); resolve(); }
+      }, 500);
+    });
+  }
+
+  if(!window._fbAuthToken) {
+    feedbackFb('❌ Autenticação não concluída. Recarregue a página e tente novamente.', 'danger');
     return;
   }
 
@@ -9488,8 +9506,7 @@ async function firebaseConectar() {
   syncSetStatus('Conectando...', 'Testando conexão...', 'sincronizando');
 
   configSync.dbUrl  = dbUrl.replace(/\/$/, '');
-  configSync.apiKey = apiKey;
-
+  configSync.apiKey = ''; // não usa mais API Key — usa token JWT
   try {
     // Teste de conexão — lê o nó raiz de ping
     const res = await fetch(rtdbUrl('gestcom/ping'), {
@@ -10707,8 +10724,8 @@ function atualizarTextoAutoSave(swEl) {
     const swRt = el("sw-realtime");
     if (swRt) { if (configSync.realtime) swRt.classList.add("on"); else swRt.classList.remove("on"); }
     // Reconecta silenciosamente
-    configSync.dbUrl  = dbUrl;
-    configSync.apiKey = apiKey || '';
+   configSync.dbUrl  = dbUrl;
+configSync.apiKey = '';
     setTimeout(async () => {
       try {
         const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
@@ -10759,19 +10776,24 @@ onAuthStateChanged(_fbAuth, async (user) => {
   try {
     const token = await user.getIdToken();
     window._fbAuthToken = token;
-    if (typeof configSync !== 'undefined') configSync.apiKey = token;
+    // Não coloca em configSync.apiKey — rtdbUrl usa _fbAuthToken diretamente
+
     // Renova token a cada 50 minutos
     setInterval(async () => {
       try {
         const t = await user.getIdToken(true);
         window._fbAuthToken = t;
-        if (typeof configSync !== 'undefined') configSync.apiKey = t;
       } catch(e) {}
     }, 50 * 60 * 1000);
-    console.info('[Auth] OK. UID:', user.uid);
+
+    console.info('[Auth] Token JWT pronto. UID:', user.uid);
+
+    // Se URL já estava salva, reconecta automaticamente
+    if(typeof configSync !== 'undefined' && configSync.dbUrl && !configSync.conectado) {
+      setTimeout(() => {
+        if(!configSync.conectado && configSync.dbUrl) firebaseConectar();
+      }, 500);
+    }
+
   } catch(e) { console.warn('[Auth]', e.message); }
 });
-</script>
-
-</body>
-</html>
