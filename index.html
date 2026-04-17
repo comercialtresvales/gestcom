@@ -312,8 +312,9 @@ tr:last-child td{border-bottom:none;}
     <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
     <div class="form-group"><label>Usuário</label><input id="login-user" type="text" placeholder="seu.usuario" autocomplete="username" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
     <div class="form-group"><label>Senha</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="fazerLogin()">Entrar</button>
-    <div style="text-align:center;margin-top:12px;font-size:11px;color:#555">Login padrão: <strong style="color:#fff">admin</strong> / <strong style="color:#fff">admin123</strong></div>
+    <button class="btn btn-primary" id="btn-entrar" style="width:100%;justify-content:center;padding:10px" onclick="fazerLogin()">Entrar</button>
+    <div id="login-sync-status" style="text-align:center;margin-top:8px;font-size:11px;color:#f5c500;min-height:16px;display:none">⏳ Carregando dados da nuvem…</div>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:#555">Login padrão: <strong style="color:#fff">admin</strong> / <strong style="color:#fff">admin123</strong></div>
     <div style="text-align:center;margin-top:10px">
       <button onclick="recuperarAcesso()" style="background:none;border:none;color:#888;font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit">🔑 Esqueci minha senha / Recuperar acesso</button>
     </div>
@@ -10696,6 +10697,11 @@ function atualizarTextoAutoSave(swEl) {
     // Reconecta silenciosamente
     configSync.dbUrl  = dbUrl;
     configSync.apiKey = apiKey || '';
+    // Bloqueia botão Entrar enquanto sincroniza
+    const _btnEntrar = document.getElementById('btn-entrar');
+    const _loginSyncStatus = document.getElementById('login-sync-status');
+    if (_btnEntrar) { _btnEntrar.disabled = true; _btnEntrar.textContent = '⏳ Aguarde…'; }
+    if (_loginSyncStatus) _loginSyncStatus.style.display = 'block';
     setTimeout(async () => {
       try {
         const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
@@ -10715,6 +10721,12 @@ function atualizarTextoAutoSave(swEl) {
         }
       } catch(e) {
         syncLog('Reconexão automática falhou: ' + e.message, 'aviso');
+      } finally {
+        // Libera o botão Entrar após sync (ou falha)
+        const _btn = document.getElementById('btn-entrar');
+        const _sts = document.getElementById('login-sync-status');
+        if (_btn) { _btn.disabled = false; _btn.textContent = 'Entrar'; }
+        if (_sts) _sts.style.display = 'none';
       }
     }, 1200);
   } catch(e) {}
