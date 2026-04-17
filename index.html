@@ -2378,7 +2378,7 @@ let orcamentos = [];
 
 let pedidos = [];
 
-let faturamentos = [];
+// let faturamentos = []; // REMOVIDO — variável morta. Use pedidos.filter(p => p.nf)
 
 let comissoes_data = [];
 
@@ -2598,7 +2598,7 @@ function _salvarLocal() {
       pedidos, orcamentos, clientes, industrias, redes, comissoes_data,
       logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
       PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms,
-      configSistema, _ts: Date.now()
+      configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]), _ts: Date.now()
     });
     localStorage.setItem('gestcom_dados', payload);
   } catch(e) {
@@ -2630,6 +2630,8 @@ function _carregarLocal() {
     if(d.PRODUTOS_CAT  && typeof d.PRODUTOS_CAT  ==='object') Object.assign(PRODUTOS_CAT,   d.PRODUTOS_CAT);
     if(d.userPerms     && typeof d.userPerms     ==='object') Object.assign(userPerms,       d.userPerms);
     if(d.configSistema && typeof d.configSistema ==='object') Object.assign(configSistema,   d.configSistema);
+    if(Array.isArray(d.auditLog))         auditLog             = d.auditLog;
+    if(Array.isArray(d.saldoUsosData))    window.saldoUsosData = d.saldoUsosData;
     // Migração: cria entradas de logística para pedidos antigos
     pedidos.filter(p=>!p.excluido).forEach(p=>{
       if(!logisticaData.find(l=>l.pedId===p.id))
@@ -4139,7 +4141,7 @@ function _calcMesPrevisaoComissao(dataNF, tipoCom, prazoCliente) {
     dNF = dataNF;
   } else if(typeof dataNF === 'string' && dataNF.length >= 7) {
     // Garante parse local correto (evita offset UTC)
-    const parts = dataNF.split('-');
+    const parts = dataNF.split(/[-\/T]/);
     dNF = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]||1));
   } else {
     dNF = new Date(); // fallback: data atual
@@ -9437,7 +9439,7 @@ let configSync = {
   conectado: false,
 };
 
-window._rtdbPollInterval = null;
+let _rtdbPollInterval = null;
 let _rtdbLastTs = 0;
 
 function syncLog(msg, tipo='info') {
@@ -9470,35 +9472,17 @@ function syncHabilitarBotoes(sim) {
 // ── URL base para REST calls ──
 function rtdbUrl(path) {
   const base = configSync.dbUrl.replace(/\/$/, '');
-  const token = window._fbAuthToken || configSync.apiKey || '';
-  const auth = token ? `?auth=${token}` : '';
+  const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
   return `${base}/${path}.json${auth}`;
 }
 
 // ── Conectar e testar ──
-async function async function firebaseConectar() {
-  const dbUrl = (el('fb-dburl')||{}).value?.trim();
+async function firebaseConectar() {
+  const dbUrl  = (el('fb-dburl')||{}).value?.trim();
+  const apiKey = (el('fb-apikey')||{}).value?.trim() || '';
 
   if(!dbUrl) {
-    feedbackFb('⚠️ Cole a URL do Realtime Database', 'warning');
-    return;
-  }
-
-  feedbackFb('🔄 Aguardando autenticação...', 'info');
-
-  // Aguarda token JWT do signInAnonymously (até 8 segundos)
-  if(!window._fbAuthToken) {
-    await new Promise(resolve => {
-      let t = 0;
-      const check = setInterval(() => {
-        t++;
-        if(window._fbAuthToken || t > 16) { clearInterval(check); resolve(); }
-      }, 500);
-    });
-  }
-
-  if(!window._fbAuthToken) {
-    feedbackFb('❌ Autenticação não concluída. Recarregue a página e tente novamente.', 'danger');
+    feedbackFb('⚠️ Cole a URL do Realtime Database (ex: https://xxx-default-rtdb.firebaseio.com)', 'warning');
     return;
   }
 
@@ -9506,7 +9490,8 @@ async function async function firebaseConectar() {
   syncSetStatus('Conectando...', 'Testando conexão...', 'sincronizando');
 
   configSync.dbUrl  = dbUrl.replace(/\/$/, '');
-  configSync.apiKey = ''; // não usa mais API Key — usa token JWT
+  configSync.apiKey = apiKey;
+
   try {
     // Teste de conexão — lê o nó raiz de ping
     const res = await fetch(rtdbUrl('gestcom/ping'), {
@@ -10233,24 +10218,9 @@ function salvarSellOutEdit() {
 })();
 
 function _hookSalvarNFInternal() {
-  if (!window.salvarNF || window.salvarNF._hooked) return;
-  const orig = window.salvarNF;
-  window.salvarNF = function() {
-    const result = orig.apply(this, arguments);
-    // Após salvar NF, verificar saldo para o último pedido com NF
-    setTimeout(function() {
-      const pedComNF = pedidos.filter(p => p.nf && !p.excluido).slice(-1)[0];
-      if (pedComNF && pedComNF.tipo !== 'bonificacao') {
-        const saldoGerado = verificarEGerarSaldo(pedComNF, pedComNF.nf);
-        if (saldoGerado && saldoGerado > 0) {
-          toast(`💡 Saldo de ${fmt(saldoGerado)} gerado automaticamente para ${pedComNF.cliente} / ${pedComNF.industria}!`, 'info');
-          renderSaldo();
-        }
-      }
-    }, 200);
-    return result;
-  };
-  window.salvarNF._hooked = true;
+  // BUG FIX: hook desabilitado — causava chamada dupla de gerarComissaoAuto.
+  // salvarNFUnificado() já roteia corretamente para salvarNF() ou salvarNFSemPedido().
+  // O saldo é verificado dentro de salvarNF() e salvarNFSemPedido() diretamente.
 }
 
 /* ─────────────────────────────────────────────────────
@@ -10724,8 +10694,8 @@ function atualizarTextoAutoSave(swEl) {
     const swRt = el("sw-realtime");
     if (swRt) { if (configSync.realtime) swRt.classList.add("on"); else swRt.classList.remove("on"); }
     // Reconecta silenciosamente
-   configSync.dbUrl  = dbUrl;
-configSync.apiKey = '';
+    configSync.dbUrl  = dbUrl;
+    configSync.apiKey = apiKey || '';
     setTimeout(async () => {
       try {
         const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
@@ -10753,47 +10723,5 @@ configSync.apiKey = '';
 console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
 
 </script>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-const _fbApp = initializeApp({
-  apiKey: "AIzaSyC1eaTg2sXqyM9BMHZYJNCwwEydhwdVy6c",
-  authDomain: "sistematresvales.firebaseapp.com",
-  databaseURL: "https://sistematresvales-default-rtdb.firebaseio.com",
-  projectId: "sistematresvales",
-  storageBucket: "sistematresvales.firebasestorage.app",
-  messagingSenderId: "625055053193",
-  appId: "1:625055053193:web:d35e3a063a24c357c65d58"
-});
-
-const _fbAuth = getAuth(_fbApp);
-signInAnonymously(_fbAuth).catch(e => console.warn('[Auth]', e.message));
-
-onAuthStateChanged(_fbAuth, async (user) => {
-  if (!user) return;
-  try {
-    const token = await user.getIdToken();
-    window._fbAuthToken = token;
-    // Não coloca em configSync.apiKey — rtdbUrl usa _fbAuthToken diretamente
-
-    // Renova token a cada 50 minutos
-    setInterval(async () => {
-      try {
-        const t = await user.getIdToken(true);
-        window._fbAuthToken = t;
-      } catch(e) {}
-    }, 50 * 60 * 1000);
-
-    console.info('[Auth] Token JWT pronto. UID:', user.uid);
-
-    // Se URL já estava salva, reconecta automaticamente
-    if(typeof configSync !== 'undefined' && configSync.dbUrl && !configSync.conectado) {
-      setTimeout(() => {
-        if(!configSync.conectado && configSync.dbUrl) firebaseConectar();
-      }, 500);
-    }
-
-  } catch(e) { console.warn('[Auth]', e.message); }
-});
+</body>
+</html>
