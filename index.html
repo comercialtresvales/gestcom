@@ -2090,7 +2090,7 @@ tr:last-child td{border-bottom:none;}
     <div class="modal-title">✏️ Editar Sell Out<button class="close-btn" onclick="closeModal('modal-sellout-edit')">✕</button></div>
     <div class="alert alert-info">Edite os dados do sell out. Alterações ficam registradas no histórico.</div>
     <div class="form-grid">
-      <div class="form-group"><label>Cliente</label><input id="soe-cli" readonly style="background:#fafaf8"></div>
+      <div class="form-group"><label>Cliente</label><select id="soe-cli"></select></div>
       <div class="form-group"><label>Indústria</label><input id="soe-ind" readonly style="background:#fafaf8"></div>
       <div class="form-group"><label>Produto</label><input id="soe-produto" placeholder="Descrição ou código"></div>
       <div class="form-group"><label>Mês de Referência</label>
@@ -7401,8 +7401,20 @@ function salvarCliente() {
     obs:       el('c-obs').value.trim(),
     rede:      el('c-rede') ? el('c-rede').value : '',
   };
-  if(_cliEditId) clientes = clientes.map(c=>c.id===_cliEditId ? obj : c);
-  else            clientes.push(obj);
+  if(_cliEditId) {
+    const nomeAntigo = (clientes.find(c=>c.id===_cliEditId)||{}).nome || '';
+    clientes = clientes.map(c=>c.id===_cliEditId ? obj : c);
+    // Atualizar nome do cliente nos registros de Sell Out
+    if(nomeAntigo && nomeAntigo !== nome) {
+      let atualizados = 0;
+      sellOutData = sellOutData.map(s => {
+        if(s.cliente === nomeAntigo) { atualizados++; return {...s, cliente: nome}; }
+        return s;
+      });
+      if(atualizados > 0) toast(`🔄 ${atualizados} registro(s) de Sell Out atualizados para "${nome}".`);
+    }
+  }
+  else clientes.push(obj);
   const acao = _cliEditId ? 'editado' : 'cadastrado';
   addAudit(usuarioLogado?.login||'admin', `Cliente ${acao}: ${nome}${obj.rede?' (Rede: '+obj.rede+')':''}`, '👥');
   _cliEditId = null;
@@ -10114,7 +10126,26 @@ function editarSellOut(soId) {
   if (!so) return;
   _soEditId = soId;
 
-  if (el('soe-cli')) el('soe-cli').value = so.cliente;
+  // Popular select de clientes
+  const soeCli = el('soe-cli');
+  if (soeCli) {
+    soeCli.innerHTML = '';
+    const cliAtivos = clientes.filter(c => c.status !== 'Inativo').sort((a,b) => a.nome.localeCompare(b.nome));
+    cliAtivos.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.nome;
+      opt.textContent = c.nome;
+      soeCli.appendChild(opt);
+    });
+    // Se o cliente do registro nao esta na lista (nome antigo), adiciona como opcao
+    if (!cliAtivos.some(c => c.nome === so.cliente)) {
+      const opt = document.createElement('option');
+      opt.value = so.cliente;
+      opt.textContent = so.cliente + ' (nome desatualizado)';
+      soeCli.insertBefore(opt, soeCli.firstChild);
+    }
+    soeCli.value = so.cliente;
+  }
   if (el('soe-ind')) el('soe-ind').value = so.industria;
   if (el('soe-produto')) el('soe-produto').value = so.produto || '';
   if (el('soe-qtd')) el('soe-qtd').value = so.qtd || 0;
@@ -10182,6 +10213,7 @@ function salvarSellOutEdit() {
   });
 
   // Atualizar dados
+  so.cliente = (el('soe-cli') || {}).value || so.cliente;
   so.produto = (el('soe-produto') || {}).value || so.produto;
   so.mes = (el('soe-mes') || {}).value || so.mes;
   so.qtd = parseInt((el('soe-qtd') || {}).value) || so.qtd;
