@@ -534,9 +534,10 @@ tr:last-child td{border-bottom:none;}
           <option>GUMMY</option><option>EXCLUSIVE</option>
         </select>
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;background:#fff">
-          <input type="checkbox" id="ped-mostrar-excluidos" onchange="renderPedidos()" style="accent-color:var(--vermelho)">
+          <input type="checkbox" id="ped-mostrar-excluidos" onchange="renderPedidos();toggleBtnLimparExcluidos()" style="accent-color:var(--vermelho)">
           🚫 Ver excluídos
         </label>
+        <button id="btn-limpar-excluidos" class="btn btn-danger btn-sm" style="display:none" onclick="limparTodosExcluidos()">🗑️ Excluir todos permanentemente</button>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -3188,9 +3189,11 @@ function renderPedidos() {
     // Por padrão, oculta excluídos; mostra só se checkbox marcado
     if(p.excluido && !mostrarExcluidos) return false;
     if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)) return false;
-    if(filtSt&&p.status!==filtSt) return false;
-    if(filtInd&&p.industria!==filtInd) return false;
-    if(filtTipo&&(p.tipo||'venda')!==filtTipo) return false;
+    // Pedidos excluídos sempre passam pelos filtros de status/indústria/tipo quando mostrarExcluidos está ativo
+    const isExcShowing = mostrarExcluidos && p.excluido;
+    if(filtSt && !isExcShowing && p.status!==filtSt) return false;
+    if(filtInd && !isExcShowing && p.industria!==filtInd) return false;
+    if(filtTipo && !isExcShowing && (p.tipo||'venda')!==filtTipo) return false;
     return true;
   });
   // Paginação — 50 por página
@@ -3283,6 +3286,33 @@ function reativarPedido(id) {
   renderComissoes();
   renderDashboard();
   toast(`Pedido ${id} reativado com sucesso! Comissão restaurada.`);
+}
+
+function toggleBtnLimparExcluidos() {
+  const cb = el('ped-mostrar-excluidos');
+  const btn = el('btn-limpar-excluidos');
+  if (!btn) return;
+  const temExcluidos = pedidos.some(p => p.excluido);
+  btn.style.display = (cb && cb.checked && temExcluidos) ? '' : 'none';
+}
+
+function limparTodosExcluidos() {
+  const excluidos = pedidos.filter(p => p.excluido);
+  if (excluidos.length === 0) { toast('Não há pedidos excluídos.'); return; }
+  if (!confirm(`⚠️ ATENÇÃO: Excluir PERMANENTEMENTE os ${excluidos.length} pedido(s) marcados como excluídos?\n\nEsta ação NÃO pode ser desfeita.`)) return;
+  excluidos.forEach(p => {
+    pedidos = pedidos.filter(x => x.id !== p.id);
+    logisticaData = logisticaData.filter(x => x.pedId !== p.id);
+    comissoes_data = comissoes_data.filter(x => x.pedido !== p.id);
+    addAudit(usuarioLogado?.login || 'admin', `Pedido ${p.id} excluído PERMANENTEMENTE em lote (${p.cliente} / ${p.industria})`, '🗑️');
+  });
+  syncAutoSaveHook();
+  renderPedidos();
+  renderComissoes();
+  renderDashboard();
+  const btn = el('btn-limpar-excluidos');
+  if (btn) btn.style.display = 'none';
+  toast(`✅ ${excluidos.length} pedido(s) excluídos permanentemente.`);
 }
 
 /* ══════════════════════════
@@ -10693,7 +10723,7 @@ async function diagnosticarFirebase() {
   results.push({ ok: configSync.autoSave, msg: configSync.autoSave ? 'Auto-save: Ativado' : 'Auto-save: Desativado' });
 
   // 4. Polling realtime ativo?
-  results.push({ ok: !!window._rtdbPollInterval, msg: window._rtdbPollInterval ? 'Polling realtime: Ativo (atualiza a cada 5s)' : 'Polling realtime: Inativo' });
+  results.push({ ok: !!_rtdbPollInterval, msg: _rtdbPollInterval ? 'Polling realtime: Ativo (atualiza a cada 5s)' : 'Polling realtime: Inativo' });
 
   // 5. Teste de escrita ao vivo
   if (dbUrl) {
