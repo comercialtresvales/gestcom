@@ -389,7 +389,7 @@ tr:last-child td{border-bottom:none;}
     <div class="topbar-title" id="topbar-title">Dashboard Comercial</div>
     <div class="topbar-actions">
       <span id="sync-ts" style="font-size:11px;color:#aaa"></span>
-      <span id="sync-saving-indicator" style="display:none;font-size:11px;font-weight:700;color:var(--verde);animation:syncPulse 1s infinite alternate">● Salvando...</span>
+      <span id="sync-saving-indicator-topbar" style="display:none;font-size:11px;font-weight:700;color:var(--verde);animation:syncPulse 1s infinite alternate">● Salvando...</span>
       <div style="position:relative">
         <div class="topbar-user" onclick="toggleUserMenu()">
           <div class="user-avatar" id="topbar-avatar">AD</div>
@@ -422,7 +422,7 @@ tr:last-child td{border-bottom:none;}
       <div class="grid-2" style="margin-bottom:14px">
         <div class="card">
           <div class="card-header"><div class="card-title">Pedidos Recentes</div><button class="btn btn-outline btn-sm" onclick="showPanel('pedidos',null)">Ver todos →</button></div>
-          <table><thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Valor</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="dash-pedidos-tbody"></tbody></table>
         </div>
         <div class="card">
@@ -462,7 +462,7 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="orc-filtro-ind" onchange="renderOrcamentos()">
           <option value="">Todas as indústrias</option>
-          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option>
+          <option>GUMMY</option><option>EXCLUSIVE</option>
         </select>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -531,7 +531,7 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="ped-filtro-ind" onchange="renderPedidos()">
           <option value="">Todas as indústrias</option>
-          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option>
+          <option>GUMMY</option><option>EXCLUSIVE</option>
         </select>
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;background:#fff">
           <input type="checkbox" id="ped-mostrar-excluidos" onchange="renderPedidos()" style="accent-color:var(--vermelho)">
@@ -569,11 +569,11 @@ tr:last-child td{border-bottom:none;}
         <input id="fat-busca" placeholder="🔍 Nº NF, cliente, pedido..." oninput="renderFaturamento()">
         <select id="fat-filtro-cli" onchange="renderFaturamento()">
           <option value="">Todos os clientes</option>
-          <option>Coelho Diniz</option><option>DCA Bahia</option><option>Casa Aladim TO</option><option>Lojas Rede</option>
+          
         </select>
         <select id="fat-filtro-ind" onchange="renderFaturamento()">
           <option value="">Todas as indústrias</option>
-          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option>
+          
         </select>
         <select id="fat-filtro-status" onchange="renderFaturamento()">
           <option value="">Todos os status</option>
@@ -622,7 +622,7 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="log-filtro-ind" onchange="renderLogistica()">
           <option value="">Todas as indústrias</option>
-          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option>
+          
         </select>
       </div>
       <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo.</div>
@@ -729,7 +729,6 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="fm-ind" onchange="renderFatMensal()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
           <option value="">Todas as indústrias</option>
-          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option>
         </select>
         <div style="display:flex;gap:4px">
           <button class="btn btn-outline btn-sm" id="fm-view-tabela" onclick="setFmView('tabela',this)" style="background:var(--preto);color:var(--amarelo)">📋 Tabela</button>
@@ -757,11 +756,10 @@ tr:last-child td{border-bottom:none;}
       <div class="search-bar">
         <select id="sio-filtro-cli" onchange="renderSellInOut()">
           <option value="">Todos os clientes</option>
-          <option>Coelho Diniz</option><option>DCA Bahia</option><option>Casa Aladim TO</option><option>Lojas Rede</option>
+          
         </select>
         <select id="sio-filtro-ind" onchange="renderSellInOut()">
           <option value="">Todas as indústrias</option>
-          <option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option>
         </select>
         <select id="sio-filtro-mes" onchange="renderSellInOut()">
           <option value="">Todos os meses</option>
@@ -775,7 +773,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>Cliente</th><th>Indústria</th><th>Mês</th><th>Sell In (R$)</th><th>Sell Out (R$)</th><th>Positivação</th><th>Estoque Estimado</th><th>Giro %</th><th>Cobertura</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Cliente / Grupo</th><th>Indústria</th><th>Mês</th><th>Sell In (R$)</th><th>Sell Out (R$)</th><th>Positivação</th><th>Estoque Estimado</th><th>Giro %</th><th>Cobertura</th><th>Ações</th></tr></thead>
           <tbody id="sio-tbody"></tbody>
         </table>
       </div>
@@ -878,7 +876,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="search-bar">
         <input id="mix-busca" placeholder="🔍 Código ou descrição..." oninput="renderMix()">
-        <select id="filtro-industria-mix" onchange="renderMix()"><option value="">Todas as indústrias</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option><option>DUTY</option></select>
+        <select id="filtro-industria-mix" onchange="renderMix()"><option value="">Todas as indústrias</option></select>
         <select id="mix-filtro-status" onchange="renderMix()"><option value="">Ativo + Inativo</option><option value="ativo">Apenas ativos</option><option value="inativo">Apenas inativos</option></select>
         <select id="mix-filtro-curva" onchange="renderMix()"><option value="">Curva A+B+C</option><option value="A">Curva A</option><option value="B">Curva B</option><option value="C">Curva C</option></select>
         <select id="mix-filtro-desconto" onchange="renderMix()"><option value="">Todos os descontos</option><option value="com">Apenas com desconto</option><option value="sem">Apenas sem desconto</option></select>
@@ -1379,10 +1377,10 @@ tr:last-child td{border-bottom:none;}
     </div>
     <div class="form-grid" style="margin-bottom:12px">
       <div class="form-group"><label>Cliente *</label>
-        <select id="orc-cli"><option value="">Selecione...</option><option>Coelho Diniz</option><option>DCA Bahia</option><option>Casa Aladim TO</option><option>Lojas Rede</option></select>
+        <select id="orc-cli"><option value="">Selecione...</option></select>
       </div>
       <div class="form-group"><label>Indústria principal</label>
-        <select id="orc-ind"><option value="">Selecione...</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option></select>
+        <select id="orc-ind"><option value="">Selecione...</option></select>
       </div>
       <div class="form-group"><label>Data</label><input type="date" id="orc-data"></div>
       <div class="form-group"><label>Validade</label><input type="date" id="orc-validade"></div>
@@ -1982,11 +1980,11 @@ tr:last-child td{border-bottom:none;}
     <div class="modal-title">Lançar Sell Out<button class="close-btn" onclick="closeModal('modal-sellout')">✕</button></div>
     <div class="alert alert-info">O Sell Out representa as vendas realizadas pelo cliente (saída de estoque). Informe os dados manualmente.</div>
     <div class="form-grid">
-      <div class="form-group"><label>Cliente *</label>
-        <select id="so-cli"><option value="">Selecione...</option><option>Coelho Diniz</option><option>DCA Bahia</option><option>Casa Aladim TO</option><option>Lojas Rede</option></select>
+      <div class="form-group"><label>Grupo / Rede *</label>
+        <select id="so-cli" style="border-color:var(--amarelo)"><option value="">— Selecione o grupo —</option></select>
       </div>
       <div class="form-group"><label>Indústria *</label>
-        <select id="so-ind"><option value="">Selecione...</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option></select>
+        <select id="so-ind"><option value="">Selecione...</option></select>
       </div>
       <div class="form-group"><label>Produto</label><input id="so-produto" placeholder="Descrição ou código do produto"></div>
       <div class="form-group"><label>Mês de Referência *</label>
@@ -2106,9 +2104,12 @@ tr:last-child td{border-bottom:none;}
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Histórico de Alterações</div>
       <div id="soe-historico-list" style="max-height:120px;overflow-y:auto;font-size:11px;color:#666;line-height:1.8"></div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-      <button class="btn btn-outline" onclick="closeModal('modal-sellout-edit')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarSellOutEdit()">💾 Salvar Alterações</button>
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:16px">
+      <button class="btn btn-danger btn-sm" onclick="excluirSellOut(_soEditId)">🗑️ Excluir</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="closeModal('modal-sellout-edit')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarSellOutEdit()">💾 Salvar Alterações</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2288,7 +2289,7 @@ tr:last-child td{border-bottom:none;}
     <div class="modal-title"><span id="meta-modal-titulo">Nova Meta</span><button class="close-btn" onclick="closeModal('modal-meta')">✕</button></div>
     <div class="form-grid">
       <div class="form-group"><label>Indústria *</label>
-        <select id="meta-ind"><option value="">Selecione...</option><option>LABOTRAT</option><option>ZALIKE</option><option>AEROFLEX</option><option>MZ3 KERATEX</option><option>GUMMY</option><option>EXCLUSIVE</option></select>
+        <select id="meta-ind"><option value="">Selecione...</option></select>
       </div>
       <div class="form-group"><label>Mês/Ano *</label>
         <select id="meta-mes"><option>Jan/26</option><option>Fev/26</option><option selected>Mar/26</option><option>Abr/26</option><option>Mai/26</option><option>Jun/26</option><option>Jul/26</option><option>Ago/26</option><option>Set/26</option><option>Out/26</option><option>Nov/26</option><option>Dez/26</option></select>
@@ -2648,7 +2649,7 @@ function _carregarLocal() {
 }
 function salvarDados() { _salvarLocal(); } // compatibilidade
 function _mostrarIndicadorSalvando(mostrar) {
-  const ind = el('sync-saving-indicator');
+  const ind = el('sync-saving-indicator'); const indTop = el('sync-saving-indicator-topbar'); if(indTop) { indTop.style.display = ind ? ind.style.display : 'none'; if(ind) indTop.textContent = ind.textContent; }
   if (!ind) return;
   if (mostrar) {
     ind.style.display = 'inline';
@@ -5378,6 +5379,24 @@ function mixEditCalcNeg() {
   const el2 = el('mix-edit-neg-preview');
   if(el2) el2.textContent = 'Preço negociado: ' + fmt(neg);
 }
+
+function previewNegMix() {
+  const tabInput = (el('mix-edit-tabela')||{}).value||'0';
+  const tab = parseFloat(tabInput.replace(/[.]/g,'').replace(',','.')) || 0;
+  const pct = parseFloat((el('mix-edit-desc-pct')||{}).value) || 0;
+  const neg = tab * (1 - pct/100);
+  const prev = el('mix-edit-neg-preview');
+  if(!prev) return;
+  if(tab > 0) {
+    prev.style.display = 'block';
+    const tabFmt = tab.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    const negFmt = neg.toLocaleString('pt-BR',{minimumFractionDigits:2});
+    prev.innerHTML = 'Preco negociado: <strong>R$ ' + negFmt + '</strong> &nbsp;(' + pct + '% de desconto sobre R$ ' + tabFmt + ')';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
 function salvarMixEdit() {
   const idx = parseInt(el('mix-edit-idx').value);
   if(isNaN(idx)||!mixProdutos[idx]) return;
@@ -6174,7 +6193,7 @@ function importarNF(){
   el('import-confirm-btn').textContent = '✅ Criar Pedido com esta NF';
   el('import-modelo-btn').style.display = 'none';
   // Aceita somente XML e PDF no input de arquivo
-  const fi = el('import-file-input');
+  const fi = el('import-file');
   if(fi) fi.accept = '.xml,.pdf';
   openModal('modal-import');
 }
@@ -7016,9 +7035,23 @@ function popularSelectsDinamicos() {
     .map(p=>`<option value="${p.id}">${p.id} — ${esc(p.cliente)}${p.nf?' ✓NF':''}</option>`).join('');
 
   // selects de escolha (modal de criação)
-  const modalCli = ['orc-cli','ped-cli','regra-cli','so-cli'];
+  const modalCli = ['orc-cli','ped-cli','regra-cli'];
   const modalInd = ['orc-ind','ped-ind','meta-ind','regra-ind','so-ind','p-ind','mix-novo-ind'];
   const modalRede = ['c-rede','mix-novo-rede','regra-rede'];
+
+  // so-cli: mostra grupos/redes (igual ao campo Rede/Grupo do cadastro)
+  const soCli = el('so-cli');
+  if(soCli) {
+    const cur = soCli.value;
+    const redesAtivas = redes.filter(r=>r.status==='Ativo').map(r=>r.nome).sort();
+    const clisSemRede = clientes.filter(c=>c.status==='Ativo' && !c.rede).map(c=>c.nome).sort();
+    const gruposExtra = [...new Set(pedidos.filter(p=>!p.excluido).map(p=>normalizarGrupoSellOut(p.cliente)))]
+      .filter(g => !redesAtivas.includes(g) && !clisSemRede.includes(g)).sort();
+    const todasOpcoes = [...new Set([...redesAtivas, ...clisSemRede, ...gruposExtra])].sort();
+    soCli.innerHTML = '<option value="">— Selecione o grupo —</option>' +
+      todasOpcoes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(cur) soCli.value = cur;
+  }
 
   modalCli.forEach(id=>{
     const s=el(id); if(!s) return;
@@ -7040,8 +7073,21 @@ function popularSelectsDinamicos() {
     if(cur) s.value=cur;
   });
 
-  // selects de filtro (search bars)
-  const filtroCli = ['fat-filtro-cli','saldo-cli','sio-filtro-cli','bonif-filtro-cli'];
+  // Para o filtro do Sell In/Out, usa nomes normalizados (grupos)
+  const nomesCliGrupos = [...new Set([
+    ...clientes.filter(c=>c.status==='Ativo').map(c=>normalizarGrupoSellOut(c.nome)),
+    ...pedidos.filter(p=>!p.excluido).map(p=>normalizarGrupoSellOut(p.cliente))
+  ])].sort();
+  const optsCliGrupo = nomesCliGrupos.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  const sioFiltro = el('sio-filtro-cli');
+  if(sioFiltro) {
+    const cur = sioFiltro.value;
+    sioFiltro.innerHTML = '<option value="">Todos os clientes</option>' + optsCliGrupo;
+    if(cur) sioFiltro.value = cur;
+  }
+
+  // selects de filtro (search bars) — exceto sio-filtro-cli que já foi tratado acima
+  const filtroCli = ['fat-filtro-cli','saldo-cli','bonif-filtro-cli'];
   const filtroInd = ['orc-filtro-ind','ped-filtro-ind','fat-filtro-ind','saldo-ind',
     'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix','prod-ind-filtro','bonif-filtro-ind'];
 
@@ -8049,108 +8095,24 @@ function exportarLogistica() {
 /* ══════════════════════════
    SELL IN / SELL OUT
 ══════════════════════════ */
+
+// ── Normalização de grupos para Sell Out ──
+// Usa o cadastro de clientes: se o cliente tem rede cadastrada, retorna a rede.
+// Se não tem rede, retorna o nome do cliente (cliente independente).
+function normalizarGrupoSellOut(nomeCliente) {
+  if(!nomeCliente) return nomeCliente;
+  // Busca o cliente no cadastro
+  const cli = clientes.find(c => c.nome === nomeCliente);
+  if(cli && cli.rede) return cli.rede; // retorna o nome da rede
+  // Fallback: heurísticas para clientes ainda não cadastrados
+  const n = nomeCliente.toUpperCase();
+  if(n.includes('COELHO DINIZ') || n.includes('SUPERMERCADO COELHO DINIZ')) return 'COELHO DINIZ';
+  if(n.includes('LOJAS REDE')) return 'LOJAS REDE';
+  return nomeCliente;
+}
+
 function renderSellInOut() {
-  const tbody = el('sio-tbody'); if(!tbody) return;
-  const filtCli = (el('sio-filtro-cli')||{}).value||'';
-  const filtInd = (el('sio-filtro-ind')||{}).value||'';
-  const filtMes = (el('sio-filtro-mes')||{}).value||'';
-
-  // Sell In = pedidos faturados
-  const fats = pedidos.filter(p=>p.nf && !p.excluido);
-
-  // ── Coleta todos os meses presentes nos dados (pedidos faturados + sell out lançado) ──
-  const mesesNfSet = new Set(fats.map(p=>{
-    if(!p.nf.data) return null;
-    const d = new Date(p.nf.data);
-    if(isNaN(d)) return null;
-    const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    return meses[d.getMonth()]+'/'+String(d.getFullYear()).slice(2);
-  }).filter(Boolean));
-
-  const mesesSOSet = new Set(sellOutData.map(s=>s.mes).filter(Boolean));
-  // União de todos os meses, ordenados cronologicamente
-  const todosOsMeses = [...new Set([...mesesNfSet, ...mesesSOSet])].sort((a,b)=>{
-    const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    const parse = m=>{ const [mn,an]=m.split('/'); return (2000+parseInt(an))*12+meses.indexOf(mn); };
-    return parse(a)-parse(b);
-  });
-
-  // Se não há meses dos dados, usa os 3 últimos meses (fallback)
-  if(todosOsMeses.length===0){
-    const mesesNomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    const d=new Date();
-    for(let i=2;i>=0;i--){
-      const idx=(d.getMonth()-i+12)%12;
-      const ano=d.getFullYear()-( d.getMonth()-i<0?1:0);
-      todosOsMeses.push(mesesNomes[idx]+'/'+String(ano).slice(2));
-    }
-  }
-
-  // Atualiza o select de filtro de mês dinamicamente
-  const selMes = el('sio-filtro-mes');
-  if(selMes){
-    const curMes = selMes.value;
-    selMes.innerHTML = '<option value="">Todos os meses</option>' +
-      todosOsMeses.map(m=>`<option value="${m}"${m===curMes?' selected':''}>${m}</option>`).join('');
-  }
-
-  // Build combined rows
-  const rows = [];
-  const clisLocal = [...new Set([...fats.map(p=>p.cliente),...sellOutData.map(s=>s.cliente)])];
-  const indsLocal = [...new Set([...fats.map(p=>p.industria),...sellOutData.map(s=>s.industria)])];
-
-  clisLocal.forEach(cli=>{
-    if(filtCli && cli!==filtCli) return;
-    indsLocal.forEach(ind=>{
-      if(filtInd && ind!==filtInd) return;
-      todosOsMeses.forEach(mes=>{
-        if(filtMes && mes!==filtMes) return;
-
-        // Sell In: pedidos faturados neste mês (usa data da NF)
-        const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const [mesNome, anoStr2] = mes.split('/');
-        const mesIdx2 = meses.indexOf(mesNome);
-        const anoFull2 = 2000 + parseInt(anoStr2);
-        const sellIn = fats
-          .filter(p=>p.cliente===cli && p.industria===ind && p.nf.data)
-          .filter(p=>{
-            const d=new Date(p.nf.data);
-            return !isNaN(d) && d.getMonth()===mesIdx2 && d.getFullYear()===anoFull2;
-          })
-          .reduce((s,p)=>s+p.nf.liquida, 0);
-
-        const soRows = sellOutData.filter(s=>s.cliente===cli&&s.industria===ind&&s.mes===mes);
-        const sellOut = soRows.reduce((s,r)=>s+r.valor,0);
-        if(sellIn===0&&sellOut===0) return;
-        const positivacao = soRows.reduce((s,r)=>s+(r.positivacao||0),0);
-        const estoque = sellIn - sellOut;
-        const giro = sellIn>0 ? ((sellOut/sellIn)*100).toFixed(1) : 0;
-        const cobertura = sellOut>0 ? Math.round((estoque/sellOut)*30)+' dias' : '—';
-        rows.push({cli,ind,mes,sellIn,sellOut,positivacao,estoque,giro,cobertura});
-      });
-    });
-  });
-
-  const totIn = rows.reduce((s,r)=>s+r.sellIn,0);
-  const totOut = rows.reduce((s,r)=>s+r.sellOut,0);
-  const giroMedio = totIn>0 ? ((totOut/totIn)*100).toFixed(1) : 0;
-  el('sio-kpi-in').textContent = fmt(totIn);
-  el('sio-kpi-out').textContent = fmt(totOut);
-  el('sio-kpi-giro').textContent = giroMedio+'%';
-
-  tbody.innerHTML = rows.length===0
-    ? `<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
-    : rows.map(r=>`<tr>
-      <td><strong>${esc(r.cli)}</strong></td>
-      <td><span class="tag">${esc(r.ind)}</span></td>
-      <td><span class="pill">${r.mes}</span></td>
-      <td class="bold azul">${fmt(r.sellIn)}</td>
-      <td class="bold verde">${fmt(r.sellOut)}</td>
-      <td>${r.positivacao>0 ? `<span class="badge badge-roxo">🏪 ${r.positivacao} ${r.positivacao===1?'loja':'lojas'}</span>` : '<span class="badge badge-cinza">—</span>'}</td>
-      <td class="${r.estoque<0?'vermelho':'bold'}">${fmt(r.estoque)}</td>
-      <td><span class="pill ${parseFloat(r.giro)>=80?'amarelo':''}">${r.giro}%</span></td>
-      <td>${r.cobertura}</td>
-    </tr>`).join('');
+  if(window._renderSellInOutV3) return window._renderSellInOutV3();
 }
 
 function salvarSellOut() {
@@ -8171,7 +8133,10 @@ function salvarSellOut() {
     obs: el('so-obs').value||''
   });
   addAudit(usuarioLogado?.login||'sistema', `Sell Out lançado: ${cli} / ${ind} — ${fmt(valor)}`, '↕️');
-  el('so-positivacao').value = '';
+  // Limpar todos os campos do modal após submit
+  ['so-valor','so-qtd','so-produto','so-obs','so-positivacao'].forEach(id=>{
+    const f=el(id); if(f) f.value='';
+  });
   closeModal('modal-sellout');
   renderSellInOut();
   syncAutoSaveHook();
@@ -8183,7 +8148,10 @@ function exportarSellInOut() {
 
   // ── Aba 1: Comparativo Sell In × Sell Out (todos os dados, sem filtro) ──
   const fats = pedidos.filter(p => p.nf && !p.excluido);
-  const allClis = [...new Set([...fats.map(p => p.cliente), ...sellOutData.map(s => s.cliente)])];
+  const allClis = [...new Set([
+    ...fats.map(p => normalizarGrupoSellOut(p.cliente)),
+    ...sellOutData.map(s => normalizarGrupoSellOut(s.cliente))
+  ])];
   const allInds = [...new Set([...fats.map(p => p.industria), ...sellOutData.map(s => s.industria)])];
   const todosMeses = [...new Set([...sellOutData.map(s => s.mes), ...fats.map(p=>{
     if(!p.nf.data) return null;
@@ -8208,10 +8176,11 @@ function exportarSellInOut() {
         const [mesNome2,anoStr2]=mes.split('/');
         const mesIdx2=mesesN.indexOf(mesNome2);
         const anoFull2=2000+parseInt(anoStr2);
-        const sellIn = fats.filter(p => p.cliente === cli && p.industria === ind && p.nf.data)
+        // Sell In agrupado por grupo (soma todas as filiais)
+        const sellIn = fats.filter(p => normalizarGrupoSellOut(p.cliente) === cli && p.industria === ind && p.nf.data)
           .filter(p=>{const d=new Date(p.nf.data);return !isNaN(d)&&d.getMonth()===mesIdx2&&d.getFullYear()===anoFull2;})
           .reduce((s, p) => s + p.nf.liquida, 0);
-        const soRows = sellOutData.filter(s => s.cliente === cli && s.industria === ind && s.mes === mes);
+        const soRows = sellOutData.filter(s => normalizarGrupoSellOut(s.cliente) === cli && s.industria === ind && s.mes === mes);
         const sellOut = soRows.reduce((s, r) => s + r.valor, 0);
         if (sellIn === 0 && sellOut === 0) return;
         const positivacao = soRows.reduce((s, r) => s + (r.positivacao || 0), 0);
@@ -10201,6 +10170,121 @@ function salvarSellOutEdit() {
 }
 
 /* ─────────────────────────────────────────────────────
+   EXCLUIR SELL OUT
+───────────────────────────────────────────────────── */
+function excluirSellOut(soId) {
+  const so = sellOutData.find(s=>s.id===soId);
+  if(!so) return;
+  if(!confirm(`Excluir Sell Out ${soId}?\n${so.cliente} / ${so.industria} — ${fmt(so.valor)}\n\nEsta ação não pode ser desfeita.`)) return;
+  sellOutData = sellOutData.filter(s=>s.id!==soId);
+  addAudit(usuarioLogado?.login||'admin', `Sell Out excluído: ${soId} — ${so.cliente} / ${so.industria} — ${fmt(so.valor)}`, '🗑️');
+  closeModal('modal-sellout-edit');
+  renderSellInOut();
+  syncAutoSaveHook();
+  toast('Sell Out excluído.');
+}
+
+/* ─────────────────────────────────────────────────────
+   EDITAR SELL IN (pedidos faturados do grupo)
+───────────────────────────────────────────────────── */
+let _siEditIds = [];
+
+function editarSellIn(pedIds, grupo, ind, mes) {
+  _siEditIds = pedIds;
+  const peds = pedidos.filter(p=>pedIds.includes(p.id));
+  const totalSI = peds.reduce((s,p)=>s+(p.nf?.liquida||0),0);
+
+  const el2 = el('si-edit-grupo'); if(el2) el2.textContent = grupo;
+  const el3 = el('si-edit-ind');   if(el3) el3.textContent = ind;
+  const el4 = el('si-edit-mes');   if(el4) el4.textContent = mes;
+  const el5 = el('si-edit-total'); if(el5) el5.textContent = fmt(totalSI);
+
+  // Lista de pedidos editáveis
+  const lista = el('si-edit-lista');
+  if(lista) {
+    lista.innerHTML = peds.map(p=>`
+      <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede6">
+        <span class="tag" style="font-size:10px">${esc(p.id)}</span>
+        <span style="font-size:12px;color:#666">${esc(p.cliente)}</span>
+        <span style="font-size:11px;color:#888">${p.nf?.data||''}</span>
+        <strong style="color:var(--azul);font-size:13px">${fmt(p.nf?.liquida||0)}</strong>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-outline btn-xs" onclick="verPedidoSI('${p.id}')" title="Ver pedido">👁️</button>
+          <button class="btn btn-danger btn-xs" onclick="excluirSellInPedido('${p.id}')" title="Remover do Sell In">🗑️</button>
+        </div>
+      </div>
+    `).join('') || '<div style="color:#aaa;font-size:12px;padding:8px 0">Nenhum pedido encontrado</div>';
+  }
+
+  // Histórico de NF dos pedidos
+  const hist = el('si-edit-historico');
+  if(hist) {
+    const entries = peds.flatMap(p=>(p._audit||[]).map(a=>({...a, pedId:p.id}))).sort((a,b)=>b.ts-a.ts).slice(0,10);
+    hist.innerHTML = entries.length>0
+      ? entries.map(h=>`<div style="font-size:11px;color:#888;padding:3px 0;border-bottom:1px solid #f5f5f5">
+          <span style="color:#aaa">${h.data||''}</span> · <strong>${esc(h.usuario||'')}</strong>: ${esc(h.acao||'')}
+        </div>`).join('')
+      : '<div style="font-size:11px;color:#aaa">Sem histórico</div>';
+  }
+
+  openModal('modal-sellin-edit');
+}
+
+function verPedidoSI(pedId) {
+  closeModal('modal-sellin-edit');
+  // Navega para o pedido na aba faturamento
+  if(window.showPanel) window.showPanel('faturamento');
+  setTimeout(()=>{
+    const busca = el('fat-busca'); if(busca){ busca.value=pedId; busca.dispatchEvent(new Event('input')); }
+  }, 200);
+}
+
+function excluirSellInPedido(pedId) {
+  const p = pedidos.find(x=>x.id===pedId);
+  if(!p) return;
+  if(!confirm(`Remover NF do pedido ${pedId}?\nIsso zerará o Sell In deste pedido.\n\nO pedido continuará existindo, apenas sem NF vinculada.`)) return;
+  const nfBkp = p.nf;
+  delete p.nf;
+  addAudit(usuarioLogado?.login||'admin', `NF removida do pedido ${pedId} (Sell In) — valor era ${fmt(nfBkp?.liquida||0)}`, '🗑️');
+  // Atualiza lista no modal
+  _siEditIds = _siEditIds.filter(id=>id!==pedId);
+  renderSellInOut();
+  syncAutoSaveHook();
+  toast(`NF do pedido ${pedId} removida.`);
+  if(_siEditIds.length===0) { closeModal('modal-sellin-edit'); }
+  else {
+    // Re-abre com dados atualizados
+    const peds = pedidos.filter(p2=>_siEditIds.includes(p2.id));
+    const lista = el('si-edit-lista');
+    if(lista) lista.innerHTML = peds.map(p2=>`
+      <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede6">
+        <span class="tag" style="font-size:10px">${esc(p2.id)}</span>
+        <span style="font-size:12px;color:#666">${esc(p2.cliente)}</span>
+        <span style="font-size:11px;color:#888">${p2.nf?.data||''}</span>
+        <strong style="color:var(--azul);font-size:13px">${fmt(p2.nf?.liquida||0)}</strong>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-outline btn-xs" onclick="verPedidoSI('${p2.id}')" title="Ver pedido">👁️</button>
+          <button class="btn btn-danger btn-xs" onclick="excluirSellInPedido('${p2.id}')" title="Remover NF">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+    const tot = el('si-edit-total');
+    if(tot) tot.textContent = fmt(peds.reduce((s,p2)=>s+(p2.nf?.liquida||0),0));
+  }
+}
+
+
+
+// Alias: abrirEditSellIn abre o pedido de NF na tela de faturamento
+function abrirEditSellIn(pedId) {
+  if(window.showPanel) window.showPanel('faturamento');
+  setTimeout(()=>{
+    const busca = el('fat-busca');
+    if(busca){ busca.value = pedId; busca.dispatchEvent(new Event('input')); }
+  }, 200);
+}
+
+/* ─────────────────────────────────────────────────────
    HOOK: após salvarNF, verificar e gerar saldo automático
 ───────────────────────────────────────────────────── */
 // Monkey-patch salvarNF para chamar verificarEGerarSaldo
@@ -10227,27 +10311,7 @@ function _hookSalvarNFInternal() {
 /* ─────────────────────────────────────────────────────
    PATCH renderSellInOut: adiciona coluna Ações com botão Editar
 ───────────────────────────────────────────────────── */
-(function patchRenderSellInOut() {
-  const origRender = window.renderSellInOut;
-  if (!origRender) return;
-  window.renderSellInOut = function() {
-    origRender.apply(this, arguments);
-    // Adiciona coluna de ações nas linhas de sell out
-    const tbody = el('sio-tbody');
-    if (!tbody) return;
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(function(tr) {
-      // Verifica se a linha já tem a coluna de ações
-      if (tr.cells.length === 9) {
-        const td = document.createElement('td');
-        td.innerHTML = '<span style="color:#aaa;font-size:11px">Sell In</span>';
-        tr.appendChild(td);
-      }
-    });
-    // Para linhas de sell out, adiciona botão editar
-    // Isso requer acesso ao id do sellout, então repatchamos a geração da tabela
-  };
-})();
+// patchRenderSellInOut removed — window._renderSellInOutV3 handles this
 
 /* ─────────────────────────────────────────────────────
    PATCH renderMix: aplicar filtro de desconto
@@ -10288,111 +10352,129 @@ function _hookSalvarNFInternal() {
 })();
 
 /* ─────────────────────────────────────────────────────
-   PATCH renderSellInOut v2: adicionar botão editar corretamente
+   renderSellInOut v3: agrupamento por rede/cadastro + editar/excluir
 ───────────────────────────────────────────────────── */
-window.renderSellInOut = (function(origRender) {
-  return function() {
-    if (!origRender) return;
-    // Reescrevemos o render para incluir botão editar nas linhas de Sell Out
-    const tbody = el('sio-tbody'); if (!tbody) return;
-    const filtCli = (el('sio-filtro-cli') || {}).value || '';
-    const filtInd = (el('sio-filtro-ind') || {}).value || '';
-    const filtMes = (el('sio-filtro-mes') || {}).value || '';
+window._renderSellInOutV3 = function() {
+  const tbody = el('sio-tbody'); if(!tbody) return;
+  const filtCli = (el('sio-filtro-cli')||{}).value||'';
+  const filtInd = (el('sio-filtro-ind')||{}).value||'';
+  const filtMes = (el('sio-filtro-mes')||{}).value||'';
 
-    const fats = pedidos.filter(p => p.nf && !p.excluido);
+  const fats = pedidos.filter(p=>p.nf && !p.excluido);
 
-    const mesesNfSet = new Set(fats.map(p => {
-      if (!p.nf.data) return null;
-      const d = new Date(p.nf.data);
-      if (isNaN(d)) return null;
-      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      return meses[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
-    }).filter(Boolean));
-    const mesesSOSet = new Set(sellOutData.map(s => s.mes).filter(Boolean));
-    const todosOsMeses = [...new Set([...mesesNfSet, ...mesesSOSet])].sort((a, b) => {
-      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      const parse = m => { const [mn, an] = m.split('/'); return (2000 + parseInt(an)) * 12 + meses.indexOf(mn); };
-      return parse(a) - parse(b);
-    });
+  // Normalização dinâmica: usa redes do cadastro
+  function grupoDeCliente(nomeCli) {
+    if(!nomeCli) return nomeCli;
+    // Primeiro: verifica se o cliente tem rede cadastrada
+    const cli = clientes.find(c=>c.nome===nomeCli);
+    if(cli && cli.rede) return cli.rede;
+    // Segundo: verifica se alguma rede está contida no nome (fallback)
+    const redeMatch = redes.find(r=> nomeCli.toUpperCase().includes(r.nome.toUpperCase()));
+    if(redeMatch) return redeMatch.nome;
+    // Terceiro: regras hardcode para grupos sem rede cadastrada
+    const n = nomeCli.toUpperCase();
+    if(n.includes('COELHO DINIZ') || n.includes('SUPERMERCADO COELHO DINIZ')) return 'COELHO DINIZ';
+    if(n.includes('LOJAS REDE')) return 'LOJAS REDE';
+    return nomeCli;
+  }
+  // Atualiza função global para uso em outros lugares
+  window.normalizarGrupoSellOut = grupoDeCliente;
 
-    if (todosOsMeses.length === 0) {
-      const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      const d = new Date();
-      for (let i = 2; i >= 0; i--) {
-        const idx = (d.getMonth() - i + 12) % 12;
-        const ano = d.getFullYear() - (d.getMonth() - i < 0 ? 1 : 0);
-        todosOsMeses.push(mesesNomes[idx] + '/' + String(ano).slice(2));
-      }
+  // Meses presentes
+  const mn = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const mesesSet = new Set([
+    ...fats.map(p=>{ if(!p.nf.data) return null; const d=new Date(p.nf.data); return isNaN(d)?null:mn[d.getMonth()]+'/'+String(d.getFullYear()).slice(2); }).filter(Boolean),
+    ...sellOutData.map(s=>s.mes).filter(Boolean)
+  ]);
+  let todosOsMeses = [...mesesSet].sort((a,b)=>{
+    const parse=m=>{const[n2,y]=m.split('/');return(2000+parseInt(y))*12+mn.indexOf(n2);};
+    return parse(a)-parse(b);
+  });
+  if(todosOsMeses.length===0){
+    const d=new Date();
+    for(let i=2;i>=0;i--){
+      const idx=(d.getMonth()-i+12)%12;
+      const ano=d.getFullYear()-(d.getMonth()-i<0?1:0);
+      todosOsMeses.push(mn[idx]+'/'+String(ano).slice(2));
     }
+  }
 
-    const selMes = el('sio-filtro-mes');
-    if (selMes) {
-      const curMes = selMes.value;
-      selMes.innerHTML = '<option value="">Todos os meses</option>' +
-        todosOsMeses.map(m => `<option value="${m}"${m === curMes ? ' selected' : ''}>${m}</option>`).join('');
-    }
+  // Atualiza select de mês
+  const selMes=el('sio-filtro-mes');
+  if(selMes){ const c=selMes.value; selMes.innerHTML='<option value="">Todos os meses</option>'+todosOsMeses.map(m=>`<option value="${m}"${m===c?' selected':''}>${m}</option>`).join(''); }
 
-    const rows = [];
-    const clisLocal = [...new Set([...fats.map(p => p.cliente), ...sellOutData.map(s => s.cliente)])];
-    const indsLocal = [...new Set([...fats.map(p => p.industria), ...sellOutData.map(s => s.industria)])];
+  // Grupos únicos (rede quando tiver, cliente quando não tiver)
+  const todosGrupos = [...new Set([
+    ...fats.map(p=>grupoDeCliente(p.cliente)),
+    ...sellOutData.map(s=>grupoDeCliente(s.cliente))
+  ])].sort();
+  const todasInds = [...new Set([...fats.map(p=>p.industria),...sellOutData.map(s=>s.industria)])].sort();
 
-    clisLocal.forEach(cli => {
-      if (filtCli && cli !== filtCli) return;
-      indsLocal.forEach(ind => {
-        if (filtInd && ind !== filtInd) return;
-        todosOsMeses.forEach(mes => {
-          if (filtMes && mes !== filtMes) return;
-          const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-          const [mesNome, anoStr2] = mes.split('/');
-          const mesIdx2 = meses.indexOf(mesNome);
-          const anoFull2 = 2000 + parseInt(anoStr2);
-          const sellIn = fats
-            .filter(p => p.cliente === cli && p.industria === ind && p.nf.data)
-            .filter(p => {
-              const d = new Date(p.nf.data);
-              return !isNaN(d) && d.getMonth() === mesIdx2 && d.getFullYear() === anoFull2;
-            })
-            .reduce((s, p) => s + p.nf.liquida, 0);
+  // Atualiza filtro de clientes/grupos
+  const selCli=el('sio-filtro-cli');
+  if(selCli){ const c=selCli.value; selCli.innerHTML='<option value="">Todos os grupos</option>'+todosGrupos.map(g=>`<option value="${esc(g)}"${g===c?' selected':''}>${esc(g)}</option>`).join(''); }
 
-          const soRows = sellOutData.filter(s => s.cliente === cli && s.industria === ind && s.mes === mes);
-          const sellOut = soRows.reduce((s, r) => s + r.valor, 0);
-          if (sellIn === 0 && sellOut === 0) return;
-          const positivacao = soRows.reduce((s, r) => s + (r.positivacao || 0), 0);
-          const estoque = sellIn - sellOut;
-          const giro = sellIn > 0 ? ((sellOut / sellIn) * 100).toFixed(1) : 0;
-          const cobertura = sellOut > 0 ? Math.round((estoque / sellOut) * 30) + ' dias' : '—';
-          const soIds = soRows.map(r => r.id);
-          rows.push({ cli, ind, mes, sellIn, sellOut, positivacao, estoque, giro, cobertura, soIds });
-        });
+  const rows=[];
+  todosGrupos.forEach(grupo=>{
+    if(filtCli && grupo!==filtCli) return;
+    todasInds.forEach(ind=>{
+      if(filtInd && ind!==filtInd) return;
+      todosOsMeses.forEach(mes=>{
+        if(filtMes && mes!==filtMes) return;
+        const [mesNome,anoStr]=mes.split('/');
+        const mesIdx=mn.indexOf(mesNome), anoFull=2000+parseInt(anoStr);
+
+        // Sell In: soma pedidos de todas as filiais do grupo
+        const pedsMes = fats.filter(p=>grupoDeCliente(p.cliente)===grupo && p.industria===ind && p.nf.data)
+          .filter(p=>{ const d=new Date(p.nf.data); return !isNaN(d)&&d.getMonth()===mesIdx&&d.getFullYear()===anoFull; });
+        const sellIn = pedsMes.reduce((s,p)=>s+p.nf.liquida,0);
+        const siPedIds = pedsMes.map(p=>p.id);
+
+        // Sell Out: soma lançamentos do grupo
+        const soRows=sellOutData.filter(s=>grupoDeCliente(s.cliente)===grupo&&s.industria===ind&&s.mes===mes);
+        const sellOut=soRows.reduce((s,r)=>s+r.valor,0);
+        if(sellIn===0&&sellOut===0) return;
+
+        const positivacao=soRows.reduce((s,r)=>s+(r.positivacao||0),0);
+        const estoque=sellIn-sellOut;
+        const giro=sellIn>0?((sellOut/sellIn)*100).toFixed(1):0;
+        const cobertura=sellOut>0?Math.round((estoque/sellOut)*30)+' dias':'—';
+        const soIds=soRows.map(r=>r.id);
+        rows.push({grupo,ind,mes,sellIn,sellOut,positivacao,estoque,giro,cobertura,soIds,siPedIds});
       });
     });
+  });
 
-    const totIn = rows.reduce((s, r) => s + r.sellIn, 0);
-    const totOut = rows.reduce((s, r) => s + r.sellOut, 0);
-    const giroMedio = totIn > 0 ? ((totOut / totIn) * 100).toFixed(1) : 0;
-    if (el('sio-kpi-in')) el('sio-kpi-in').textContent = fmt(totIn);
-    if (el('sio-kpi-out')) el('sio-kpi-out').textContent = fmt(totOut);
-    if (el('sio-kpi-giro')) el('sio-kpi-giro').textContent = giroMedio + '%';
+  const totIn=rows.reduce((s,r)=>s+r.sellIn,0);
+  const totOut=rows.reduce((s,r)=>s+r.sellOut,0);
+  const giroMedio=totIn>0?((totOut/totIn)*100).toFixed(1):0;
+  if(el('sio-kpi-in')) el('sio-kpi-in').textContent=fmt(totIn);
+  if(el('sio-kpi-out')) el('sio-kpi-out').textContent=fmt(totOut);
+  if(el('sio-kpi-giro')) el('sio-kpi-giro').textContent=giroMedio+'%';
 
-    tbody.innerHTML = rows.length === 0
-      ? `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
-      : rows.map(r => `<tr>
-        <td><strong>${esc(r.cli)}</strong></td>
-        <td><span class="tag">${esc(r.ind)}</span></td>
-        <td><span class="pill">${r.mes}</span></td>
-        <td class="bold azul">${fmt(r.sellIn)}</td>
-        <td class="bold verde">${fmt(r.sellOut)}</td>
-        <td>${r.positivacao > 0 ? `<span class="badge badge-roxo">🏪 ${r.positivacao} ${r.positivacao === 1 ? 'loja' : 'lojas'}</span>` : '<span class="badge badge-cinza">—</span>'}</td>
-        <td class="${r.estoque < 0 ? 'vermelho' : 'bold'}">${fmt(r.estoque)}</td>
-        <td><span class="pill ${parseFloat(r.giro) >= 80 ? 'amarelo' : ''}">${r.giro}%</span></td>
-        <td>${r.cobertura}</td>
-        <td>${r.soIds.length > 0
-          ? r.soIds.map(sid => `<button class="btn btn-outline btn-xs" onclick="editarSellOut('${sid}')">✏️ Editar</button>`).join(' ')
-          : '<span style="color:#aaa;font-size:11px">Sell In</span>'
-        }</td>
-      </tr>`).join('');
-  };
-})(window.renderSellInOut);
+  tbody.innerHTML = rows.length===0
+    ? `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
+    : rows.map(r=>`<tr>
+      <td><strong>${esc(r.grupo)}</strong></td>
+      <td><span class="tag">${esc(r.ind)}</span></td>
+      <td><span class="pill">${r.mes}</span></td>
+      <td class="bold azul">${fmt(r.sellIn)}</td>
+      <td class="bold verde">${fmt(r.sellOut)}</td>
+      <td>${r.positivacao>0?`<span class="badge badge-roxo">🏪 ${r.positivacao} ${r.positivacao===1?'loja':'lojas'}</span>`:'<span class="badge badge-cinza">—</span>'}</td>
+      <td class="${r.estoque<0?'vermelho':'bold'}">${fmt(r.estoque)}</td>
+      <td><span class="pill ${parseFloat(r.giro)>=80?'amarelo':''}">${r.giro}%</span></td>
+      <td>${r.cobertura}</td>
+      <td style="white-space:nowrap">
+        ${r.soIds.length>0
+          ? r.soIds.map(sid=>`<button class="btn btn-outline btn-xs" onclick="editarSellOut('${sid}')" title="Editar Sell Out">✏️ SO</button>`).join(' ')
+          : ''}
+        ${r.siPedIds.length>0
+          ? `<button class="btn btn-info btn-xs" onclick="editarSellIn(${JSON.stringify(r.siPedIds)},${JSON.stringify(r.grupo)},${JSON.stringify(r.ind)},${JSON.stringify(r.mes)})" title="Editar pedidos do Sell In">📋 SI</button>`
+          : ''}
+        ${r.soIds.length===0&&r.siPedIds.length===0?'<span style="color:#aaa;font-size:10px">—</span>':''}
+      </td>
+    </tr>`).join('');
+};
 
 /* ─────────────────────────────────────────────────────
    PERSISTÊNCIA: incluir saldoUsosData no save/load
@@ -10408,7 +10490,7 @@ window.renderSellInOut = (function(origRender) {
         origSalvar.apply(this, arguments);
         // Salva saldoUsosData separadamente (pode crescer muito)
         if (window.saldoUsosData && window.saldoUsosData.length > 0) {
-          localStorage.setItem('gestcom_saldousos', JSON.stringify(window.saldoUsosData));
+          try{ localStorage.setItem('gestcom_saldousos', JSON.stringify(window.saldoUsosData)); } catch(e){ console.warn('[GestCom] localStorage cheio:', e.message); }
         }
       } catch(e) { console.warn('[v5] save error', e); }
     };
@@ -10503,7 +10585,7 @@ console.info('[GestCom v5] ✅ Melhorias carregadas: Saldo automático, Importa�
 
 // ── Mostra/oculta indicador "Salvando..." ───────────────────────────────────
 function _mostrarSalvando() {
-  const ind = el('sync-saving-indicator');
+  const ind = el('sync-saving-indicator'); const indTop = el('sync-saving-indicator-topbar'); if(indTop) { indTop.style.display = ind ? ind.style.display : 'none'; if(ind) indTop.textContent = ind.textContent; }
   if (ind) {
     ind.style.display = 'flex';
     clearTimeout(window._savingTimer);
@@ -10735,5 +10817,77 @@ function atualizarTextoAutoSave(swEl) {
 console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
 
 </script>
+
+<!-- ===== MODAL EDITAR PRODUTO MIX ===== -->
+<div class="modal-bg" id="modal-mix-edit">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar Produto do Mix<button class="close-btn" onclick="closeModal('modal-mix-edit')">✕</button></div>
+    <input type="hidden" id="mix-edit-idx">
+    <div class="form-grid">
+      <div class="form-group"><label>Código</label><span id="mix-edit-cod" style="font-family:monospace;font-size:13px;padding:8px 10px;display:block;background:#fafaf8;border:1.5px solid var(--cinza-medio);border-radius:6px;color:#666"></span></div>
+      <div class="form-group"><label>Indústria</label><input id="mix-edit-ind" placeholder="Indústria"></div>
+      <div class="form-group full"><label>Descrição</label><input id="mix-edit-desc" placeholder="Descrição do produto"></div>
+      <div class="form-group"><label>Preço Tabela (R$)</label><input id="mix-edit-tabela" placeholder="0,00" oninput="previewNegMix()"></div>
+      <div class="form-group"><label>Desconto Negociado (%)</label><input type="number" id="mix-edit-desc-pct" min="0" max="100" placeholder="0" oninput="previewNegMix()"></div>
+      <div class="form-group"><label>Curva ABC</label>
+        <select id="mix-edit-curva">
+          <option value="A">A — Alta rotatividade</option>
+          <option value="B">B — Média rotatividade</option>
+          <option value="C">C — Baixa rotatividade</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Última Compra</label><input id="mix-edit-ultima" placeholder="dd/mm/aaaa"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="mix-edit-ativo">
+          <option value="ativo">✅ Ativo</option>
+          <option value="inativo">❌ Inativo</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Observações</label><textarea id="mix-edit-obs" rows="2" placeholder="Notas sobre este produto no mix..."></textarea></div>
+    </div>
+    <div id="mix-edit-neg-preview" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 14px;font-size:12px;color:#166534;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeModal('modal-mix-edit')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMixEdit()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== MODAL EDITAR SELL IN ===== -->
+<div class="modal-bg" id="modal-sellin-edit">
+  <div class="modal modal-xl">
+    <div class="modal-title">📋 Sell In — Pedidos Faturados<button class="close-btn" onclick="closeModal('modal-sellin-edit')">✕</button></div>
+    <div class="alert alert-info">Estes são os pedidos faturados que compõem o Sell In deste grupo/mês. Você pode ver o pedido ou remover a NF vinculada.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="kpi-card kpi-azul" style="padding:12px">
+        <div class="kpi-label">Grupo</div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-grupo">—</div>
+      </div>
+      <div class="kpi-card kpi-roxo" style="padding:12px">
+        <div class="kpi-label">Indústria</div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-ind">—</div>
+      </div>
+      <div class="kpi-card kpi-amarelo" style="padding:12px">
+        <div class="kpi-label">Mês</div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-mes">—</div>
+      </div>
+      <div class="kpi-card kpi-verde" style="padding:12px">
+        <div class="kpi-label">Total Sell In</div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-total">R$ 0</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pedidos incluídos no Sell In</div>
+    <div id="si-edit-lista" style="max-height:280px;overflow-y:auto"></div>
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Histórico de auditoria</div>
+      <div id="si-edit-historico" style="max-height:100px;overflow-y:auto;background:#fafaf8;border-radius:6px;padding:8px;border:1px solid var(--cinza-medio)"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeModal('modal-sellin-edit')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
