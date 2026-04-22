@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -9409,8 +9410,8 @@ let configSync = {
   conectado: false,
 };
 
-let _rtdbPollInterval = null;
-let _rtdbLastTs = 0;
+var _rtdbPollInterval = null;
+var _rtdbLastTs = 0;
 
 function syncLog(msg, tipo='info') {
   const logEl = el('sync-log');
