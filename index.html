@@ -3773,8 +3773,10 @@ function _pedPreencherNFInline(p) {
 function salvarPedido() {
   const cli = el('ped-cli').value;
   if(!cli){alert('Selecione um cliente.');return;}
-  if(pedItens.length===0){alert('Adicione pelo menos um produto.');return;}
-  const total = pedItens.reduce((s,i)=>s+i.total,0);
+  // Permite salvar sem itens ao editar pedido existente (faturamento direto/importado)
+  const _pedExistenteCheck = pedEditId ? pedidos.find(x=>x.id===pedEditId) : null;
+  if(pedItens.length===0 && !_pedExistenteCheck){alert('Adicione pelo menos um produto.');return;}
+  const total = pedItens.length > 0 ? pedItens.reduce((s,i)=>s+i.total,0) : (_pedExistenteCheck?.total || 0);
   const orcOrigem = el('ped-orc-origem')?.value?.trim() || '';
   const tipo = el('ped-tipo')?.value || 'venda';
 
@@ -3849,11 +3851,18 @@ function salvarPedido() {
     if(!jaTemNF) {
       gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
     } else {
-      // Atualiza comissão existente com a nova base
+      // Atualiza comissão existente com a nova base E recalcula mês de previsão
       const cIdx = comissoes_data.findIndex(c=>c.pedido===obj.id);
       if(cIdx>=0){
         const c = comissoes_data[cIdx];
-        comissoes_data[cIdx] = {...c, baseLiq: baseCom, valor: baseCom*c.pct/100};
+        // Recalcula mês de previsão com dados atualizados (NF, prazo, tipo)
+        const indCadUpd = industrias.find(i => i.nome === obj.industria || i.id === obj.industria);
+        const tipoUpd = indCadUpd?.tipoCom || c.tipo || 'Faturamento';
+        const cliCadUpd = clientes.find(cl => cl.nome === obj.cliente || cl.id === obj.cliente);
+        const prazoUpd = obj.cond || cliCadUpd?.prazo || '';
+        const dataNFUpd = nfInline?.data || obj.nf?.data || obj.data || new Date();
+        const mesLabelUpd = _calcMesPrevisaoComissao(dataNFUpd, tipoUpd, prazoUpd);
+        comissoes_data[cIdx] = {...c, baseLiq: baseCom, valor: baseCom*c.pct/100, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
       } else {
         // Cria comissão se não existia ainda
         gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
@@ -10876,7 +10885,7 @@ function atualizarTextoAutoSave(swEl) {
   } catch(e) {}
 })();
 
-console.info('[GestCom v6.0] ✅ Correções: indicador salvando, agrupamento de importação, cálculo total com desconto.');
+console.info('[GestCom v6.1] ✅ Correções: recálculo mesPrevisao comissão ao editar NF, edição de faturamento direto sem bloquear itens.');
 
 </script>
 
