@@ -805,9 +805,9 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Controle de Metas</div><div class="section-sub">Cadastro e acompanhamento de metas mensais por indústria</div></div>
         <div class="export-btns">
           <select id="metas-mes-sel" onchange="renderMetas()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-            <option value="Mar/26" selected>Mar/26</option><option value="Fev/26">Fev/26</option><option value="Jan/26">Jan/26</option><option value="Abr/26">Abr/26</option>
+            <option value="Jan/26">Jan/26</option><option value="Fev/26">Fev/26</option><option value="Mar/26">Mar/26</option><option value="Abr/26" selected>Abr/26</option><option value="Mai/26">Mai/26</option><option value="Jun/26">Jun/26</option><option value="Jul/26">Jul/26</option><option value="Ago/26">Ago/26</option><option value="Set/26">Set/26</option><option value="Out/26">Out/26</option><option value="Nov/26">Nov/26</option><option value="Dez/26">Dez/26</option>
           </select>
-          <button class="btn btn-primary btn-sm" onclick="window._metaEditId=null;el('meta-modal-titulo').textContent='Nova Meta';el('meta-tipo').value='faturamento';atualizarLabelMetaValor();el('meta-valor').value='';el('meta-obs').value='';openModal('modal-meta')">+ Nova Meta</button>
+          <button class="btn btn-primary btn-sm" onclick="window._metaEditId=null;popularSelectsDinamicos();el('meta-modal-titulo').textContent='Nova Meta';el('meta-tipo').value='faturamento';atualizarLabelMetaValor();el('meta-valor').value='';el('meta-obs').value='';el('meta-real-manual').value='';openModal('modal-meta')">+ Nova Meta</button>
         </div>
       </div>
       <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px" id="metas-kpis">
@@ -2317,8 +2317,9 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-group"><label id="meta-valor-label">Valor da Meta (R$) *</label><input type="number" id="meta-valor" placeholder="0,00" step="0.01"></div>
       <div class="form-group"><label>Tipo</label>
-        <select id="meta-tipo" onchange="atualizarLabelMetaValor()"><option value="faturamento">Faturamento</option><option value="pedidos">Pedidos (qtd)</option><option value="clientes">Clientes ativos</option></select>
+        <select id="meta-tipo" onchange="atualizarLabelMetaValor()"><option value="faturamento">Faturamento</option><option value="implantado">Valor Implantado (R$)</option><option value="pedidos">Pedidos (qtd)</option><option value="clientes">Clientes ativos</option></select>
       </div>
+      <div class="form-group" id="meta-real-manual-grp"><label id="meta-real-manual-label">Realizado no Mês (R$)</label><input type="number" id="meta-real-manual" placeholder="0,00" step="0.01" min="0"><div style="font-size:10px;color:#888;margin-top:3px" id="meta-real-manual-hint">Informe o valor realizado no mês para acompanhar o atingimento da meta.</div></div>
       <div class="form-group full"><label>Observação</label><textarea id="meta-obs" rows="2" placeholder="Metas específicas, bonificações envolvidas..."></textarea></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -7074,7 +7075,7 @@ function adicionarProduto(){
   el('add-produtos-lista').appendChild(tr);
   el('add-codigo').value='';el('add-descricao').value='';el('add-industria').value='';el('add-preco-tabela').value='';el('add-desconto').value='';el('add-preco-neg').value='';
 }
-function salvarProdutosMix(){closeModal('modal-add-produto');renderMix();}
+function salvarProdutosMix(){closeModal('modal-add-produto');renderMix();syncAutoSaveHook();}
 
 /* ══════════════════════════
    CLIENTES
@@ -7244,7 +7245,8 @@ function excluirRede(id) {
   if(!confirm(`Excluir permanentemente a rede "${r.nome}"?`)) return;
   redes = redes.filter(x=>x.id!==id);
   addAudit(usuarioLogado?.login||'admin', `Rede excluída: ${r.nome}`, '🗑️');
-  renderRedes(); popularSelectsDinamicos(); toast('Rede excluída.');
+  renderRedes(); popularSelectsDinamicos();
+  syncAutoSaveHook(); toast('Rede excluída.');
 }
 
 function renderRedes() {
@@ -7473,7 +7475,8 @@ function excluirCliente(id) {
   if(!confirm(`Excluir permanentemente o cliente "${c.nome}"?`)) return;
   clientes = clientes.filter(x=>x.id!==id);
   addAudit(usuarioLogado?.login||'admin', `Cliente excluído: ${c.nome}`, '🗑️');
-  renderClientes(); renderDashboard(); toast('Cliente excluído.');
+  renderClientes(); renderDashboard();
+  syncAutoSaveHook(); toast('Cliente excluído.');
 }
 
 /* ── Seleção em massa de clientes ── */
@@ -7538,6 +7541,7 @@ function excluirClientesSelecionados() {
   popularSelectsDinamicos();
   renderClientes();
   renderDashboard();
+  syncAutoSaveHook();
   toast(`🗑️ ${selecionados.length} cliente${selecionados.length!==1?'s':''} processado${selecionados.length!==1?'s':''}!`);
 }
 
@@ -7698,7 +7702,8 @@ function excluirIndustria(id) {
   if(!confirm(`Excluir permanentemente a indústria "${ind.nome}"?`)) return;
   industrias = industrias.filter(x=>x.id!==id);
   addAudit(usuarioLogado?.login||'admin', `Indústria excluída: ${ind.nome}`, '🗑️');
-  renderIndustrias(); _popularSelectsIndustriaTodos(); toast('Indústria excluída.');
+  renderIndustrias(); _popularSelectsIndustriaTodos();
+  syncAutoSaveHook(); toast('Indústria excluída.');
 }
 
 function renderIndustrias() {
@@ -8667,6 +8672,7 @@ function salvarUsuario() {
   _usrEditId = null;
   closeModal('modal-usuario');
   renderUsuarios();
+  syncAutoSaveHook();
   // Atualizar configurações se estiver aberta
   if(el('cfg-acesso-usuarios')) renderConfiguracoes();
 }
@@ -8735,76 +8741,10 @@ function renderMetas() {
   const mes = (el('metas-mes-sel')||{}).value||'Mar/26';
   const lista = metasData.filter(m=>m.mes===mes);
 
-  const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  function mesLabelToPrefix(label) {
-    const parts = label.split('/');
-    if(parts.length!==2) return null;
-    const mIdx = mesesAbrev.findIndex(m=>m===parts[0]);
-    if(mIdx===-1) return null;
-    const ano = parseInt(parts[1],10) + 2000;
-    return `${ano}-${String(mIdx+1).padStart(2,'0')}`;
-  }
-  const mesPrefix = mesLabelToPrefix(mes);
-
-  // Realizado por tipo
-  function getRealizadoFaturamento(ind) {
-    return pedidos.filter(p=>{
-      if(!p.nf || p.excluido || p.industria!==ind) return false;
-      if(!mesPrefix) return true;
-      return p.nf.data && p.nf.data.startsWith(mesPrefix);
-    }).reduce((s,p)=>s+p.nf.liquida,0);
-  }
-  function getRealizadoPedidos(ind) {
-    return pedidos.filter(p=>{
-      if(p.excluido || p.industria!==ind) return false;
-      if(!mesPrefix) return true;
-      // usar data do pedido ou da NF
-      const dataPed = p.data||'';
-      const dataNF = (p.nf&&p.nf.data)||'';
-      return dataPed.startsWith(mesPrefix) || dataNF.startsWith(mesPrefix);
-    }).length;
-  }
-  function getRealizadoClientes(ind) {
-    const clientesSet = new Set();
-    pedidos.filter(p=>{
-      if(p.excluido || p.industria!==ind) return false;
-      if(!mesPrefix) return true;
-      const dataPed = p.data||'';
-      const dataNF = (p.nf&&p.nf.data)||'';
-      return dataPed.startsWith(mesPrefix) || dataNF.startsWith(mesPrefix);
-    }).forEach(p=>{ if(p.cliente) clientesSet.add(p.cliente); });
-    return clientesSet.size;
-  }
-  function getRealizado(m) {
-    if(m.tipo==='pedidos') return getRealizadoPedidos(m.industria);
-    if(m.tipo==='clientes') return getRealizadoClientes(m.industria);
-    return getRealizadoFaturamento(m.industria);
-  }
-  function fmtRealizado(m, real) {
-    if(m.tipo==='pedidos') return real+' ped.';
-    if(m.tipo==='clientes') return real+' cli.';
-    return fmt(real);
-  }
-  function fmtMeta(m) {
-    if(m.tipo==='pedidos') return m.valor+' ped.';
-    if(m.tipo==='clientes') return m.valor+' cli.';
-    return fmt(m.valor);
-  }
-  function fmtSaldo(m, saldo) {
-    if(m.tipo==='pedidos') return Math.abs(saldo)+' ped.';
-    if(m.tipo==='clientes') return Math.abs(saldo)+' cli.';
-    return fmt(Math.abs(saldo));
-  }
-  function tipoBadge(tipo) {
-    if(tipo==='pedidos') return '<span class="badge badge-azul">📋 Pedidos</span>';
-    if(tipo==='clientes') return '<span class="badge badge-roxo">👥 Clientes</span>';
-    return '<span class="badge badge-amarelo">💰 Faturamento</span>';
-  }
-
-  // KPIs — soma apenas faturamento para manter coerência de R$
+  // KPIs — apenas metas de faturamento para exibir R$
   const listaFat = lista.filter(m=>!m.tipo||m.tipo==='faturamento');
   const totMeta = listaFat.reduce((s,m)=>s+m.valor,0);
-  const totReal = listaFat.reduce((s,m)=>s+getRealizado(m),0);
+  const totReal = listaFat.reduce((s,m)=>s+(m.realizado||0),0);
   const pctGeral = totMeta>0?((totReal/totMeta)*100).toFixed(1):0;
   if(el('meta-kpi-total')) el('meta-kpi-total').textContent = fmt(totMeta);
   if(el('meta-kpi-real'))  el('meta-kpi-real').textContent  = fmt(totReal);
@@ -8813,25 +8753,51 @@ function renderMetas() {
   if(lista.length===0){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px">Nenhuma meta cadastrada para ${mes}. Clique em "+ Nova Meta".</td></tr>`;return;}
 
   const hoje = new Date();
+  const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function mesLabelToPrefix(label) {
+    const parts = label.split('/'); if(parts.length!==2) return null;
+    const mIdx = mesesAbrev.findIndex(m=>m===parts[0]); if(mIdx===-1) return null;
+    return `${parseInt(parts[1],10)+2000}-${String(mIdx+1).padStart(2,'0')}`;
+  }
+  const mesPrefix = mesLabelToPrefix(mes);
   const mesEncerrado = mesPrefix
     ? (parseInt(mesPrefix.slice(0,4)) < hoje.getFullYear() ||
        (parseInt(mesPrefix.slice(0,4)) === hoje.getFullYear() &&
         parseInt(mesPrefix.slice(5,7)) < (hoje.getMonth()+1)))
     : false;
 
+  function fmtMeta(m) {
+    if(m.tipo==='pedidos')  return m.valor+' ped.';
+    if(m.tipo==='clientes') return m.valor+' cli.';
+    return fmt(m.valor);
+  }
+  function fmtReal(m) {
+    const r = m.realizado||0;
+    if(m.tipo==='pedidos')  return r+' ped.';
+    if(m.tipo==='clientes') return r+' cli.';
+    return fmt(r);
+  }
+  function fmtSaldo(m, saldo) {
+    if(m.tipo==='pedidos')  return Math.abs(saldo)+' ped.';
+    if(m.tipo==='clientes') return Math.abs(saldo)+' cli.';
+    return fmt(Math.abs(saldo));
+  }
+  function tipoBadge(tipo) {
+    if(tipo==='pedidos')    return '<span class="badge badge-azul">📋 Pedidos</span>';
+    if(tipo==='clientes')   return '<span class="badge badge-roxo">👥 Clientes</span>';
+    if(tipo==='implantado') return '<span class="badge badge-laranja">📦 Implantado</span>';
+    return '<span class="badge badge-amarelo">💰 Faturamento</span>';
+  }
+
   tbody.innerHTML = lista.map(m=>{
-    const real = getRealizado(m);
+    const real = m.realizado||0;
     const pct  = m.valor>0?((real/m.valor)*100).toFixed(1):0;
-    const saldo= m.valor-real;
+    const saldo = m.valor - real;
     let cls, lbl;
-    if(pct>=100) {
-      cls='badge-verde'; lbl='✅ Atingida';
-    } else if(mesEncerrado) {
-      cls='badge-vermelho'; lbl='❌ Não atingida';
-    } else {
-      cls=pct>=80?'badge-amarelo':'badge-vermelho';
-      lbl=pct>=80?'⏳ Em andamento':'⚠️ Abaixo da meta';
-    }
+    if(pct>=100)            { cls='badge-verde';    lbl='✅ Atingida'; }
+    else if(mesEncerrado)   { cls='badge-vermelho'; lbl='❌ Não atingida'; }
+    else if(pct>=80)        { cls='badge-amarelo';  lbl='⏳ Em andamento'; }
+    else                    { cls='badge-vermelho'; lbl='⚠️ Abaixo da meta'; }
     const pctBar = Math.min(100,parseFloat(pct));
     return `<tr>
       <td><span class="tag">${esc(m.industria)}</span></td>
@@ -8839,7 +8805,7 @@ function renderMetas() {
       <td>${tipoBadge(m.tipo||'faturamento')}</td>
       <td class="bold">${fmtMeta(m)}</td>
       <td>
-        <div style="font-weight:600">${fmtRealizado(m,real)}</div>
+        <div style="font-weight:600">${fmtReal(m)}</div>
         <div style="background:var(--cinza-medio);border-radius:99px;height:5px;margin-top:4px;overflow:hidden"><div style="width:${pctBar}%;height:100%;background:${pct>=100?'var(--verde)':pct>=80?'var(--amarelo)':'var(--vermelho)'};border-radius:99px"></div></div>
       </td>
       <td><span class="bold ${pct>=100?'verde':pct>=80?'':'vermelho'}">${pct}%</span></td>
@@ -8852,30 +8818,45 @@ function renderMetas() {
     </tr>`;
   }).join('');
 }
-
 function atualizarLabelMetaValor() {
   const tipo = (el('meta-tipo')||{}).value||'faturamento';
-  const lbl = el('meta-valor-label');
-  const inp = el('meta-valor');
+  const lbl   = el('meta-valor-label');
+  const inp   = el('meta-valor');
+  const rLbl  = el('meta-real-manual-label');
+  const rInp  = el('meta-real-manual');
+  const rHint = el('meta-real-manual-hint');
   if(!lbl||!inp) return;
   if(tipo==='pedidos') {
     lbl.textContent = 'Meta de Pedidos (qtd) *';
-    inp.placeholder = 'Ex: 50';
-    inp.step = '1';
+    inp.placeholder = 'Ex: 50'; inp.step = '1';
+    if(rLbl)  rLbl.textContent  = 'Pedidos realizados no mês';
+    if(rInp)  { rInp.placeholder='Qtd de pedidos'; rInp.step='1'; }
+    if(rHint) rHint.textContent = 'Informe a quantidade de pedidos realizados no mês.';
   } else if(tipo==='clientes') {
     lbl.textContent = 'Meta de Clientes Ativos (qtd) *';
-    inp.placeholder = 'Ex: 30';
-    inp.step = '1';
+    inp.placeholder = 'Ex: 30'; inp.step = '1';
+    if(rLbl)  rLbl.textContent  = 'Clientes ativos realizados no mês';
+    if(rInp)  { rInp.placeholder='Qtd de clientes'; rInp.step='1'; }
+    if(rHint) rHint.textContent = 'Informe quantos clientes ativos você atingiu para esta indústria no mês.';
+  } else if(tipo==='implantado') {
+    lbl.textContent = 'Meta Valor Implantado (R$) *';
+    inp.placeholder = '0,00'; inp.step = '0.01';
+    if(rLbl)  rLbl.textContent  = 'Valor implantado realizado no mês (R$)';
+    if(rInp)  { rInp.placeholder='0,00'; rInp.step='0.01'; }
+    if(rHint) rHint.textContent = 'Informe o valor total dos pedidos implantados no mês.';
   } else {
     lbl.textContent = 'Valor da Meta (R$) *';
-    inp.placeholder = '0,00';
-    inp.step = '0.01';
+    inp.placeholder = '0,00'; inp.step = '0.01';
+    if(rLbl)  rLbl.textContent  = 'Valor faturado realizado no mês (R$)';
+    if(rInp)  { rInp.placeholder='0,00'; rInp.step='0.01'; }
+    if(rHint) rHint.textContent = 'Informe o valor faturado no mês para acompanhar o atingimento da meta.';
   }
 }
 
 function salvarMeta() {
   const ind = el('meta-ind').value; const valor = parseFloat(el('meta-valor').value)||0;
-  if(!ind||!valor){alert('Preencha Indústria e Valor.');return;}
+  if(!ind){alert('Selecione a Indústria.');return;}
+  if(!valor){alert('Informe o valor da meta (maior que zero).');return;}
   const mes = el('meta-mes').value;
   const tipo = el('meta-tipo').value;
   if(metasData.find(m=>m.industria===ind&&m.mes===mes&&m.tipo===tipo&&(!window._metaEditId||m.id!==window._metaEditId))) {
@@ -8883,7 +8864,8 @@ function salvarMeta() {
     metasData = metasData.filter(m=>!(m.industria===ind&&m.mes===mes&&m.tipo===tipo));
   }
   const id = window._metaEditId || ('META-'+String(metasData.length+1).padStart(3,'0'));
-  const obj = {id,industria:ind,mes,valor,tipo,obs:el('meta-obs').value,usuario:usuarioLogado?.login||'admin',criado:new Date().toLocaleDateString('pt-BR')};
+  const realizado = parseFloat(el('meta-real-manual')?.value)||0;
+  const obj = {id,industria:ind,mes,valor,tipo,realizado,obs:el('meta-obs').value,usuario:usuarioLogado?.login||'admin',criado:new Date().toLocaleDateString('pt-BR')};
   metasData = metasData.filter(m=>m.id!==id);
   metasData.push(obj);
   window._metaEditId = null;
@@ -8897,16 +8879,21 @@ function salvarMeta() {
 function editarMeta(id) {
   const m = metasData.find(x=>x.id===id); if(!m) return;
   window._metaEditId = id;
+  popularSelectsDinamicos();
   el('meta-ind').value=m.industria; el('meta-mes').value=m.mes;
   el('meta-tipo').value=m.tipo||'faturamento';
   atualizarLabelMetaValor();
   el('meta-valor').value=m.valor; el('meta-obs').value=m.obs||'';
+  if(el('meta-real-manual')) el('meta-real-manual').value=m.realizado||'';
   el('meta-modal-titulo').textContent='Editar Meta';
   openModal('modal-meta');
 }
 function excluirMeta(id) {
   if(!confirm('Remover esta meta?')) return;
-  metasData = metasData.filter(m=>m.id!==id); renderMetas(); toast('Meta removida.');
+  metasData = metasData.filter(m=>m.id!==id);
+  renderMetas();
+  syncAutoSaveHook();
+  toast('Meta removida.');
 }
 
 /* ══════════════════════════
@@ -9340,7 +9327,8 @@ function excluirRegra(id) {
   if(!confirm('Excluir esta regra comercial?')) return;
   regrasComerciais = regrasComerciais.filter(r=>r.id!==id);
   addAudit(usuarioLogado?.login||'admin','Regra excluída','⚙️');
-  renderRegras(); toast('Regra excluída.');
+  renderRegras();
+  syncAutoSaveHook(); toast('Regra excluída.');
 }
 
 function toggleRegra(id) {
@@ -9871,7 +9859,7 @@ async function syncPush(silencioso=false){
   if(!configSync.conectado||!configSync.dbUrl) return;
   try{const dados=coletarDadosParaSync();const res=await fetch(rtdbUrl('gestcom/dados'),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});if(!res.ok)throw new Error('HTTP '+res.status);_rtdbLastTs=dados._ts;if(!silencioso){syncLog('✅ Enviado','success');feedbackFb('Sincronizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
-async function syncPull(silencioso=false){
+async function syncPull(false){
   if(!configSync.conectado||!configSync.dbUrl) return;
   try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
