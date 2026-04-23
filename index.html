@@ -613,6 +613,20 @@ tr:last-child td{border-bottom:none;}
           <button class="btn btn-info btn-sm" onclick="exportarLogistica()">📤 Exportar Excel</button>
         </div>
       </div>
+
+      <!-- KPIs de alerta logístico -->
+      <div id="log-kpi-grid" class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"></div>
+
+      <!-- Banner de alertas de atraso -->
+      <div id="log-alerta-atraso" style="display:none;background:#fef2f2;border:2px solid #c0392b;border-radius:8px;padding:12px 16px;margin-bottom:14px;display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:18px">🚨</span>
+          <strong style="color:#c0392b;font-size:13px">ENTREGAS ATRASADAS</strong>
+          <span id="log-alerta-count" style="background:#c0392b;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px"></span>
+        </div>
+        <div id="log-alerta-lista" style="font-size:12px;color:#7f1d1d;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
       <div class="search-bar">
         <input id="log-busca" placeholder="🔍 Pedido, cliente..." oninput="renderLogistica()">
         <select id="log-filtro-status" onchange="renderLogistica()">
@@ -623,16 +637,21 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="log-filtro-ind" onchange="renderLogistica()">
           <option value="">Todas as indústrias</option>
-          
+        </select>
+        <select id="log-filtro-alerta" onchange="renderLogistica()">
+          <option value="">Todas as situações</option>
+          <option value="atrasado">⚠️ Apenas atrasados</option>
+          <option value="sem-previsao">❓ Sem previsão</option>
+          <option value="hoje">📅 Entrega hoje</option>
         </select>
       </div>
-      <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo.</div>
+      <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão, data de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo. Pedidos com previsão vencida e não entregues aparecem destacados em vermelho.</div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-wrap">
           <table>
             <thead><tr>
               <th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Data</th>
-              <th>Transportadora</th><th>Previsão Entrega</th><th>Status</th><th>Observação</th>
+              <th>Transportadora</th><th>Previsão Entrega</th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
             </tr></thead>
             <tbody id="log-tbody"></tbody>
           </table>
@@ -2263,6 +2282,7 @@ tr:last-child td{border-bottom:none;}
     <div class="form-grid">
       <div class="form-group"><label>Transportadora</label><input id="log-transportadora" placeholder="Ex: Jadlog, Correios..."></div>
       <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="log-previsao"></div>
+      <div class="form-group"><label>📦 Data de Entrega Real</label><input type="date" id="log-data-entrega"><div style="font-size:10px;color:#888;margin-top:3px">Preencha quando o pedido for efetivamente entregue</div></div>
     </div>
     <div class="form-group"><label>Observação</label><textarea id="log-obs-status" rows="2" placeholder="Informações adicionais..."></textarea></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -2639,7 +2659,7 @@ function _carregarLocal() {
     pedidos.filter(p=>!p.excluido).forEach(p=>{
       if(!logisticaData.find(l=>l.pedId===p.id))
         logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
-          data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+          data:p.data,transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''});
     });
     console.info('[GestCom] ✓ Dados locais restaurados (' + new Date(d._ts||0).toLocaleTimeString('pt-BR') + ')');
     return true;
@@ -3023,7 +3043,7 @@ function converterEmPedido(id) {
   pedidos.push(pedObj);
   if(!logisticaData.find(l=>l.pedId===pedId))
     logisticaData.push({pedId:pedId,cliente:o.cliente,industria:o.industria,
-      data:today(),transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''});
+      data:today(),transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''});
   orcamentos = orcamentos.map(x=>x.id===id?{...x,status:'Convertido em pedido'}:x);
   renderOrcamentos(); renderPedidos(); renderLogistica(); renderSaldo();
   syncAutoSaveHook();
@@ -3629,6 +3649,7 @@ function _sincLogisticaPedido(ped) {
       data:           ped.data,
       transportadora: '',
       previsao:       '',
+      dataEntrega:    '',
       statusLog:      'Pedido Digitado',
       obs:            ''
     });
@@ -3841,7 +3862,7 @@ function salvarPedido() {
     pedidos.push({...obj, nf: nfInline});
     if(!logisticaData.find(l=>l.pedId===obj.id))
       logisticaData.push({pedId:obj.id,cliente:obj.cliente,industria:obj.industria,
-        data:obj.data,transportadora:'',previsao:'',statusLog: nfInline ? 'Faturado' : 'Pedido Digitado',obs:''});
+        data:obj.data,transportadora:'',previsao:'',dataEntrega:'',statusLog: nfInline ? 'Faturado' : 'Pedido Digitado',obs:''});
   }
 
   // Gera/atualiza comissão se NF foi lançada inline (e é venda)
@@ -4116,7 +4137,7 @@ function salvarNFSemPedido() {
   pedidos.push(pedSP);
   logisticaData.push({
     pedId, cliente: cli, industria: ind,
-    data, transportadora: '', previsao: '',
+    data, transportadora: '', previsao: '', dataEntrega: '',
     statusLog: 'Faturado', obs: ''
   });
 
@@ -6597,7 +6618,7 @@ function confirmarImportNFe() {
 
   pedidos.push(pedObj);
   logisticaData.push({pedId, cliente: cli, industria: ind,
-    data: p.dataNF, transportadora: '', previsao: '', statusLog: 'Faturado', obs: ''});
+    data: p.dataNF, transportadora: '', previsao: '', dataEntrega: '', statusLog: 'Faturado', obs: ''});
 
   // Gera comissão automática
   gerarComissaoAuto(pedObj, nfObj.liquida);
@@ -6948,8 +6969,8 @@ function confirmarImport() {
       };
       pedidos.push(pedObj);
       logisticaData.push({pedId, cliente: g.cliente, industria: g.industria,
-        data: g.data, transportadora: '', previsao: '',
-        statusLog: nfObj ? 'Faturado' : 'Pedido Digitado', obs: ''});
+          data: g.data, transportadora: '', previsao: '', dataEntrega: '',
+          statusLog: nfObj ? 'Faturado' : 'Pedido Digitado', obs: ''});
 
       // Gera comissão se tiver NF e for venda
       if(nfObj && g.tipo !== 'bonificacao') {
@@ -8006,11 +8027,31 @@ function addAudit(user, acao, icon='ℹ️') {
 /* ══════════════════════════
    LOGÍSTICA
 ══════════════════════════ */
+function _logIsAtrasado(l) {
+  // Retorna true se tem previsão, não foi entregue/finalizado/cancelado, e a data já passou
+  if (!l.previsao) return false;
+  const entregue = ['Entregue','Finalizado','Cancelado'];
+  if (entregue.includes(l.statusLog)) return false;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prev = new Date(l.previsao + 'T00:00:00');
+  return prev < hoje;
+}
+
+function _logIsHoje(l) {
+  if (!l.previsao) return false;
+  const entregue = ['Entregue','Finalizado','Cancelado'];
+  if (entregue.includes(l.statusLog)) return false;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prev = new Date(l.previsao + 'T00:00:00');
+  return prev.getTime() === hoje.getTime();
+}
+
 function renderLogistica() {
   const tbody = el('log-tbody'); if(!tbody) return;
-  const busca  = (el('log-busca')||{}).value?.toLowerCase()||'';
-  const filtSt = (el('log-filtro-status')||{}).value||'';
-  const filtInd = (el('log-filtro-ind')||{}).value||'';
+  const busca      = (el('log-busca')||{}).value?.toLowerCase()||'';
+  const filtSt     = (el('log-filtro-status')||{}).value||'';
+  const filtInd    = (el('log-filtro-ind')||{}).value||'';
+  const filtAlerta = (el('log-filtro-alerta')||{}).value||'';
 
   const statusOpts = ['Pedido Digitado','Pedido Enviado','Em Separação','Faturado',
     'Aguardando Coleta','Em Transporte','Entregue','Finalizado','Cancelado'];
@@ -8023,10 +8064,10 @@ function renderLogistica() {
     const idx = logisticaData.findIndex(l => l.pedId === p.id);
     if(idx < 0) {
       logisticaData.push({pedId:p.id, cliente:p.cliente, industria:p.industria,
-        data:p.data, transportadora:'', previsao:'', statusLog:'Pedido Digitado', obs:''});
+        data:p.data, transportadora:'', previsao:'', dataEntrega:'', statusLog:'Pedido Digitado', obs:''});
     } else {
-      // Mantém dados logísticos, atualiza apenas cadastrais
-      logisticaData[idx] = {...logisticaData[idx], cliente:p.cliente, industria:p.industria};
+      logisticaData[idx] = {...logisticaData[idx], cliente:p.cliente, industria:p.industria,
+        dataEntrega: logisticaData[idx].dataEntrega || ''};
     }
   });
 
@@ -8040,19 +8081,59 @@ function renderLogistica() {
       data:           p.data,
       transportadora: l.transportadora || '',
       previsao:       l.previsao       || '',
+      dataEntrega:    l.dataEntrega    || '',
       statusLog:      l.statusLog      || 'Pedido Digitado',
       obs:            l.obs            || ''
     };
   });
 
+  // ── KPIs de logística ──
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const totalAtivos = list.filter(l => !['Entregue','Finalizado','Cancelado'].includes(l.statusLog)).length;
+  const totalAtrasados = list.filter(l => _logIsAtrasado(l)).length;
+  const totalSemPrevisao = list.filter(l => !l.previsao && !['Entregue','Finalizado','Cancelado'].includes(l.statusLog)).length;
+  const totalEntregues = list.filter(l => l.statusLog==='Entregue' || l.statusLog==='Finalizado').length;
+
+  const kpiGrid = el('log-kpi-grid');
+  if(kpiGrid) kpiGrid.innerHTML = `
+    <div class="kpi-card kpi-azul"><div class="kpi-label">Em Andamento</div><div class="kpi-value">${totalAtivos}</div><div class="kpi-sub">Pedidos ativos</div></div>
+    <div class="kpi-card kpi-vermelho"><div class="kpi-label">⚠️ Atrasados</div><div class="kpi-value" style="color:var(--vermelho)">${totalAtrasados}</div><div class="kpi-sub">Previsão vencida</div></div>
+    <div class="kpi-card kpi-amarelo"><div class="kpi-label">Sem Previsão</div><div class="kpi-value">${totalSemPrevisao}</div><div class="kpi-sub">Aguardando data</div></div>
+    <div class="kpi-card kpi-verde"><div class="kpi-label">Entregues</div><div class="kpi-value">${totalEntregues}</div><div class="kpi-sub">Concluídos</div></div>
+  `;
+
+  // ── Banner de alertas de atraso ──
+  const alertaBanner = el('log-alerta-atraso');
+  if(alertaBanner) {
+    const atrasados = list.filter(l => _logIsAtrasado(l));
+    if(atrasados.length > 0) {
+      alertaBanner.style.display = 'block';
+      el('log-alerta-count').textContent = atrasados.length + ' pedido(s)';
+      el('log-alerta-lista').innerHTML = atrasados.slice(0,5).map(l => {
+        const diasAtraso = Math.floor((hoje - new Date(l.previsao+'T00:00:00')) / 86400000);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed #fecaca">
+          <span style="font-weight:700">${l.pedId}</span>
+          <span>${esc(l.cliente)}</span>
+          <span class="tag">${esc(l.industria)}</span>
+          <span style="margin-left:auto;background:#c0392b;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">${diasAtraso} dia(s) de atraso</span>
+        </div>`;
+      }).join('') + (atrasados.length > 5 ? `<div style="margin-top:4px;color:#888;font-size:11px">… e mais ${atrasados.length-5} pedido(s) atrasado(s)</div>` : '');
+    } else {
+      alertaBanner.style.display = 'none';
+    }
+  }
+
   // Aplica filtros
   if(busca)   list = list.filter(l => l.pedId.toLowerCase().includes(busca) || l.cliente.toLowerCase().includes(busca));
   if(filtSt)  list = list.filter(l => l.statusLog === filtSt);
   if(filtInd) list = list.filter(l => l.industria === filtInd);
+  if(filtAlerta === 'atrasado')    list = list.filter(l => _logIsAtrasado(l));
+  if(filtAlerta === 'sem-previsao') list = list.filter(l => !l.previsao && !['Entregue','Finalizado','Cancelado'].includes(l.statusLog));
+  if(filtAlerta === 'hoje')        list = list.filter(l => _logIsHoje(l));
 
   if(list.length===0){
-    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#aaa;padding:24px">
-      Nenhum pedido encontrado.<br><span style="font-size:11px">Nenhum pedido encontrado. Crie um pedido para que apareça aqui automaticamente.</span>
+    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">
+      Nenhum pedido encontrado.<br><span style="font-size:11px">Crie um pedido para que apareça aqui automaticamente.</span>
     </td></tr>`;
     return;
   }
@@ -8063,31 +8144,62 @@ function renderLogistica() {
     const optsHtml = statusOpts.map(s=>
       `<option value="${s}" ${l.statusLog===s?'selected':''}>${s}</option>`
     ).join('');
-    return `<tr>
+
+    const atrasado = _logIsAtrasado(l);
+    const entregueHoje = _logIsHoje(l);
+    let rowStyle = '';
+    let situacaoBadge = '';
+
+    if(atrasado) {
+      rowStyle = 'background:#fff5f5;';
+      const diasAtraso = Math.floor((hoje - new Date(l.previsao+'T00:00:00')) / 86400000);
+      situacaoBadge = `<span class="badge badge-vermelho" title="${diasAtraso} dia(s) em atraso">⚠️ Atrasado (${diasAtraso}d)</span>`;
+    } else if(l.statusLog==='Entregue'||l.statusLog==='Finalizado') {
+      situacaoBadge = `<span class="badge badge-verde">✅ Entregue</span>`;
+    } else if(entregueHoje) {
+      rowStyle = 'background:#fffbeb;';
+      situacaoBadge = `<span class="badge badge-amarelo">📅 Hoje</span>`;
+    } else if(!l.previsao && !['Cancelado'].includes(l.statusLog)) {
+      situacaoBadge = `<span class="badge badge-cinza">❓ Sem previsão</span>`;
+    } else if(l.previsao) {
+      situacaoBadge = `<span class="badge badge-azul">🕐 No prazo</span>`;
+    }
+
+    // Auto-marcar dataEntrega quando status muda para Entregue
+    const dataEntregaVal = l.dataEntrega || (l.statusLog==='Entregue' && !l.dataEntrega ? today() : '');
+
+    return `<tr style="${rowStyle}">
       <td class="mono bold">${l.pedId}</td>
       <td><strong>${esc(l.cliente)}</strong></td>
       <td><span class="tag">${esc(l.industria)}</span></td>
       <td>${l.data}</td>
       <td>
         <input type="text" value="${esc(l.transportadora)}" placeholder="Transportadora"
-          style="${inStyle}width:130px"
+          style="${inStyle}width:120px"
           onfocus="this.style.borderColor='var(--amarelo)'"
           onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','transportadora',this.value)">
       </td>
       <td>
         <input type="date" value="${l.previsao}"
-          style="${inStyle}width:130px"
+          style="${inStyle}width:130px${atrasado?';border-color:#fca5a5':''}"
           onfocus="this.style.borderColor='var(--amarelo)'"
-          onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','previsao',this.value)">
+          onblur="this.style.borderColor='${atrasado?'#fca5a5':'var(--cinza-medio)'  }';logSalvarCampo('${l.pedId}','previsao',this.value)">
       </td>
       <td>
-        <select class="status-select" onchange="logSalvarCampo('${l.pedId}','statusLog',this.value)">
+        <input type="date" value="${dataEntregaVal}"
+          style="${inStyle}width:130px${dataEntregaVal?';border-color:#86efac':''}"
+          onfocus="this.style.borderColor='var(--amarelo)'"
+          onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampoEntrega('${l.pedId}',this.value)">
+      </td>
+      <td>${situacaoBadge}</td>
+      <td>
+        <select class="status-select" style="${inStyle}" onchange="logSalvarCampo('${l.pedId}','statusLog',this.value);renderLogistica()">
           ${optsHtml}
         </select>
       </td>
       <td>
         <input type="text" value="${esc(l.obs)}" placeholder="Obs..."
-          style="${inStyle}width:120px"
+          style="${inStyle}width:110px"
           onfocus="this.style.borderColor='var(--amarelo)'"
           onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','obs',this.value)">
       </td>
@@ -8101,8 +8213,31 @@ function logSalvarCampo(pedId, campo, valor) {
   if(idx < 0) return;
   logisticaData[idx] = {...logisticaData[idx], [campo]: valor};
   if(campo==='statusLog') {
+    // Auto-preencher dataEntrega ao marcar como Entregue
+    if(valor==='Entregue' && !logisticaData[idx].dataEntrega) {
+      logisticaData[idx].dataEntrega = today();
+      toast('Status atualizado: '+valor+' · Data de entrega preenchida automaticamente.');
+    } else {
+      toast('Status atualizado: '+valor);
+    }
     addAudit(usuarioLogado?.login||'sistema', `Logística ${pedId} → ${valor}`, '🚚');
-    toast('Status atualizado: '+valor);
+    renderLogistica();
+  }
+  syncAutoSaveHook();
+}
+
+// Salva a data de entrega e, se preenchida, atualiza status para Entregue automaticamente
+function logSalvarCampoEntrega(pedId, valor) {
+  const idx = logisticaData.findIndex(l=>l.pedId===pedId);
+  if(idx < 0) return;
+  logisticaData[idx] = {...logisticaData[idx], dataEntrega: valor};
+  if(valor && logisticaData[idx].statusLog !== 'Entregue' && logisticaData[idx].statusLog !== 'Finalizado') {
+    logisticaData[idx].statusLog = 'Entregue';
+    addAudit(usuarioLogado?.login||'sistema', `Logística ${pedId} → Entregue em ${valor}`, '🚚');
+    toast('Data de entrega registrada! Status atualizado para Entregue.');
+    renderLogistica();
+  } else {
+    if(valor) addAudit(usuarioLogado?.login||'sistema', `Logística ${pedId} → data entrega: ${valor}`, '🚚');
   }
   syncAutoSaveHook();
 }
@@ -8116,6 +8251,7 @@ function abrirModalStatusLog(pedId) {
   el('log-novo-status').value = l.statusLog;
   el('log-transportadora').value = l.transportadora||'';
   el('log-previsao').value = l.previsao||'';
+  if(el('log-data-entrega')) el('log-data-entrega').value = l.dataEntrega||'';
   el('log-obs-status').value = l.obs||'';
   openModal('modal-log-status');
 }
@@ -8123,11 +8259,15 @@ function abrirModalStatusLog(pedId) {
 function confirmarStatusLogistica() {
   if(!logEditId) return;
   const novoStatus = el('log-novo-status').value;
+  const novaDataEntrega = el('log-data-entrega') ? el('log-data-entrega').value : '';
+  // Auto-preencher dataEntrega se status = Entregue e campo vazio
+  const autoDataEntrega = (novoStatus==='Entregue' && !novaDataEntrega) ? today() : novaDataEntrega;
   logisticaData = logisticaData.map(l=>{
     if(l.pedId===logEditId) return {...l,
       statusLog: novoStatus,
       transportadora: el('log-transportadora').value,
       previsao: el('log-previsao').value,
+      dataEntrega: autoDataEntrega,
       obs: el('log-obs-status').value
     };
     return l;
@@ -8140,8 +8280,8 @@ function confirmarStatusLogistica() {
 
 function exportarLogistica() {
   const wb=XLSX.utils.book_new();
-  const rows=[['Pedido','Cliente','Indústria','Data','Transportadora','Previsão','Status']];
-  logisticaData.forEach(l=>rows.push([l.pedId,l.cliente,l.industria,l.data,l.transportadora||'',l.previsao||'',l.statusLog]));
+  const rows=[['Pedido','Cliente','Indústria','Data','Transportadora','Previsão','Data Entrega','Status','Observação']];
+  logisticaData.forEach(l=>rows.push([l.pedId,l.cliente,l.industria,l.data,l.transportadora||'',l.previsao||'',l.dataEntrega||'',l.statusLog,l.obs||'']));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Logistica');
   XLSX.writeFile(wb,'Logistica_TresVales.xlsx');
   toast('Excel exportado!');
@@ -9641,7 +9781,7 @@ function syncAgora(){syncPull();}
 async function syncResetCloud(){if(!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada!');}
 async function tentarReconexaoAuto(){if(configSync.dbUrl&&!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
 (function(){try{const _rawSU=localStorage.getItem('gestcom_saldousos');if(_rawSU)window.saldoUsosData=JSON.parse(_rawSU);}catch(e){}try{if(typeof _carregarLocal==='function'&&_carregarLocal()){try{popularSelectsDinamicos();}catch(e){}try{renderDashboard();}catch(e){}}}catch(e){}})();
-pedidos.filter(p=>!p.excluido).forEach(p=>{if(!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,transportadora:'',previsao:'',statusLog:'Pedido Digitado',obs:''}); });
+pedidos.filter(p=>!p.excluido).forEach(p=>{if(!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''}); });
 try{const ts=document.getElementById('sync-ts');if(ts)ts.textContent='Sistema ativo · '+new Date().toLocaleString('pt-BR');}catch(e){}
 try{atualizarBadgeTratativas();}catch(e){}
 try{renderDashboard();}catch(e){}
@@ -10067,7 +10207,7 @@ function confirmarImportFaturados() {
     pedidos.push(pedObj);
     logisticaData.push({
       pedId, cliente: r.cli, industria: r.ind,
-      data: r.data, transportadora: '', previsao: '',
+      data: r.data, transportadora: '', previsao: '', dataEntrega: '',
       statusLog: 'Faturado', obs: ''
     });
 
