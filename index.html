@@ -4925,11 +4925,13 @@ function abrirLancarRecebimento(comId) {
   const prev = el('rec-preview');
   if(prev){ prev.textContent='Preencha o valor acima para ver o resultado'; prev.style.cssText='background:#fafaf8;color:#888;border:1px solid var(--cinza-medio);border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600'; }
 
-  // Gera opções de mês: mês atual + 47 meses
+  // Gera opções de mês: 12 meses anteriores + mês atual + 35 meses futuros (total 48)
   let optsHtml = '';
-  for(let i=0; i<48; i++){
-    const idx = (hoje.getMonth()+i)%12;
-    const ano = hoje.getFullYear()+Math.floor((hoje.getMonth()+i)/12);
+  const OFFSET = 12; // quantos meses para trás exibir
+  for(let i=-OFFSET; i<36; i++){
+    const totalMes = hoje.getMonth() + i;
+    const idx = ((totalMes % 12) + 12) % 12;
+    const ano = hoje.getFullYear() + Math.floor(totalMes / 12);
     const lbl = MESES[idx]+'/'+String(ano).slice(2);
     optsHtml += `<option value="${lbl}"${i===0?' selected':''}>${lbl}</option>`;
   }
@@ -5016,9 +5018,11 @@ function _gerarOpsMeses(selecionado) {
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const hoje = new Date();
   let opts = '';
-  for(let i=0; i<48; i++){
-    const idx = (hoje.getMonth()+i)%12;
-    const ano = hoje.getFullYear()+Math.floor((hoje.getMonth()+i)/12);
+  const OFFSET = 12; // quantos meses para trás exibir
+  for(let i=-OFFSET; i<36; i++){
+    const totalMes = hoje.getMonth() + i;
+    const idx = ((totalMes % 12) + 12) % 12;
+    const ano = hoje.getFullYear() + Math.floor(totalMes / 12);
     const lbl = MESES[idx]+'/'+String(ano).slice(2);
     opts += `<option value="${lbl}"${lbl===selecionado?' selected':''}>${lbl}</option>`;
   }
