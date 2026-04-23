@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -9859,7 +9860,7 @@ async function syncPush(silencioso=false){
   if(!configSync.conectado||!configSync.dbUrl) return;
   try{const dados=coletarDadosParaSync();const res=await fetch(rtdbUrl('gestcom/dados'),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});if(!res.ok)throw new Error('HTTP '+res.status);_rtdbLastTs=dados._ts;if(!silencioso){syncLog('✅ Enviado','success');feedbackFb('Sincronizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
-async function syncPull(false){
+async function syncPull(silencioso){
   if(!configSync.conectado||!configSync.dbUrl) return;
   try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
@@ -11087,6 +11088,15 @@ function atualizarTextoAutoSave(swEl) {
     const _loginSyncStatus = document.getElementById('login-sync-status');
     if (_btnEntrar) { _btnEntrar.disabled = true; _btnEntrar.textContent = '⏳ Aguarde…'; }
     if (_loginSyncStatus) _loginSyncStatus.style.display = 'block';
+
+    // Segurança: libera o botão após 8s independente do que acontecer
+    const _safetyTimer = setTimeout(() => {
+      const _b = document.getElementById('btn-entrar');
+      const _s = document.getElementById('login-sync-status');
+      if (_b && _b.disabled) { _b.disabled = false; _b.textContent = 'Entrar'; }
+      if (_s) _s.style.display = 'none';
+    }, 8000);
+
     setTimeout(async () => {
       try {
         const auth = configSync.apiKey ? `?auth=${configSync.apiKey}` : '';
@@ -11107,6 +11117,7 @@ function atualizarTextoAutoSave(swEl) {
       } catch(e) {
         syncLog('Reconexão automática falhou: ' + e.message, 'aviso');
       } finally {
+        clearTimeout(_safetyTimer);
         // Libera o botão Entrar após sync (ou falha)
         const _btn = document.getElementById('btn-entrar');
         const _sts = document.getElementById('login-sync-status');
