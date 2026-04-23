@@ -807,7 +807,7 @@ tr:last-child td{border-bottom:none;}
           <select id="metas-mes-sel" onchange="renderMetas()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
             <option value="Mar/26" selected>Mar/26</option><option value="Fev/26">Fev/26</option><option value="Jan/26">Jan/26</option><option value="Abr/26">Abr/26</option>
           </select>
-          <button class="btn btn-primary btn-sm" onclick="openModal('modal-meta')">+ Nova Meta</button>
+          <button class="btn btn-primary btn-sm" onclick="window._metaEditId=null;el('meta-modal-titulo').textContent='Nova Meta';el('meta-tipo').value='faturamento';atualizarLabelMetaValor();el('meta-valor').value='';el('meta-obs').value='';openModal('modal-meta')">+ Nova Meta</button>
         </div>
       </div>
       <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px" id="metas-kpis">
@@ -817,7 +817,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>Indústria</th><th>Mês</th><th>Meta (R$)</th><th>Realizado (R$)</th><th>% Atingido</th><th>Saldo</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Indústria</th><th>Mês</th><th>Tipo</th><th>Meta</th><th>Realizado</th><th>% Atingido</th><th>Saldo</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="metas-tbody"></tbody>
         </table>
       </div>
@@ -2315,9 +2315,9 @@ tr:last-child td{border-bottom:none;}
       <div class="form-group"><label>Mês/Ano *</label>
         <select id="meta-mes"><option>Jan/26</option><option>Fev/26</option><option selected>Mar/26</option><option>Abr/26</option><option>Mai/26</option><option>Jun/26</option><option>Jul/26</option><option>Ago/26</option><option>Set/26</option><option>Out/26</option><option>Nov/26</option><option>Dez/26</option></select>
       </div>
-      <div class="form-group"><label>Valor da Meta (R$) *</label><input type="number" id="meta-valor" placeholder="0,00" step="0.01"></div>
+      <div class="form-group"><label id="meta-valor-label">Valor da Meta (R$) *</label><input type="number" id="meta-valor" placeholder="0,00" step="0.01"></div>
       <div class="form-group"><label>Tipo</label>
-        <select id="meta-tipo"><option value="faturamento">Faturamento</option><option value="pedidos">Pedidos (qtd)</option><option value="clientes">Clientes ativos</option></select>
+        <select id="meta-tipo" onchange="atualizarLabelMetaValor()"><option value="faturamento">Faturamento</option><option value="pedidos">Pedidos (qtd)</option><option value="clientes">Clientes ativos</option></select>
       </div>
       <div class="form-group full"><label>Observação</label><textarea id="meta-obs" rows="2" placeholder="Metas específicas, bonificações envolvidas..."></textarea></div>
     </div>
@@ -8735,10 +8735,8 @@ function renderMetas() {
   const mes = (el('metas-mes-sel')||{}).value||'Mar/26';
   const lista = metasData.filter(m=>m.mes===mes);
 
-  // Calcular realizado a partir de pedidos faturados — filtra pelo mês selecionado
   const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   function mesLabelToPrefix(label) {
-    // label ex: "Mar/26" => "2026-03"
     const parts = label.split('/');
     if(parts.length!==2) return null;
     const mIdx = mesesAbrev.findIndex(m=>m===parts[0]);
@@ -8746,26 +8744,74 @@ function renderMetas() {
     const ano = parseInt(parts[1],10) + 2000;
     return `${ano}-${String(mIdx+1).padStart(2,'0')}`;
   }
-  const mesPrefix = mesLabelToPrefix(mes); // ex: "2026-03"
-  function getRealizadoInd(ind) {
+  const mesPrefix = mesLabelToPrefix(mes);
+
+  // Realizado por tipo
+  function getRealizadoFaturamento(ind) {
     return pedidos.filter(p=>{
       if(!p.nf || p.excluido || p.industria!==ind) return false;
-      if(!mesPrefix) return true; // se não conseguir converter, inclui tudo
+      if(!mesPrefix) return true;
       return p.nf.data && p.nf.data.startsWith(mesPrefix);
     }).reduce((s,p)=>s+p.nf.liquida,0);
   }
+  function getRealizadoPedidos(ind) {
+    return pedidos.filter(p=>{
+      if(p.excluido || p.industria!==ind) return false;
+      if(!mesPrefix) return true;
+      // usar data do pedido ou da NF
+      const dataPed = p.data||'';
+      const dataNF = (p.nf&&p.nf.data)||'';
+      return dataPed.startsWith(mesPrefix) || dataNF.startsWith(mesPrefix);
+    }).length;
+  }
+  function getRealizadoClientes(ind) {
+    const clientesSet = new Set();
+    pedidos.filter(p=>{
+      if(p.excluido || p.industria!==ind) return false;
+      if(!mesPrefix) return true;
+      const dataPed = p.data||'';
+      const dataNF = (p.nf&&p.nf.data)||'';
+      return dataPed.startsWith(mesPrefix) || dataNF.startsWith(mesPrefix);
+    }).forEach(p=>{ if(p.cliente) clientesSet.add(p.cliente); });
+    return clientesSet.size;
+  }
+  function getRealizado(m) {
+    if(m.tipo==='pedidos') return getRealizadoPedidos(m.industria);
+    if(m.tipo==='clientes') return getRealizadoClientes(m.industria);
+    return getRealizadoFaturamento(m.industria);
+  }
+  function fmtRealizado(m, real) {
+    if(m.tipo==='pedidos') return real+' ped.';
+    if(m.tipo==='clientes') return real+' cli.';
+    return fmt(real);
+  }
+  function fmtMeta(m) {
+    if(m.tipo==='pedidos') return m.valor+' ped.';
+    if(m.tipo==='clientes') return m.valor+' cli.';
+    return fmt(m.valor);
+  }
+  function fmtSaldo(m, saldo) {
+    if(m.tipo==='pedidos') return Math.abs(saldo)+' ped.';
+    if(m.tipo==='clientes') return Math.abs(saldo)+' cli.';
+    return fmt(Math.abs(saldo));
+  }
+  function tipoBadge(tipo) {
+    if(tipo==='pedidos') return '<span class="badge badge-azul">📋 Pedidos</span>';
+    if(tipo==='clientes') return '<span class="badge badge-roxo">👥 Clientes</span>';
+    return '<span class="badge badge-amarelo">💰 Faturamento</span>';
+  }
 
-  const totMeta = lista.reduce((s,m)=>s+m.valor,0);
-  const totReal = lista.reduce((s,m)=>s+getRealizadoInd(m.industria),0);
+  // KPIs — soma apenas faturamento para manter coerência de R$
+  const listaFat = lista.filter(m=>!m.tipo||m.tipo==='faturamento');
+  const totMeta = listaFat.reduce((s,m)=>s+m.valor,0);
+  const totReal = listaFat.reduce((s,m)=>s+getRealizado(m),0);
   const pctGeral = totMeta>0?((totReal/totMeta)*100).toFixed(1):0;
-
   if(el('meta-kpi-total')) el('meta-kpi-total').textContent = fmt(totMeta);
   if(el('meta-kpi-real'))  el('meta-kpi-real').textContent  = fmt(totReal);
   if(el('meta-kpi-pct'))   el('meta-kpi-pct').textContent   = pctGeral+'%';
 
-  if(lista.length===0){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Nenhuma meta cadastrada para ${mes}. Clique em "+ Nova Meta".</td></tr>`;return;}
+  if(lista.length===0){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px">Nenhuma meta cadastrada para ${mes}. Clique em "+ Nova Meta".</td></tr>`;return;}
 
-  // Verificar se o mês selecionado já encerrou
   const hoje = new Date();
   const mesEncerrado = mesPrefix
     ? (parseInt(mesPrefix.slice(0,4)) < hoje.getFullYear() ||
@@ -8774,17 +8820,15 @@ function renderMetas() {
     : false;
 
   tbody.innerHTML = lista.map(m=>{
-    const real = getRealizadoInd(m.industria);
+    const real = getRealizado(m);
     const pct  = m.valor>0?((real/m.valor)*100).toFixed(1):0;
     const saldo= m.valor-real;
     let cls, lbl;
     if(pct>=100) {
       cls='badge-verde'; lbl='✅ Atingida';
     } else if(mesEncerrado) {
-      // Mês já fechou — resultado definitivo
       cls='badge-vermelho'; lbl='❌ Não atingida';
     } else {
-      // Mês ainda em curso
       cls=pct>=80?'badge-amarelo':'badge-vermelho';
       lbl=pct>=80?'⏳ Em andamento':'⚠️ Abaixo da meta';
     }
@@ -8792,13 +8836,14 @@ function renderMetas() {
     return `<tr>
       <td><span class="tag">${esc(m.industria)}</span></td>
       <td><span class="pill">${m.mes}</span></td>
-      <td class="bold">${fmt(m.valor)}</td>
+      <td>${tipoBadge(m.tipo||'faturamento')}</td>
+      <td class="bold">${fmtMeta(m)}</td>
       <td>
-        <div style="font-weight:600">${fmt(real)}</div>
+        <div style="font-weight:600">${fmtRealizado(m,real)}</div>
         <div style="background:var(--cinza-medio);border-radius:99px;height:5px;margin-top:4px;overflow:hidden"><div style="width:${pctBar}%;height:100%;background:${pct>=100?'var(--verde)':pct>=80?'var(--amarelo)':'var(--vermelho)'};border-radius:99px"></div></div>
       </td>
       <td><span class="bold ${pct>=100?'verde':pct>=80?'':'vermelho'}">${pct}%</span></td>
-      <td class="${saldo<=0?'verde bold':'vermelho bold'}">${saldo<=0?'Superada! +'+fmt(Math.abs(saldo)):fmt(saldo)}</td>
+      <td class="${saldo<=0?'verde bold':'vermelho bold'}">${saldo<=0?'Superada! +'+fmtSaldo(m,saldo):fmtSaldo(m,saldo)}</td>
       <td><span class="badge ${cls}">${lbl}</span></td>
       <td>
         <button class="btn btn-outline btn-xs" onclick="editarMeta('${m.id}')">Editar</button>
@@ -8808,20 +8853,41 @@ function renderMetas() {
   }).join('');
 }
 
+function atualizarLabelMetaValor() {
+  const tipo = (el('meta-tipo')||{}).value||'faturamento';
+  const lbl = el('meta-valor-label');
+  const inp = el('meta-valor');
+  if(!lbl||!inp) return;
+  if(tipo==='pedidos') {
+    lbl.textContent = 'Meta de Pedidos (qtd) *';
+    inp.placeholder = 'Ex: 50';
+    inp.step = '1';
+  } else if(tipo==='clientes') {
+    lbl.textContent = 'Meta de Clientes Ativos (qtd) *';
+    inp.placeholder = 'Ex: 30';
+    inp.step = '1';
+  } else {
+    lbl.textContent = 'Valor da Meta (R$) *';
+    inp.placeholder = '0,00';
+    inp.step = '0.01';
+  }
+}
+
 function salvarMeta() {
   const ind = el('meta-ind').value; const valor = parseFloat(el('meta-valor').value)||0;
   if(!ind||!valor){alert('Preencha Indústria e Valor.');return;}
   const mes = el('meta-mes').value;
-  if(metasData.find(m=>m.industria===ind&&m.mes===mes&&(!window._metaEditId||m.id!==window._metaEditId))) {
-    if(!confirm(`Já existe meta para ${ind} em ${mes}. Substituir?`)) return;
-    metasData = metasData.filter(m=>!(m.industria===ind&&m.mes===mes));
+  const tipo = el('meta-tipo').value;
+  if(metasData.find(m=>m.industria===ind&&m.mes===mes&&m.tipo===tipo&&(!window._metaEditId||m.id!==window._metaEditId))) {
+    if(!confirm(`Já existe meta de ${tipo} para ${ind} em ${mes}. Substituir?`)) return;
+    metasData = metasData.filter(m=>!(m.industria===ind&&m.mes===mes&&m.tipo===tipo));
   }
   const id = window._metaEditId || ('META-'+String(metasData.length+1).padStart(3,'0'));
-  const obj = {id,industria:ind,mes,valor,tipo:el('meta-tipo').value,obs:el('meta-obs').value,usuario:usuarioLogado?.login||'admin',criado:new Date().toLocaleDateString('pt-BR')};
+  const obj = {id,industria:ind,mes,valor,tipo,obs:el('meta-obs').value,usuario:usuarioLogado?.login||'admin',criado:new Date().toLocaleDateString('pt-BR')};
   metasData = metasData.filter(m=>m.id!==id);
   metasData.push(obj);
   window._metaEditId = null;
-  addAudit(usuarioLogado?.login||'admin',`Meta ${ind} ${mes}: ${fmt(valor)}`,'🎯');
+  addAudit(usuarioLogado?.login||'admin',`Meta ${tipo} ${ind} ${mes}: ${valor}`,'🎯');
   closeModal('modal-meta');
   renderMetas();
   syncAutoSaveHook();
@@ -8832,7 +8898,9 @@ function editarMeta(id) {
   const m = metasData.find(x=>x.id===id); if(!m) return;
   window._metaEditId = id;
   el('meta-ind').value=m.industria; el('meta-mes').value=m.mes;
-  el('meta-valor').value=m.valor; el('meta-tipo').value=m.tipo; el('meta-obs').value=m.obs||'';
+  el('meta-tipo').value=m.tipo||'faturamento';
+  atualizarLabelMetaValor();
+  el('meta-valor').value=m.valor; el('meta-obs').value=m.obs||'';
   el('meta-modal-titulo').textContent='Editar Meta';
   openModal('modal-meta');
 }
