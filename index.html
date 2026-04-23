@@ -8735,9 +8735,24 @@ function renderMetas() {
   const mes = (el('metas-mes-sel')||{}).value||'Mar/26';
   const lista = metasData.filter(m=>m.mes===mes);
 
-  // Calcular realizado a partir de pedidos faturados
+  // Calcular realizado a partir de pedidos faturados — filtra pelo mês selecionado
+  const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function mesLabelToPrefix(label) {
+    // label ex: "Mar/26" => "2026-03"
+    const parts = label.split('/');
+    if(parts.length!==2) return null;
+    const mIdx = mesesAbrev.findIndex(m=>m===parts[0]);
+    if(mIdx===-1) return null;
+    const ano = parseInt(parts[1],10) + 2000;
+    return `${ano}-${String(mIdx+1).padStart(2,'0')}`;
+  }
+  const mesPrefix = mesLabelToPrefix(mes); // ex: "2026-03"
   function getRealizadoInd(ind) {
-    return pedidos.filter(p=>p.nf&&!p.excluido&&p.industria===ind).reduce((s,p)=>s+p.nf.liquida,0);
+    return pedidos.filter(p=>{
+      if(!p.nf || p.excluido || p.industria!==ind) return false;
+      if(!mesPrefix) return true; // se não conseguir converter, inclui tudo
+      return p.nf.data && p.nf.data.startsWith(mesPrefix);
+    }).reduce((s,p)=>s+p.nf.liquida,0);
   }
 
   const totMeta = lista.reduce((s,m)=>s+m.valor,0);
@@ -8750,12 +8765,29 @@ function renderMetas() {
 
   if(lista.length===0){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Nenhuma meta cadastrada para ${mes}. Clique em "+ Nova Meta".</td></tr>`;return;}
 
+  // Verificar se o mês selecionado já encerrou
+  const hoje = new Date();
+  const mesEncerrado = mesPrefix
+    ? (parseInt(mesPrefix.slice(0,4)) < hoje.getFullYear() ||
+       (parseInt(mesPrefix.slice(0,4)) === hoje.getFullYear() &&
+        parseInt(mesPrefix.slice(5,7)) < (hoje.getMonth()+1)))
+    : false;
+
   tbody.innerHTML = lista.map(m=>{
     const real = getRealizadoInd(m.industria);
     const pct  = m.valor>0?((real/m.valor)*100).toFixed(1):0;
     const saldo= m.valor-real;
-    const cls  = pct>=100?'badge-verde':pct>=80?'badge-amarelo':'badge-vermelho';
-    const lbl  = pct>=100?'✅ Atingida':pct>=80?'Em andamento':'⚠️ Abaixo';
+    let cls, lbl;
+    if(pct>=100) {
+      cls='badge-verde'; lbl='✅ Atingida';
+    } else if(mesEncerrado) {
+      // Mês já fechou — resultado definitivo
+      cls='badge-vermelho'; lbl='❌ Não atingida';
+    } else {
+      // Mês ainda em curso
+      cls=pct>=80?'badge-amarelo':'badge-vermelho';
+      lbl=pct>=80?'⏳ Em andamento':'⚠️ Abaixo da meta';
+    }
     const pctBar = Math.min(100,parseFloat(pct));
     return `<tr>
       <td><span class="tag">${esc(m.industria)}</span></td>
