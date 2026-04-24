@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -2220,6 +2219,14 @@ tr:last-child td{border-bottom:none;}
           <div id="rec-preview" style="border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600;background:#fafaf8;color:#888;border:1px solid var(--cinza-medio)">
             Preencha o valor acima para ver o resultado
           </div>
+        </div>
+        <!-- Opção aceitar diferença — aparece só quando recebe a menos -->
+        <div class="form-group full" id="rec-aceitar-dif-bloco" style="display:none">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;text-transform:none;letter-spacing:0;color:var(--preto);font-weight:600">
+            <input type="checkbox" id="rec-aceitar-dif" onchange="calcRecebimentoParcial()" style="width:16px;height:16px;accent-color:var(--vermelho);cursor:pointer">
+            <span>Aceitar diferença como desconto / abatimento de nota — <span style="color:var(--vermelho)">fechar comissão mesmo recebendo menos</span></span>
+          </label>
+          <div style="font-size:11px;color:#888;margin-top:3px;padding-left:24px">Marque quando a diferença é um desconto acordado, devolução de NF ou abatimento — a comissão será marcada como <strong>Recebida</strong> e a diferença ficará registrada como desconto, sem saldo em aberto.</div>
         </div>
         <div class="form-group full">
           <label>Observação</label>
@@ -4874,7 +4881,37 @@ function renderComissoes() {
     : list.map(c=>{
         const recebido  = c.valorRecebido || 0;
         const diferenca = c.valor - recebido;
+        const desconto  = c.desconto || 0;
         const parcelas  = c.parcelas || [];
+
+        // Texto da coluna diferença
+        const jaRecebida = c.status === 'Recebida';
+        let difHtml;
+        let difClass = '';
+
+        if(diferenca === 0) {
+          difHtml  = '✅';
+        } else if(jaRecebida) {
+          // Comissão já encerrada — diferença é APENAS informativa, sem cor de alerta
+          if(diferenca < 0) {
+            // Recebeu a mais
+            difHtml  = `<span style="color:#aaa;font-size:11px" title="Recebeu a mais — apenas informativo">+${fmt(Math.abs(diferenca))}</span>`;
+          } else {
+            // Recebeu a menos (desconto/abatimento aceito ou diferença aceita)
+            difHtml  = `<span style="color:#aaa;font-size:11px" title="Diferença registrada — sem saldo em aberto">-${fmt(diferenca)}</span>`;
+          }
+        } else if(diferenca > 0 && desconto > 0 && Math.abs(diferenca - desconto) < 0.01) {
+          // Desconto aceito explicitamente
+          difHtml  = `<span title="Abatimento/desconto aceito" style="color:#aaa;font-size:11px">🏷️ -${fmt(desconto)}</span>`;
+        } else if(diferenca < 0) {
+          // Recebeu a mais (ainda não Recebida formalmente)
+          difHtml  = `<span style="color:var(--verde);font-weight:700">+${fmt(Math.abs(diferenca))}</span>`;
+          difClass = 'verde bold';
+        } else {
+          // Falta receber — saldo em aberto real
+          difHtml  = `- ${fmt(diferenca)}`;
+          difClass = 'amarelo';
+        }
 
         return `<tr>
           <td class="mono" style="font-size:11px">${c.id}</td>
@@ -4888,8 +4925,8 @@ function renderComissoes() {
           <td class="bold verde" style="font-size:12px">
             ${recebido>0 ? fmt(recebido) : '<span style="color:#aaa">—</span>'}
           </td>
-          <td style="font-size:12px" class="${diferenca>0?'amarelo':diferenca<0?'vermelho':'verde bold'}">
-            ${diferenca===0?'✅':diferenca>0?'- '+fmt(diferenca):'+ '+fmt(Math.abs(diferenca))}
+          <td style="font-size:12px" class="${difClass}">
+            ${difHtml}
           </td>
           <td style="font-size:11px">
             ${parcelas.length>0
@@ -4945,6 +4982,10 @@ function abrirLancarRecebimento(comId) {
   // Limpa campo simples
   el('rec-valor').value = saldoRest > 0 ? saldoRest.toFixed(2) : '';
   el('rec-obs').value   = '';
+  const chkAceit = el('rec-aceitar-dif');
+  if(chkAceit) chkAceit.checked = false;
+  const blocoAceit = el('rec-aceitar-dif-bloco');
+  if(blocoAceit) blocoAceit.style.display = 'none';
   const prev = el('rec-preview');
   if(prev){ prev.textContent='Preencha o valor acima para ver o resultado'; prev.style.cssText='background:#fafaf8;color:#888;border:1px solid var(--cinza-medio);border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600'; }
 
@@ -5063,20 +5104,41 @@ function calcRecebimentoParcial() {
   const totalRec   = jaRecebido + novoVal;
   const saldo      = parseFloat((c.valor - totalRec).toFixed(2));
   const prev       = el('rec-preview'); if(!prev) return;
+  const blocoAceit = el('rec-aceitar-dif-bloco');
+  const chkAceit   = el('rec-aceitar-dif');
+  const aceitou    = chkAceit?.checked || false;
+
   if(!novoVal) {
     prev.textContent = 'Preencha o valor acima para ver o resultado';
     prev.style.cssText = 'background:#fafaf8;color:#888;border:1px solid var(--cinza-medio);border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
+    if(blocoAceit) blocoAceit.style.display = 'none';
     return;
   }
+
+  // Recebeu a menos (saldo positivo = ainda falta)
   if(saldo > 0.01) {
-    prev.style.cssText = 'background:#fff8e1;color:#7a5800;border:1px solid #f0d060;border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
-    prev.textContent = `Recebimento PARCIAL — Total acumulado: ${fmt(totalRec)} · Saldo restante: ${fmt(saldo)} → Status: Parcial`;
+    if(blocoAceit) blocoAceit.style.display = '';
+    if(aceitou) {
+      // Aceita desconto: fecha como Recebida, registra diferença como desconto
+      prev.style.cssText = 'background:#fef2f2;color:#c0392b;border:1px solid #fecaca;border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
+      prev.textContent = `✅ Aceito como desconto/abatimento — Diferença: -${fmt(saldo)} · Comissão será marcada como Recebida (com desconto registrado)`;
+    } else {
+      // Normal: parcial
+      prev.style.cssText = 'background:#fff8e1;color:#7a5800;border:1px solid #f0d060;border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
+      prev.textContent = `Recebimento PARCIAL — Total acumulado: ${fmt(totalRec)} · Saldo restante: ${fmt(saldo)} → Status: Parcial`;
+    }
+  // Recebeu exato
   } else if(Math.abs(saldo) <= 0.01) {
+    if(blocoAceit) blocoAceit.style.display = 'none';
+    if(chkAceit) chkAceit.checked = false;
     prev.style.cssText = 'background:#e8f5e9;color:#2d7a3a;border:1px solid #c8e6c9;border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
     prev.textContent = `✅ Recebimento TOTAL — Comissão será marcada como Recebida`;
+  // Recebeu a mais
   } else {
-    prev.style.cssText = 'background:#fef2f2;color:#c0392b;border:1px solid #fecaca;border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
-    prev.textContent = `⚠️ Valor ${fmt(Math.abs(saldo))} acima do previsto — registrado assim mesmo`;
+    if(blocoAceit) blocoAceit.style.display = 'none';
+    if(chkAceit) chkAceit.checked = false;
+    prev.style.cssText = 'background:#e8f5e9;color:#2d7a3a;border:2px solid #4caf50;border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600';
+    prev.textContent = `✅ Recebido a mais — +${fmt(Math.abs(saldo))} acima do previsto · Comissão marcada como Recebida`;
   }
 }
 
@@ -5130,24 +5192,55 @@ function confirmarRecebimento() {
   const jaRecebido = c.valorRecebido||0;
   const totalRec   = jaRecebido + novoVal;
   const saldo      = c.valor - totalRec;
+  const aceitouDif = el('rec-aceitar-dif')?.checked || false;
 
+  // Parcelas histórico
   const parcelas = [...(c.parcelas||[]), {valor:novoVal, mes, obs, data:new Date().toLocaleDateString('pt-BR'), usuario:usuarioLogado?.login||'admin'}];
 
   let novoStatus;
-  if(Math.abs(saldo) < 0.01 || totalRec >= c.valor) novoStatus = 'Recebida';
-  else novoStatus = 'Parcial';
+  let desconto = 0;
+
+  if(Math.abs(saldo) <= 0.01) {
+    // Exato
+    novoStatus = 'Recebida';
+  } else if(saldo < -0.01) {
+    // Recebeu A MAIS → Recebida, diferença fica registrada como positiva
+    novoStatus = 'Recebida';
+  } else if(saldo > 0.01 && aceitouDif) {
+    // Recebeu A MENOS mas aceitou como desconto/nota → Recebida com desconto
+    novoStatus = 'Recebida';
+    desconto = parseFloat(saldo.toFixed(2));
+    parcelas[parcelas.length-1].obs = (obs ? obs + ' · ' : '') + `Desconto/abatimento: -${fmt(desconto)}`;
+  } else {
+    // Recebeu a menos sem aceitar → Parcial
+    novoStatus = 'Parcial';
+  }
 
   comissoes_data = comissoes_data.map(x=>{
     if(x.id!==_recEditId) return x;
-    return {...x, valorRecebido:totalRec, parcelas, status:novoStatus, mesRecebimento:mes};
+    const update = {...x, valorRecebido:totalRec, parcelas, status:novoStatus, mesRecebimento:mes};
+    if(desconto > 0) update.desconto = (x.desconto||0) + desconto;
+    return update;
   });
 
+  // Toast com info contextual
+  let toastMsg;
+  if(novoStatus === 'Recebida' && saldo < -0.01) {
+    toastMsg = `💰 Recebimento lançado — +${fmt(Math.abs(saldo))} a mais · Status: Recebida`;
+  } else if(novoStatus === 'Recebida' && desconto > 0) {
+    toastMsg = `✅ Recebimento aceito com desconto de ${fmt(desconto)} · Status: Recebida`;
+  } else if(novoStatus === 'Recebida') {
+    toastMsg = `✅ Recebimento total de ${fmt(novoVal)} · Status: Recebida`;
+  } else {
+    toastMsg = `⏳ Recebimento parcial de ${fmt(novoVal)} · Saldo restante: ${fmt(saldo)} · Status: Parcial`;
+  }
+
   addAudit(usuarioLogado?.login||'admin',
-    `Recebimento lançado: ${c.id} — ${fmt(novoVal)} (${novoStatus}) · ${c.cliente}/${c.industria}`, '💰');
+    `Recebimento lançado: ${c.id} — ${fmt(novoVal)} (${novoStatus}${desconto>0?' · desconto '+fmt(desconto):''}) · ${c.cliente}/${c.industria}`, '💰');
   closeModal('modal-lancar-recebimento');
   renderComissoes();
   syncAutoSaveHook();
-  toast(`💰 Recebimento de ${fmt(novoVal)} lançado — Status: ${novoStatus}`);
+  toast(toastMsg);
 }
 
 // Edição rápida de comissão (mês de previsão)
