@@ -378,7 +378,7 @@ tr:last-child td{border-bottom:none;}
   </div>
 
   <div class="sb-foot">
-    <div>GestCom v6.0</div>
+    <div>GestCom v6.3</div>
     <div style="color:var(--amarelo)">Comercial Três Vales</div>
   </div>
 </nav>
@@ -682,6 +682,10 @@ tr:last-child td{border-bottom:none;}
           <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
           <option>Jul/26</option><option>Ago/26</option><option>Set/26</option>
           <option>Out/26</option><option>Nov/26</option><option>Dez/26</option>
+          <option>Jan/25</option><option>Fev/25</option><option>Mar/25</option>
+          <option>Abr/25</option><option>Mai/25</option><option>Jun/25</option>
+          <option>Jul/25</option><option>Ago/25</option><option>Set/25</option>
+          <option>Out/25</option><option>Nov/25</option><option>Dez/25</option>
         </select>
       </div>
       <div id="saldo-content"></div>
@@ -711,6 +715,10 @@ tr:last-child td{border-bottom:none;}
           <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
           <option>Jul/26</option><option>Ago/26</option><option>Set/26</option>
           <option>Out/26</option><option>Nov/26</option><option>Dez/26</option>
+          <option>Jan/25</option><option>Fev/25</option><option>Mar/25</option>
+          <option>Abr/25</option><option>Mai/25</option><option>Jun/25</option>
+          <option>Jul/25</option><option>Ago/25</option><option>Set/25</option>
+          <option>Out/25</option><option>Nov/25</option><option>Dez/25</option>
         </select>
       </div>
 
@@ -1226,10 +1234,10 @@ tr:last-child td{border-bottom:none;}
             </div>
           </div>
           <div class="form-group" style="margin:0;min-width:260px">
-            <label>Receber atualizações em tempo real (a cada 5s)</label>
+            <label>Receber atualizações em tempo real (a cada 30s)</label>
             <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
               <div id="sw-realtime" class="switch on" onclick="toggleRealtime(this)" style="cursor:pointer"></div>
-              <span style="font-size:12px;color:#666">✅ Ativado — atualiza dados da equipe automaticamente</span>
+              <span style="font-size:12px;color:#666">✅ Ativado — verifica novidades a cada 30 segundos</span>
             </div>
           </div>
         </div>
@@ -1240,8 +1248,8 @@ tr:last-child td{border-bottom:none;}
           <button class="btn btn-danger btn-sm" id="btn-reset-cloud" onclick="syncResetCloud()" disabled style="margin-left:auto">🗑️ Apagar dados da nuvem</button>
         </div>
         <div style="margin-top:10px;font-size:11px;color:#888;line-height:1.7;background:#f9f8f5;border-radius:6px;padding:10px 14px">
-          💡 <strong>Auto-salvar ativado?</strong> Cada vez que você cadastra, edita ou exclui qualquer dado, o sistema salva automaticamente na nuvem em 1,5 segundo — você verá o indicador <span style="color:var(--verde);font-weight:700">● Salvando...</span> piscar no topo.<br>
-          📥 <strong>Atualização automática?</strong> A cada 5 segundos o sistema verifica se alguém da equipe salvou algo novo e atualiza a tela.<br>
+          💡 <strong>Auto-salvar ativado?</strong> Cada vez que qualquer usuário cadastra, edita ou exclui qualquer dado, o sistema salva automaticamente na nuvem em 1,5 segundo — todos da equipe enviam sem precisar acessar o painel de Sincronização.<br>
+          📥 <strong>Atualização automática?</strong> A cada 30 segundos o sistema verifica se alguém da equipe salvou algo novo e atualiza a tela. Usa apenas ~2KB por verificação (só baixa os dados completos quando há mudança).<br>
           📤 <strong>Enviar para nuvem</strong> sobrescreve a nuvem com seus dados locais. <strong>Baixar da nuvem</strong> traz os dados mais recentes da equipe.
         </div>
       </div>
@@ -1337,7 +1345,15 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Relatórios e Indicadores</div><div class="section-sub">Análises gerenciais · rankings e performance comercial</div></div>
         <div class="export-btns">
           <select id="rel-filtro-mes" onchange="renderRelatorios()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-            <option value="Mar/26">Mar/26</option><option value="Fev/26">Fev/26</option><option value="Jan/26">Jan/26</option><option value="todos">Todos</option>
+            <option value="todos" selected>Todos os meses</option>
+            <option value="Jan/26">Jan/26</option><option value="Fev/26">Fev/26</option><option value="Mar/26">Mar/26</option>
+            <option value="Abr/26">Abr/26</option><option value="Mai/26">Mai/26</option><option value="Jun/26">Jun/26</option>
+            <option value="Jul/26">Jul/26</option><option value="Ago/26">Ago/26</option><option value="Set/26">Set/26</option>
+            <option value="Out/26">Out/26</option><option value="Nov/26">Nov/26</option><option value="Dez/26">Dez/26</option>
+            <option value="Jan/25">Jan/25</option><option value="Fev/25">Fev/25</option><option value="Mar/25">Mar/25</option>
+            <option value="Abr/25">Abr/25</option><option value="Mai/25">Mai/25</option><option value="Jun/25">Jun/25</option>
+            <option value="Jul/25">Jul/25</option><option value="Ago/25">Ago/25</option><option value="Set/25">Set/25</option>
+            <option value="Out/25">Out/25</option><option value="Nov/25">Nov/25</option><option value="Dez/25">Dez/25</option>
           </select>
           <button class="btn btn-info btn-sm" onclick="exportarTudo()">📤 Exportar Completo</button>
         </div>
@@ -2694,12 +2710,34 @@ function _mostrarIndicadorSalvando(mostrar) {
 
 function syncAutoSaveHook() {
   _salvarLocal(); // sempre salva localmente
-  if(configSync.autoSave && configSync.conectado) {
+
+  // AUTO-SAVE PARA TODOS: se as credenciais do Firebase estão salvas (de qualquer sessão anterior),
+  // reconecta silenciosamente e envia — sem precisar que o usuário acesse o painel de Sincronização
+  if(!configSync.conectado) {
+    // Tenta reconectar silenciosamente usando credenciais salvas
+    try {
+      const saved = localStorage.getItem('gestcom_rtdb');
+      if(saved) {
+        const {dbUrl, apiKey} = JSON.parse(saved);
+        if(dbUrl) {
+          configSync.dbUrl  = dbUrl.replace(/\/$/,'');
+          configSync.apiKey = apiKey || '';
+          configSync.conectado = true; // otimista — tenta enviar
+        }
+      }
+    } catch(e) {}
+  }
+
+  if(configSync.autoSave && configSync.conectado && configSync.dbUrl) {
     clearTimeout(window._syncDebounce);
-    // Mostra indicador imediatamente
     _mostrarIndicadorSalvando(true);
     window._syncDebounce = setTimeout(async () => {
-      await syncPush(true);
+      try {
+        await syncPush(true);
+      } catch(e) {
+        // falha silenciosa — dados já estão salvos localmente
+        console.warn('[GestCom] Auto-save falhou (silencioso):', e.message);
+      }
       _mostrarIndicadorSalvando(false);
     }, 1500);
   }
@@ -2821,14 +2859,26 @@ function renderOrcamentos() {
     <td class="bold verde">${fmt(o.total)}</td>
     <td><span class="badge ${statusClass(o.status)}">${o.status}</span></td>
     <td>
-      <div style="display:flex;gap:4px">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="btn btn-outline btn-xs" onclick="editarOrcamento('${o.id}')">Editar</button>
         <button class="btn btn-info btn-xs" onclick="exportarOrcamentoPDFById('${o.id}')">📄</button>
         <button class="btn btn-success btn-xs" onclick="exportarOrcamentoExcelById('${o.id}')">📊</button>
         ${o.status==='Aprovado'?`<button class="btn btn-roxo btn-xs" onclick="converterEmPedido('${o.id}')">→ Pedido</button>`:''}
+        <button class="btn btn-danger btn-xs" onclick="excluirOrcamento('${o.id}')" title="Excluir permanentemente">🗑️</button>
       </div>
     </td>
   </tr>`).join('');
+}
+
+function excluirOrcamento(id) {
+  const o = orcamentos.find(x=>x.id===id); if(!o) return;
+  if(!confirm(`Excluir PERMANENTEMENTE o orçamento "${o.id}" — ${o.cliente}?\n\nEsta ação não pode ser desfeita.`)) return;
+  orcamentos = orcamentos.filter(x=>x.id!==id);
+  addAudit(usuarioLogado?.login||'admin', `Orçamento excluído permanentemente: ${o.id} — ${o.cliente}`, '🗑️');
+  renderOrcamentos();
+  renderDashboard();
+  syncAutoSaveHook();
+  toast('Orçamento excluído com sucesso.');
 }
 
 function novoOrcamento() {
@@ -6335,7 +6385,45 @@ function importarCadastro(tipo) {
   openModal('modal-import');
 }
 
-function importarArquivo(tipo){importarCadastro(tipo);}
+function importarArquivo(tipo){
+  if(tipo==='orcamento'){
+    // Orçamentos usam importação própria via Excel
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls';
+    input.onchange = function(e){
+      const file = e.target.files[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        try {
+          const wb = XLSX.read(ev.target.result, {type:'binary'});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+          if(!rows||rows.length===0){toast('Planilha vazia ou formato inválido.','error');return;}
+          const norm = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+          const heads = Object.keys(rows[0]);
+          const fc = alts => heads.find(h=>alts.some(a=>norm(h).includes(norm(a))))||'';
+          const cCli=fc(['cliente']), cInd=fc(['industria']), cData=fc(['data']), cVal=fc(['validade','validade']), cCond=fc(['cond','condicao','prazo']), cSt=fc(['status']), cObs=fc(['obs']), cTotal=fc(['total','valor']);
+          let adicionados=0;
+          rows.forEach(row=>{
+            const cli=String(row[cCli]||'').trim(); const ind=String(row[cInd]||'').trim();
+            if(!cli) return;
+            let n=orcamentos.length+1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));
+            orcamentos.push({id,cliente:cli,industria:ind,data:String(row[cData]||today()),validade:String(row[cVal]||''),cond:String(row[cCond]||''),status:String(row[cSt]||'Rascunho'),obs:String(row[cObs]||''),itens:[],total:parseFloat(String(row[cTotal]||'0').replace(',','.'))||0});
+            adicionados++;
+          });
+          addAudit(usuarioLogado?.login||'admin',`Importou ${adicionados} orçamento(s)`,'📥');
+          renderOrcamentos(); renderDashboard(); syncAutoSaveHook();
+          toast(`✅ ${adicionados} orçamento(s) importado(s)!`);
+        } catch(err){toast('Erro ao ler arquivo: '+err.message,'error');}
+      };
+      reader.readAsBinaryString(file);
+    };
+    input.click();
+  } else {
+    importarCadastro(tipo);
+  }
+}
 function importarNF(){
   importTipo='nf';
   el('import-modal-titulo').textContent='Importar Nota Fiscal (XML NFe)';
@@ -8160,15 +8248,19 @@ function renderLogistica() {
   // TODOS os pedidos não excluídos aparecem na logística
   const pedElegiveis = pedidos.filter(p => !p.excluido);
 
-  // Migração automática: cria entradas faltantes para pedidos sem registro
+  // Migração automática: cria entradas APENAS para pedidos sem registro — NUNCA sobrescreve existente
   pedElegiveis.forEach(p => {
     const idx = logisticaData.findIndex(l => l.pedId === p.id);
     if(idx < 0) {
+      // Cria entrada nova apenas se não existia
+      const statusInicial = (p.nf && ['Faturado total','Expedido','Agendado','Entregue'].includes(p.status)) ? 'Faturado' : 'Pedido Digitado';
       logisticaData.push({pedId:p.id, cliente:p.cliente, industria:p.industria,
-        data:p.data, transportadora:'', previsao:'', dataEntrega:'', statusLog:'Pedido Digitado', obs:''});
+        data:p.data, transportadora:'', previsao:'', dataEntrega:'', statusLog: statusInicial, obs:''});
     } else {
-      logisticaData[idx] = {...logisticaData[idx], cliente:p.cliente, industria:p.industria,
-        dataEntrega: logisticaData[idx].dataEntrega || ''};
+      // Atualiza APENAS cliente/indústria/data (não toca statusLog, previsão, transportadora, etc.)
+      logisticaData[idx].cliente = p.cliente;
+      logisticaData[idx].industria = p.industria;
+      if(!logisticaData[idx].dataEntrega) logisticaData[idx].dataEntrega = '';
     }
   });
 
@@ -8559,15 +8651,41 @@ function exportarSellInOut() {
    RELATÓRIOS / KPIs
 ══════════════════════════ */
 function renderRelatorios() {
-  // Ranking clientes
+  const mesFiltro = (el('rel-filtro-mes')||{}).value||'todos';
+
+  // Helper: filtra pedidos pelo mês selecionado
+  function pedsFiltrados(incluirBonif) {
+    return pedidos.filter(p => {
+      if(p.excluido) return false;
+      if(!incluirBonif && p.tipo === 'bonificacao') return false;
+      if(mesFiltro !== 'todos') {
+        // Converte "Abr/26" → "2026-04"
+        const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const parts = mesFiltro.split('/');
+        const mIdx = mesesAbrev.findIndex(m=>m===parts[0]);
+        if(mIdx===-1) return true;
+        const prefixo = `${parseInt(parts[1],10)+2000}-${String(mIdx+1).padStart(2,'0')}`;
+        const dataRef = p.nf ? p.nf.data : p.data;
+        return dataRef && dataRef.startsWith(prefixo);
+      }
+      return true;
+    });
+  }
+
+  // Ranking clientes — top 10, apenas vendas com NF
   const rankCli = el('rel-rank-clientes'); if(!rankCli) return;
   const cliMap = {};
-  pedidos.filter(p=>p.nf&&!p.excluido).forEach(p=>{
+  pedsFiltrados(false).filter(p=>p.nf).forEach(p=>{
     cliMap[p.cliente] = (cliMap[p.cliente]||0) + p.nf.liquida;
   });
-  const cliRank = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]);
+  // Inclui também bonificações no total do cliente (informativo)
+  pedsFiltrados(true).filter(p=>p.tipo==='bonificacao'&&p.nf).forEach(p=>{
+    // não soma no ranking de venda, mas conta no total abaixo
+  });
+  const cliRank = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const maxCli = cliRank[0]?.[1]||1;
-  rankCli.innerHTML = cliRank.map(([nome,val],i)=>`
+  rankCli.innerHTML = cliRank.length===0 ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>' :
+    cliRank.map(([nome,val],i)=>`
     <div class="rank-row">
       <div class="rank-num">${i+1}</div>
       <div style="flex:1">
@@ -8575,17 +8693,18 @@ function renderRelatorios() {
         <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${(val/maxCli*100).toFixed(0)}%"></div></div>
       </div>
       <div class="bold" style="font-size:12px">${fmt(val)}</div>
-    </div>`).join('')||'<div style="color:#aaa;font-size:12px">Sem dados</div>';
+    </div>`).join('');
 
-  // Ranking indústrias
+  // Ranking indústrias — top 10
   const rankInd = el('rel-rank-industrias'); if(!rankInd) return;
   const indMap = {};
-  pedidos.filter(p=>p.nf&&!p.excluido).forEach(p=>{
+  pedsFiltrados(false).filter(p=>p.nf).forEach(p=>{
     indMap[p.industria] = (indMap[p.industria]||0) + p.nf.liquida;
   });
-  const indRank = Object.entries(indMap).sort((a,b)=>b[1]-a[1]);
+  const indRank = Object.entries(indMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const maxInd = indRank[0]?.[1]||1;
-  rankInd.innerHTML = indRank.map(([nome,val],i)=>`
+  rankInd.innerHTML = indRank.length===0 ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>' :
+    indRank.map(([nome,val],i)=>`
     <div class="rank-row">
       <div class="rank-num">${i+1}</div>
       <div style="flex:1">
@@ -8593,18 +8712,19 @@ function renderRelatorios() {
         <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${(val/maxInd*100).toFixed(0)}%"></div></div>
       </div>
       <div class="bold" style="font-size:12px">${fmt(val)}</div>
-    </div>`).join('')||'<div style="color:#aaa;font-size:12px">Sem dados</div>';
+    </div>`).join('');
 
-  // Ranking produtos
+  // Ranking produtos — top 10 (inclui bonificações para ter visão real do volume)
   const rankProd = el('rel-rank-produtos'); if(!rankProd) return;
   const prodMap = {};
-  pedidos.filter(p=>!p.excluido).forEach(p=>(p.itens||[]).forEach(it=>{
-    prodMap[it.cod] = (prodMap[it.cod]||{desc:it.desc,total:0});
+  pedsFiltrados(true).forEach(p=>(p.itens||[]).forEach(it=>{
+    if(!prodMap[it.cod]) prodMap[it.cod] = {desc:it.desc, total:0};
     prodMap[it.cod].total += it.total;
   }));
-  const prodRank = Object.entries(prodMap).sort((a,b)=>b[1].total-a[1].total).slice(0,6);
+  const prodRank = Object.entries(prodMap).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
   const maxProd = prodRank[0]?.[1].total||1;
-  rankProd.innerHTML = prodRank.map(([cod,{desc,total}],i)=>`
+  rankProd.innerHTML = prodRank.length===0 ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>' :
+    prodRank.map(([cod,{desc,total}],i)=>`
     <div class="rank-row">
       <div class="rank-num">${i+1}</div>
       <div style="flex:1">
@@ -8613,13 +8733,17 @@ function renderRelatorios() {
         <div class="rank-bar-wrap" style="margin-top:3px"><div class="rank-bar" style="width:${(total/maxProd*100).toFixed(0)}%"></div></div>
       </div>
       <div class="bold" style="font-size:12px">${fmt(total)}</div>
-    </div>`).join('')||'<div style="color:#aaa;font-size:12px">Sem dados</div>';
+    </div>`).join('');
 
-  // Comissão prevista x recebida
+  // Comissões previstas — mostra apenas resumo + top 5, exportação completa via botão
   const comTable = el('rel-comissao-table');
-  const totPrev = comissoes_data.filter(c=>!c.excluido&&c.status==='Prevista').reduce((s,c)=>s+c.valor,0);
-  const totRec = comissoes_data.filter(c=>!c.excluido&&c.status==='Recebida').reduce((s,c)=>s+c.valor,0);
-  const totAtr = comissoes_data.filter(c=>!c.excluido&&c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
+  const comsFiltradas = mesFiltro==='todos'
+    ? comissoes_data.filter(c=>!c.excluido)
+    : comissoes_data.filter(c=>!c.excluido && c.mesPrevisao===mesFiltro);
+  const totPrev = comsFiltradas.filter(c=>c.status==='Prevista').reduce((s,c)=>s+c.valor,0);
+  const totRec  = comsFiltradas.filter(c=>c.status==='Recebida').reduce((s,c)=>s+c.valor,0);
+  const totAtr  = comsFiltradas.filter(c=>c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
+  const comsResumidas = comsFiltradas.filter(c=>c.status!=='Recebida').slice(0,5);
   comTable.innerHTML = `
     <div class="mini-row"><span>✅ Recebida</span><span class="bold verde">${fmt(totRec)}</span></div>
     <div class="mini-row"><span>⏳ Prevista</span><span class="bold">${fmt(totPrev)}</span></div>
@@ -8627,40 +8751,51 @@ function renderRelatorios() {
     <div class="mini-row" style="font-size:13px;font-weight:700;border-top:2px solid var(--cinza-medio);margin-top:6px;padding-top:8px">
       <span>Total Geral</span><span>${fmt(totPrev+totRec+totAtr)}</span>
     </div>
-    <div style="margin-top:12px">
-      ${comissoes_data.filter(c=>!c.excluido).map(c=>`<div class="mini-row">
-        <span>${c.cliente} / <span class="tag" style="font-size:9px">${c.industria}</span></span>
-        <span><span class="badge ${c.status==='Recebida'?'badge-verde':c.status==='Atrasada'?'badge-vermelho':'badge-amarelo'}">${c.status}</span> ${fmt(c.valor)}</span>
+    <div style="margin-top:10px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Prévia — top 5 pendentes</div>
+    <div style="margin-top:6px">
+      ${comsResumidas.map(c=>`<div class="mini-row">
+        <span style="font-size:11px">${esc(c.cliente)} · <span class="tag" style="font-size:9px">${esc(c.industria)}</span> <span style="color:#aaa">${c.mesPrevisao||''}</span></span>
+        <span><span class="badge ${c.status==='Recebida'?'badge-verde':c.status==='Atrasada'?'badge-vermelho':'badge-amarelo'}" style="font-size:9px">${c.status}</span> <strong>${fmt(c.valor)}</strong></span>
       </div>`).join('')}
+      ${comsFiltradas.length>5?`<div style="text-align:center;margin-top:8px"><button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Ver completo (${comsFiltradas.length} registros) — Exportar Excel</button></div>`:''}
     </div>`;
 
-  // Saldo pendente — usando dados reais de clientes e indústrias
+  // Saldo pendente — top 5 + botão exportar completo
   const saldoDiv = el('rel-saldo-pendente');
   const saldos = [];
   const _nomsCli = [...new Set([...clientes.map(c=>c.nome),...pedidos.map(p=>p.cliente)])];
   const _nomsInd = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])];
   _nomsCli.forEach(cli=>{
     _nomsInd.forEach(ind=>{
-      const coms = comissoes_data.filter(c=>!c.excluido&&c.cliente===cli&&c.industria===ind);
+      const coms = comissoes_data.filter(c=>!c.excluido&&c.cliente===cli&&c.industria===ind&&(mesFiltro==='todos'||c.mesPrevisao===mesFiltro));
       const prev = coms.filter(c=>c.status==='Prevista'||c.status==='Atrasada').reduce((s,c)=>s+c.valor,0);
       if(prev>0) saldos.push({cli,ind,prev});
     });
   });
+  saldos.sort((a,b)=>b.prev-a.prev);
+  const saldosResumidos = saldos.slice(0,5);
   saldoDiv.innerHTML = saldos.length===0
     ? '<div style="color:#aaa;font-size:12px;padding:8px 0">Nenhum saldo pendente</div>'
-    : saldos.map(s=>`<div class="mini-row">
+    : saldosResumidos.map(s=>`<div class="mini-row">
         <span><strong>${esc(s.cli)}</strong> · <span class="tag" style="font-size:9px">${esc(s.ind)}</span></span>
-        <span class="bold ${s.prev>0?'amarelo':''}">${fmt(s.prev)}</span>
-      </div>`).join('');
+        <span class="bold" style="color:var(--amarelo)">${fmt(s.prev)}</span>
+      </div>`).join('') +
+      (saldos.length>5?`<div style="text-align:center;margin-top:8px"><button class="btn btn-info btn-sm" onclick="exportarSaldo()">📤 Ver completo (${saldos.length} registros) — Exportar Excel</button></div>`:'');
 
-  // Update KPIs
-  const totFat = pedidos.filter(p=>p.nf&&!p.excluido).reduce((s,p)=>s+p.nf.liquida,0);
-  el('rel-kpi-fat').textContent = fmt(totFat);
-  const totComissao = comissoes_data.filter(c=>!c.excluido).reduce((s,c)=>s+c.valor,0);
-  el('rel-kpi-com').textContent = fmt(totComissao);
-  const fatPeds = pedidos.filter(p=>p.nf&&!p.excluido);
-  el('rel-kpi-ticket').textContent = fatPeds.length>0 ? fmt(totFat/fatPeds.length) : 'R$ 0';
-  el('rel-kpi-bon').textContent = fmt(pedidos.filter(p=>p.nf&&!p.excluido).reduce((s,p)=>s+p.nf.bonif,0));
+  // Update KPIs — inclui bonificações no total de bonificações e faturamento líquido de vendas
+  const pedsVenda = pedsFiltrados(false).filter(p=>p.nf);
+  const pedsBonif = pedsFiltrados(true).filter(p=>p.tipo==='bonificacao'&&p.nf);
+  const totFat    = pedsVenda.reduce((s,p)=>s+p.nf.liquida,0);
+  const totBonif  = pedsBonif.reduce((s,p)=>s+(p.nf.valorNF||p.total||0),0)
+                  + pedsVenda.reduce((s,p)=>s+(p.nf.bonif||0),0);
+
+  if(el('rel-kpi-fat')) el('rel-kpi-fat').textContent = fmt(totFat);
+  const totComissao = comsFiltradas.reduce((s,c)=>s+c.valor,0);
+  if(el('rel-kpi-com')) el('rel-kpi-com').textContent = fmt(totComissao);
+  if(el('rel-kpi-ticket')) el('rel-kpi-ticket').textContent = pedsVenda.length>0 ? fmt(totFat/pedsVenda.length) : 'R$ 0';
+  if(el('rel-kpi-bon')) el('rel-kpi-bon').textContent = fmt(totBonif);
+  if(el('rel-kpi-fat-sub')) el('rel-kpi-fat-sub').textContent = `${pedsVenda.length} NF${pedsVenda.length!==1?'s':''} (somente vendas)`;
+  if(el('rel-kpi-com-sub')) el('rel-kpi-com-sub').textContent = mesFiltro==='todos'?'Geral':'Mês: '+mesFiltro;
 }
 
 /* ══════════════════════════
@@ -9959,7 +10094,30 @@ async function syncPull(silencioso){
   if(!configSync.conectado||!configSync.dbUrl) return;
   try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
-function ativarPollingRealtime(){if(_rtdbPollInterval)clearInterval(_rtdbPollInterval);_rtdbPollInterval=setInterval(async()=>{if(!configSync.conectado||!usuarioLogado)return;try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)return;const dados=await res.json();if(dados&&dados._ts&&dados._ts>(_rtdbLastTs||0)){aplicarDadosDaNuvem(dados,true);_rtdbLastTs=dados._ts;}}catch(e){}},5000);}
+function ativarPollingRealtime(){
+  if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
+  // Intervalo de 30s em vez de 5s — reduz downloads drasticamente (~6x menos)
+  _rtdbPollInterval = setInterval(async()=>{
+    if(!configSync.conectado||!usuarioLogado) return;
+    try {
+      // Primeiro busca apenas o timestamp — evita baixar 3MB toda vez
+      const res = await fetch(rtdbUrl('gestcom/dados/_ts'));
+      if(!res.ok) return;
+      const tsRemoto = await res.json();
+      if(tsRemoto && tsRemoto > (_rtdbLastTs||0)) {
+        // Só baixa os dados completos se realmente mudou
+        const resDados = await fetch(rtdbUrl('gestcom/dados'));
+        if(!resDados.ok) return;
+        const dados = await resDados.json();
+        if(dados && dados._ts && dados._ts > (_rtdbLastTs||0)) {
+          aplicarDadosDaNuvem(dados, true);
+          _rtdbLastTs = dados._ts;
+          syncLog('Dados atualizados da nuvem (ts: '+new Date(dados._ts).toLocaleTimeString('pt-BR')+')', 'ok');
+        }
+      }
+    } catch(e) {}
+  }, 30000); // 30 segundos
+}
 function toggleRealtime(swEl){swEl.classList.toggle('on');const ativo=swEl.classList.contains('on');configSync.realtime=ativo;try{const saved=localStorage.getItem('gestcom_rtdb');if(saved){const obj=JSON.parse(saved);obj.realtime=ativo;localStorage.setItem('gestcom_rtdb',JSON.stringify(obj));}}catch(e){}if(ativo){if(configSync.conectado)ativarPollingRealtime();}else{if(_rtdbPollInterval){clearInterval(_rtdbPollInterval);_rtdbPollInterval=null;}}}
 function syncAgora(){syncPull();}
 async function syncResetCloud(){if(!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada!');}
@@ -11160,6 +11318,8 @@ function atualizarTextoAutoSave(swEl) {
 }
 
 // ── Restaurar credenciais salvas e reconectar automaticamente ────────────────
+// Funciona para TODOS os usuários — qualquer um que abrir o sistema com credenciais
+// salvas no navegador já conecta e ativa o auto-save automático.
 (function autoReconectarFirebase() {
   try {
     const saved = localStorage.getItem('gestcom_rtdb');
@@ -11167,7 +11327,7 @@ function atualizarTextoAutoSave(swEl) {
     const { dbUrl, apiKey, realtime } = JSON.parse(saved);
     if (!dbUrl) return;
     if (typeof realtime === 'boolean') configSync.realtime = realtime;
-    // Preenche os campos se existirem
+    // Preenche os campos se existirem (só visíveis para admin)
     const inputUrl = el('fb-dburl');
     const inputKey = el('fb-apikey');
     if (inputUrl) inputUrl.value = dbUrl;
@@ -11175,8 +11335,8 @@ function atualizarTextoAutoSave(swEl) {
     // Sincroniza o visual do switch realtime
     const swRt = el("sw-realtime");
     if (swRt) { if (configSync.realtime) swRt.classList.add("on"); else swRt.classList.remove("on"); }
-    // Reconecta silenciosamente
-    configSync.dbUrl  = dbUrl;
+    // Reconecta silenciosamente — configura credenciais mesmo antes de testar
+    configSync.dbUrl  = dbUrl.replace(/\/$/,'');
     configSync.apiKey = apiKey || '';
     // Bloqueia botão Entrar enquanto sincroniza
     const _btnEntrar = document.getElementById('btn-entrar');
@@ -11202,18 +11362,24 @@ function atualizarTextoAutoSave(swEl) {
         });
         if (res.ok) {
           configSync.conectado = true;
-          syncSetStatus('✅ Reconectado automaticamente', configSync.dbUrl.replace('https://',''), 'conectado');
+          // Auto-save ativado por padrão para todos
+          configSync.autoSave = true;
+          syncSetStatus('✅ Conectado · auto-save ativo para todos', configSync.dbUrl.replace('https://',''), 'conectado');
           syncHabilitarBotoes(true);
-          syncLog('Reconexão automática OK', 'ok');
+          syncLog('Reconexão automática OK — auto-save ativo para todos os usuários', 'ok');
+          // Ativa polling de recebimento (30s) para todos
           if (configSync.realtime) ativarPollingRealtime();
+          // Baixa dados mais recentes da nuvem ao entrar
           await syncPull(true);
           _atualizarUltimoSalvo();
+        } else {
+          // Mesmo sem confirmar a conexão, mantém credenciais para tentar no próximo save
+          syncLog('Ping falhou — tentará auto-save na próxima alteração', 'aviso');
         }
       } catch(e) {
-        syncLog('Reconexão automática falhou: ' + e.message, 'aviso');
+        syncLog('Reconexão automática falhou: ' + e.message + ' — tentará no próximo save', 'aviso');
       } finally {
         clearTimeout(_safetyTimer);
-        // Libera o botão Entrar após sync (ou falha)
         const _btn = document.getElementById('btn-entrar');
         const _sts = document.getElementById('login-sync-status');
         if (_btn) { _btn.disabled = false; _btn.textContent = 'Entrar'; }
@@ -11223,7 +11389,7 @@ function atualizarTextoAutoSave(swEl) {
   } catch(e) {}
 })();
 
-console.info('[GestCom v6.1] ✅ Correções: recálculo mesPrevisao comissão ao editar NF, edição de faturamento direto sem bloquear itens.');
+console.info('[GestCom v6.3] ✅ Auto-save para TODOS os usuários · polling 30s · orçamento excluir/importar · logística sem reset · relatórios top 10 + filtro mês completo · bonificações nos KPIs.');
 
 </script>
 
