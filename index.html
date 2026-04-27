@@ -697,6 +697,7 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Controle de Comissões</div><div class="section-sub">Valor previsto × valor efetivamente recebido · suporte a parcelas</div></div>
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
+          <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza o % de todas as comissões conforme as Regras Comerciais cadastradas">🔄 Recalcular %</button>
           <button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Exportar Excel</button>
         </div>
       </div>
@@ -733,7 +734,7 @@ tr:last-child td{border-bottom:none;}
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr>
-            <th>#</th><th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Tipo</th>
+            <th>#</th><th>Pedido</th><th>Nº NF</th><th>Cliente</th><th>Indústria</th><th>Tipo</th>
             <th>Base NF Líq.</th><th>%</th><th>Valor Previsto</th>
             <th>Valor Recebido</th><th>Diferença</th>
             <th>Parcelas</th><th>Mês Prev.</th><th>Status</th><th>Ações</th>
@@ -4287,11 +4288,16 @@ function _calcMesPrevisaoComissao(dataNF, tipoCom, prazoCliente) {
 function gerarComissaoAuto(ped, baseLiq) {
   if(!baseLiq || baseLiq <= 0) return; // não gera comissão R$0
 
-  // Busca a regra cadastrada para esta indústria/cliente, senão usa padrão 5%
+  // Busca a regra cadastrada para esta indústria/cliente/rede, senão usa padrão 5%
+  const _cliCadGCA = clientes.find(c => c.nome === ped.cliente || c.id === ped.cliente);
+  const _redeGCA = _cliCadGCA?.rede || '';
   const regra = regrasComerciais.find(r=>r.ativo &&
     (r.industria==='Todas'||r.industria===ped.industria) &&
     (r.cliente==='Todos'||r.cliente===ped.cliente)
-  ) || regrasComerciais.find(r=>r.ativo && r.industria===ped.industria);
+  ) || (_redeGCA && regrasComerciais.find(r=>r.ativo &&
+    (r.industria==='Todas'||r.industria===ped.industria) &&
+    r.rede===_redeGCA
+  )) || regrasComerciais.find(r=>r.ativo && (r.industria==='Todas'||r.industria===ped.industria));
   const pct = regra ? regra.pct : 5;
 
   // ── CORRIGIDO: busca tipoCom na indústria cadastrada ──────────────────────
@@ -4965,9 +4971,12 @@ function renderComissoes() {
           difClass = 'amarelo';
         }
 
+        const pedVinc = pedidos.find(p=>p.id===c.pedido);
+        const nfNum = pedVinc?.nf?.numero || '—';
         return `<tr>
           <td class="mono" style="font-size:11px">${c.id}</td>
           <td class="mono" style="font-size:11px">${c.pedido}</td>
+          <td class="mono" style="font-size:11px;color:var(--azul)">${nfNum}</td>
           <td style="font-size:12px"><strong>${esc(c.cliente)}</strong></td>
           <td><span class="tag" style="font-size:9px">${esc(c.industria)}</span></td>
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
@@ -5000,6 +5009,33 @@ function renderComissoes() {
           </td>
         </tr>`;
       }).join('');
+}
+
+function recalcularPctComissoes() {
+  if(!confirm('Recalcular o % de TODAS as comissões conforme as Regras Comerciais atuais?\n\nIsso corrigirá percentuais desatualizados (ex: 8% → 7%) e recalculará o Valor Previsto de cada comissão.\n\nComissões já "Recebida" não serão alteradas.')) return;
+  let total = 0, alteradas = 0;
+  comissoes_data = comissoes_data.map(c => {
+    if(c.excluido || c.status === 'Recebida') return c;
+    // Descobre a rede do cliente para buscar regra de rede
+    const cliObj = clientes.find(x => x.nome === c.cliente || x.id === c.cliente);
+    const redeObj = cliObj?.rede || '';
+    // Prioridade: regra específica p/ cliente > regra de rede > regra global da indústria
+    const regra = regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      (r.cliente==='Todos'   || r.cliente===c.cliente)
+    ) || (redeObj && regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      r.rede===redeObj
+    )) || regrasComerciais.find(r => r.ativo && (r.industria==='Todas' || r.industria===c.industria));
+    if(!regra) return c;
+    const novoPct = regra.pct;
+    total++;
+    if(novoPct !== c.pct) alteradas++;
+    return {...c, pct: novoPct, valor: c.baseLiq * novoPct / 100};
+  });
+  renderComissoes();
+  syncAutoSaveHook();
+  toast(`✅ ${total} comissão(ões) verificadas · ${alteradas} percentual(is) atualizado(s).`);
 }
 
 function excluirComissao(id) {
@@ -5312,11 +5348,13 @@ function marcarRecebida(idx) { abrirLancarRecebimento(comissoes_data[idx]?.id); 
 function exportarComissoes(){
   const wb = XLSX.utils.book_new();
   const rows = [['COMISSÕES — COMERCIAL TRÊS VALES'],[''],
-    ['#','Pedido','Cliente','Indústria','Tipo','Base NF Líq.','%','Valor Previsto','Valor Recebido','Diferença','Parcelas','Mês Previsão','Mês Recebimento','Status']];
+    ['#','Pedido','Nº NF','Cliente','Indústria','Tipo','Base NF Líq.','%','Valor Previsto','Valor Recebido','Diferença','Parcelas','Mês Previsão','Mês Recebimento','Status']];
   comissoes_data.filter(c=>!c.excluido).forEach(c=>{
     const rec  = c.valorRecebido||0;
     const parc = (c.parcelas||[]).map(p=>`P: ${p.valor} (${p.mes})`).join(' | ');
-    rows.push([c.id,c.pedido,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct+'%',c.valor,rec,c.valor-rec,parc,c.mesPrevisao||'',c.mesRecebimento||'',c.status]);
+    const pedVincExp = pedidos.find(p=>p.id===c.pedido);
+    const nfNumExp = pedVincExp?.nf?.numero || '';
+    rows.push([c.id,c.pedido,nfNumExp,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct+'%',c.valor,rec,c.valor-rec,parc,c.mesPrevisao||'',c.mesRecebimento||'',c.status]);
   });
   rows.push(['','','','','','','','TOTAL PREVISTO:',comissoes_data.filter(c=>!c.excluido).reduce((s,c)=>s+c.valor,0),'','','','','']);
   rows.push(['','','','','','','','TOTAL RECEBIDO:',comissoes_data.filter(c=>!c.excluido).reduce((s,c)=>s+(c.valorRecebido||0),0),'','','','','']);
