@@ -449,6 +449,7 @@ tr:last-child td{border-bottom:none;}
       <div class="section-bar">
         <div><div class="section-title">Orçamentos</div><div class="section-sub">Criação e controle de orçamentos comerciais</div></div>
         <div class="export-btns">
+          <button class="btn btn-outline btn-sm" onclick="baixarModeloOrcamento()">📋 Baixar Modelo</button>
           <button class="btn btn-outline btn-sm" onclick="importarArquivo('orcamento')">📥 Importar</button>
           <button class="btn btn-primary btn-sm" onclick="novoOrcamento()">+ Novo Orçamento</button>
         </div>
@@ -698,6 +699,7 @@ tr:last-child td{border-bottom:none;}
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
           <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza o % de todas as comissões conforme as Regras Comerciais cadastradas">🔄 Recalcular %</button>
+          <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
           <button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Exportar Excel</button>
         </div>
       </div>
@@ -2864,7 +2866,7 @@ function renderOrcamentos() {
         <button class="btn btn-outline btn-xs" onclick="editarOrcamento('${o.id}')">Editar</button>
         <button class="btn btn-info btn-xs" onclick="exportarOrcamentoPDFById('${o.id}')">📄</button>
         <button class="btn btn-success btn-xs" onclick="exportarOrcamentoExcelById('${o.id}')">📊</button>
-        ${o.status==='Aprovado'?`<button class="btn btn-roxo btn-xs" onclick="converterEmPedido('${o.id}')">→ Pedido</button>`:''}
+        ${!['Convertido em pedido','Cancelado'].includes(o.status)?`<button class="btn btn-roxo btn-xs" onclick="converterEmPedido('${o.id}')" title="Converter em Pedido">→ Pedido</button>`:''}
         <button class="btn btn-danger btn-xs" onclick="excluirOrcamento('${o.id}')" title="Excluir permanentemente">🗑️</button>
       </div>
     </td>
@@ -5038,6 +5040,30 @@ function recalcularPctComissoes() {
   toast(`✅ ${total} comissão(ões) verificadas · ${alteradas} percentual(is) atualizado(s).`);
 }
 
+function recalcularTipoTodasComissoes() {
+  if(!confirm('Recalcular o Tipo (Faturamento / Liquidez) de TODAS as comissões conforme o cadastro atual das indústrias?\n\nIsso corrigirá comissões que ainda estão como "Faturamento" mas a indústria foi alterada para "Liquidez" (ou vice-versa), e recalculará o mês de previsão.\n\nComissões já "Recebida" não serão alteradas.')) return;
+  let verificadas = 0, alteradas = 0;
+  comissoes_data = comissoes_data.map(c => {
+    if(c.excluido || c.status === 'Recebida') return c;
+    const indCad = industrias.find(i => i.nome === c.industria || i.id === c.industria);
+    if(!indCad) return c;
+    const novoTipo = indCad.tipoCom || 'Faturamento';
+    verificadas++;
+    if(novoTipo === c.tipo) return c;
+    // Recalcula mês de previsão com o novo tipo
+    const ped = pedidos.find(p => p.id === c.pedido);
+    const cliCad = clientes.find(cl => cl.nome === c.cliente || cl.id === c.cliente);
+    const prazo = ped?.cond || cliCad?.prazo || '';
+    const dataNF = ped?.nf?.data || ped?.data || c.dataNF || new Date();
+    const novoMes = _calcMesPrevisaoComissao(dataNF, novoTipo, prazo);
+    alteradas++;
+    return {...c, tipo: novoTipo, mesPrevisao: novoMes};
+  });
+  renderComissoes();
+  syncAutoSaveHook();
+  toast(`✅ ${verificadas} comissão(ões) verificadas · ${alteradas} tipo(s) corrigido(s).`);
+}
+
 function excluirComissao(id) {
   const c = comissoes_data.find(x => x.id === id);
   if (!c) return;
@@ -6425,7 +6451,6 @@ function importarCadastro(tipo) {
 
 function importarArquivo(tipo){
   if(tipo==='orcamento'){
-    // Orçamentos usam importação própria via Excel
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.xlsx,.xls';
@@ -6441,13 +6466,76 @@ function importarArquivo(tipo){
           const norm = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
           const heads = Object.keys(rows[0]);
           const fc = alts => heads.find(h=>alts.some(a=>norm(h).includes(norm(a))))||'';
-          const cCli=fc(['cliente']), cInd=fc(['industria']), cData=fc(['data']), cVal=fc(['validade','validade']), cCond=fc(['cond','condicao','prazo']), cSt=fc(['status']), cObs=fc(['obs']), cTotal=fc(['total','valor']);
-          let adicionados=0;
-          rows.forEach(row=>{
-            const cli=String(row[cCli]||'').trim(); const ind=String(row[cInd]||'').trim();
+          const parseMoney = v => {
+            if(v===undefined||v===null||v==='') return 0;
+            if(typeof v==='number') return isNaN(v)?0:v;
+            let s=v.toString().replace(/R\$|\s/g,'').trim();
+            if(!s) return 0;
+            if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');
+            return parseFloat(s)||0;
+          };
+          const cCli    = fc(['cliente','razao social']);
+          const cInd    = fc(['industria']);
+          const cData   = fc(['data']);
+          const cVal    = fc(['validade']);
+          const cCond   = fc(['cond','condicao','prazo']);
+          const cSt     = fc(['status']);
+          const cObs    = fc(['obs']);
+          const cCod    = fc(['codigo','cod','sku','ref']);
+          const cDesc   = fc(['descricao','desc','produto','item','nome produto']);
+          const cQtd    = fc(['qtd','quantidade','quant','qty']);
+          const cDescPct= fc(['desconto','desc %','% desconto','descpct']);
+          const cPreco  = fc(['preco unit','preco unitario','valor unit','preco un','preco']);
+          const cTotal  = fc(['total item','total','valor total','subtotal','valor']);
+
+          const grupos = {};
+          let _seq = 0;
+          rows.forEach(row => {
+            const cli = String(row[cCli]||'').trim();
+            const ind = String(row[cInd]||'').trim();
             if(!cli) return;
-            let n=orcamentos.length+1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));
-            orcamentos.push({id,cliente:cli,industria:ind,data:String(row[cData]||today()),validade:String(row[cVal]||''),cond:String(row[cCond]||''),status:String(row[cSt]||'Rascunho'),obs:String(row[cObs]||''),itens:[],total:parseFloat(String(row[cTotal]||'0').replace(',','.'))||0});
+            const dataKey = String(row[cData]||'').trim() || '__SEMDATA__';
+            const condKey = String(row[cCond]||'').trim() || '__SEMCOND__';
+            const cod = cCod ? String(row[cCod]||'').trim().toUpperCase() : '';
+            const descItem = cDesc ? String(row[cDesc]||'').trim() : '';
+            const temItem = !!(cod || descItem);
+            const chave = temItem
+              ? [cli,ind,dataKey,condKey].join('|')
+              : [cli,ind,dataKey,condKey,'__SEQ__'+(++_seq)].join('|');
+
+            if(!grupos[chave]) {
+              grupos[chave] = {
+                cliente:  cli, industria: ind,
+                data:     String(row[cData]||'').trim() || today(),
+                validade: String(row[cVal]||'').trim(),
+                cond:     String(row[cCond]||'').trim(),
+                status:   String(row[cSt]||'').trim() || 'Rascunho',
+                obs:      String(row[cObs]||'').trim(),
+                itens:    [],
+              };
+            } else {
+              if(!grupos[chave].validade && row[cVal]) grupos[chave].validade = String(row[cVal]).trim();
+              if(!grupos[chave].obs && row[cObs]) grupos[chave].obs = String(row[cObs]).trim();
+            }
+
+            if(temItem) {
+              const qtd      = parseMoney(cQtd ? row[cQtd] : '') || 1;
+              const descPct  = parseMoney(cDescPct ? row[cDescPct] : '') || 0;
+              let precoUnit  = parseMoney(cPreco ? row[cPreco] : '');
+              const totalRow = parseMoney(cTotal ? row[cTotal] : '');
+              if(!precoUnit && totalRow && qtd) precoUnit = parseFloat((totalRow/qtd).toFixed(2));
+              const totalFinal = totalRow > 0 ? totalRow : parseFloat((precoUnit*qtd*(1-descPct/100)).toFixed(2));
+              grupos[chave].itens.push({cod:cod||'ITEM', desc:descItem||cod, ind, precoTab:0, qtd, descPct, precoUnit, total:totalFinal});
+            }
+          });
+
+          let adicionados = 0;
+          Object.values(grupos).forEach(g => {
+            const total = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : 0;
+            let n=orcamentos.length+1,id;
+            do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));
+            orcamentos.push({id, cliente:g.cliente, industria:g.industria, data:g.data,
+              validade:g.validade, cond:g.cond, status:g.status, obs:g.obs, itens:g.itens, total});
             adicionados++;
           });
           addAudit(usuarioLogado?.login||'admin',`Importou ${adicionados} orçamento(s)`,'📥');
@@ -7241,6 +7329,71 @@ function confirmarImport() {
   importDados = [];
 }
 
+function baixarModeloOrcamento() {
+  const wb = XLSX.utils.book_new();
+  const header = ['Cliente *', 'Indústria *', 'Data', 'Validade', 'Condição Pgto', 'Status', 'Observações', 'Código Produto', 'Descrição', 'Qtd', 'Desconto %', 'Preço Unit', 'Total Item'];
+  const exemplos = [
+    ['Farmácia Central', 'GUMMY',     '01/04/2026', '30/04/2026', '30D', 'Rascunho', 'Orçamento Q2', 'GUM-001', 'Gummy Vitamina C 60cp', '10', '5',  '28.00', '266.00'],
+    ['Farmácia Central', 'GUMMY',     '01/04/2026', '30/04/2026', '30D', 'Rascunho', '',             'GUM-002', 'Gummy Colágeno 50cp',   '5',  '0',  '32.00', '160.00'],
+    ['DCA Bahia',        'EXCLUSIVE', '05/04/2026', '20/04/2026', '60D', 'Enviado',  'Aprox. client','EXC-010', 'Whey Protein 900g',     '3',  '10', '89.00', '240.30'],
+    ['DCA Bahia',        'EXCLUSIVE', '05/04/2026', '20/04/2026', '60D', 'Enviado',  '',             'EXC-020', 'Creatina 300g',         '6',  '0',  '45.00', '270.00'],
+  ];
+  const rows = [header, ...exemplos];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Força coluna Data (índice 2) e Validade (índice 3) como texto
+  [2,3].forEach(colIdx => {
+    for(let r=1;r<rows.length;r++){
+      const addr=XLSX.utils.encode_cell({c:colIdx,r});
+      if(ws[addr]){ws[addr].t='s';ws[addr].z='@';}
+    }
+  });
+  ws['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:12},{wch:14},{wch:22},{wch:22},{wch:14},{wch:28},{wch:6},{wch:10},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Orçamentos');
+  const wsInst = XLSX.utils.aoa_to_sheet([
+    ['INSTRUÇÕES DE IMPORTAÇÃO DE ORÇAMENTOS'],[''],
+    ['Coluna','Descrição','Obrigatório'],
+    ['Cliente *','Nome exato do cliente cadastrado','SIM'],
+    ['Indústria *','Nome exato da indústria cadastrada','SIM'],
+    ['Data','Formato DD/MM/AAAA','Não (usa data atual)'],
+    ['Validade','Formato DD/MM/AAAA','Não'],
+    ['Condição Pgto','Ex: 30D, 28D, 30/60D','Não'],
+    ['Status','Rascunho / Em análise / Enviado / Aprovado / Reprovado / Cancelado','Não (padrão: Rascunho)'],
+    ['Observações','Texto livre (repetir em todas as linhas do mesmo orçamento)','Não'],
+    ['Código Produto','Código do produto (opcional — pode deixar em branco)','Não'],
+    ['Descrição','Descrição do item','Não'],
+    ['Qtd','Quantidade numérica','Não'],
+    ['Desconto %','Percentual de desconto (ex: 10 = 10%)','Não'],
+    ['Preço Unit','Preço unitário já com desconto','Não'],
+    ['Total Item','Valor total do item (Qtd × Preço c/ desconto)','Não'],
+    [''],
+    ['ATENÇÃO: linhas do mesmo cliente + indústria + data + condição são agrupadas num único orçamento.'],
+    ['Deixe o campo de itens em branco para importar apenas o cabeçalho do orçamento.'],
+  ]);
+  wsInst['!cols']=[{wch:16},{wch:58},{wch:26}];
+  XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+  XLSX.writeFile(wb, 'modelo_orcamentos.xlsx');
+  toast('✅ Modelo de orçamentos baixado!');
+}
+
+// Recalcula o tipo de comissão das comissões já geradas para uma indústria
+function recalcularTipoComissoesIndustria(nomeInd, novoTipo) {
+  let atualizados = 0;
+  comissoes_data = comissoes_data.map(c => {
+    if(c.industria === nomeInd && c.tipo !== novoTipo && c.status === 'Prevista') {
+      // Recalcula mês de previsão com o novo tipo
+      const ped = pedidos.find(p => p.id === c.pedido);
+      const cliCad = clientes.find(cl => cl.nome === c.cliente);
+      const prazo = ped?.cond || cliCad?.prazo || '';
+      const dataNF = ped?.nf?.data || ped?.data || new Date();
+      const novoMes = _calcMesPrevisaoComissao(dataNF, novoTipo, prazo);
+      atualizados++;
+      return {...c, tipo: novoTipo, mesPrevisao: novoMes};
+    }
+    return c;
+  });
+  return atualizados;
+}
+
 function baixarModeloImport() {
   const cols = IMPORT_COLS[importTipo];
   if(!cols) { toast('Modelo não disponível para este tipo.','error'); return; }
@@ -7897,8 +8050,14 @@ function salvarIndustria() {
     status:   el('i-status').value || 'Ativo',
     obs:      el('i-obs').value.trim(),
   };
-  if(_indEditId) industrias = industrias.map(x=>x.id===_indEditId ? obj : x);
-  else            industrias.push(obj);
+  if(_indEditId) {
+    const indAnterior = industrias.find(x=>x.id===_indEditId);
+    if(indAnterior && indAnterior.tipoCom !== obj.tipoCom) {
+      const qtd = recalcularTipoComissoesIndustria(indAnterior.nome, obj.tipoCom);
+      if(qtd > 0) toast(`🔄 ${qtd} comissão(ões) de ${obj.nome} recalculada(s) para "${obj.tipoCom}"`, 'info');
+    }
+    industrias = industrias.map(x=>x.id===_indEditId ? obj : x);
+  } else            industrias.push(obj);
   const acao = _indEditId ? 'editada' : 'cadastrada';
   addAudit(usuarioLogado?.login||'admin', `Indústria ${acao}: ${nome}`, '🏭');
   _indEditId = null;
@@ -11427,7 +11586,7 @@ function atualizarTextoAutoSave(swEl) {
   } catch(e) {}
 })();
 
-console.info('[GestCom v6.3] ✅ Auto-save para TODOS os usuários · polling 30s · orçamento excluir/importar · logística sem reset · relatórios top 10 + filtro mês completo · bonificações nos KPIs.');
+console.info('[GestCom v6.4] ✅ Auto-save para TODOS os usuários · polling 30s · orçamento: baixar modelo + importar + botão →Pedido em todos os status · comissão tipoCom recalculada ao editar indústria · logística sem reset · relatórios top 10 + filtro mês completo · bonificações nos KPIs.');
 
 </script>
 
