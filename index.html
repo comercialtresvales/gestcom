@@ -10132,7 +10132,7 @@ function exportarFatMensal() {
 ══════════════════════════════════════════════════════ */
 
 let configSync = {
-  dbUrl: '',       // ex: https://SEU-PROJETO-default-rtdb.firebaseio.com
+  dbUrl: 'https://sistematresvales-default-rtdb.firebaseio.com',
   apiKey: '',      // da configuração do web app
   autoSave: true,
   realtime: true,
@@ -10347,7 +10347,40 @@ try{renderLogistica();}catch(e){}
 try{renderSaldo();}catch(e){}
 try{renderRedes();}catch(e){}
 try{popularSelectsDinamicos();}catch(e){}
-setTimeout(tentarReconexaoAuto,800);
+// AUTO-CONEXÃO: conecta ao Firebase automaticamente em qualquer dispositivo
+(async function autoConectarFirebase() {
+  try {
+    const saved = localStorage.getItem('gestcom_rtdb');
+    if (saved) {
+      try {
+        const obj = JSON.parse(saved);
+        if (obj.dbUrl) { configSync.dbUrl = obj.dbUrl.replace(/\/$/, ''); configSync.apiKey = obj.apiKey || ''; configSync.realtime = obj.realtime !== false; }
+      } catch(e) {}
+    }
+    if (!configSync.dbUrl) configSync.dbUrl = 'https://sistematresvales-default-rtdb.firebaseio.com';
+    const stEl = document.getElementById('login-sync-status');
+    const btnEl = document.getElementById('btn-entrar');
+    if (stEl) { stEl.textContent = '⏳ Carregando dados da nuvem…'; stEl.style.display = 'block'; }
+    if (btnEl) btnEl.disabled = true;
+    const url = configSync.dbUrl.replace(/\/$/, '') + '/gestcom/dados.json' + (configSync.apiKey ? '?auth=' + configSync.apiKey : '');
+    const res = await fetch(url);
+    if (res.ok) {
+      const dados = await res.json();
+      if (dados) { aplicarDadosDaNuvem(dados, true); _rtdbLastTs = dados._ts || Date.now(); }
+      configSync.conectado = true;
+      try { localStorage.setItem('gestcom_rtdb', JSON.stringify({dbUrl: configSync.dbUrl, apiKey: configSync.apiKey, realtime: configSync.realtime})); } catch(e) {}
+      if (configSync.realtime) ativarPollingRealtime();
+    }
+    if (stEl) stEl.style.display = 'none';
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+  } catch(e) {
+    const stEl = document.getElementById('login-sync-status');
+    const btnEl = document.getElementById('btn-entrar');
+    if (stEl) stEl.style.display = 'none';
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+    console.warn('[GestCom] Auto-conexão Firebase falhou:', e.message);
+  }
+})();
 
 /* ══════════════════════════════════════════════════════
    MELHORIAS v5 — IMPLEMENTADAS CONFORME DOCUMENTO
