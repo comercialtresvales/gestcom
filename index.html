@@ -8273,58 +8273,77 @@ function fazerLogin() {
       return;
     }
 
-    // Busca usuário — comparação case-insensitive no login e aceita status 'ativo' ou 'Ativo'
-    const usr = usuarios.find(u =>
-      (u.login||'').trim().toLowerCase() === login &&
-      (u.senha||'').trim() === senha &&
-      (u.status||'').toLowerCase() === 'ativo'
-    );
+    // Tenta encontrar o usuário nos dados já carregados
+    const _tentarEntrar = () => {
+      const usr = usuarios.find(u =>
+        (u.login||'').trim().toLowerCase() === login &&
+        (u.senha||'').trim() === senha &&
+        (u.status||'').toLowerCase() === 'ativo'
+      );
 
-    if(!usr) {
-      if(errEl) {
-        errEl.textContent = 'Usuário ou senha incorretos. (Use admin / admin123 para acesso padrão)';
-        errEl.style.display = 'block';
-      } else {
-        alert('Usuário ou senha incorretos.');
+      if(!usr) {
+        if(errEl) {
+          errEl.textContent = 'Usuário ou senha incorretos. (Use admin / admin123 para acesso padrão)';
+          errEl.style.display = 'block';
+        } else {
+          alert('Usuário ou senha incorretos.');
+        }
+        senhaEl.value = '';
+        return;
       }
-      senhaEl.value = '';
-      return;
+
+      usuarioLogado = usr;
+      usr.ultimoAcesso = new Date().toLocaleString('pt-BR').slice(0,14);
+
+      const loginScreen = document.getElementById('login-screen');
+      if(loginScreen) loginScreen.classList.add('hidden');
+
+      try {
+        const av = usr.nome.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+        const avatarEl = document.getElementById('topbar-avatar');
+        const userEl   = document.getElementById('topbar-username');
+        const profEl   = document.getElementById('topbar-profile');
+        if(avatarEl) avatarEl.textContent = av;
+        if(userEl)   userEl.textContent   = usr.nome.split(' ')[0];
+        if(profEl)   profEl.textContent   = perfilLabels[usr.perfil]||usr.perfil;
+      } catch(e) { console.warn('Topbar:', e); }
+
+      try { addAudit(usr.login, 'Login no sistema', '🔐'); } catch(e) {}
+      try { aplicarVisibilidadeSidebar(); } catch(e) { console.warn('Sidebar:', e); }
+      try { toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!'); } catch(e) {}
+
+      const renders = [
+        ()=>renderOrcamentos(), ()=>renderPedidos(), ()=>renderMix(),
+        ()=>renderClientes(), ()=>renderIndustrias(), ()=>renderRedes(),
+        ()=>renderDashboard(), ()=>renderLogistica(), ()=>renderSaldo(),
+        ()=>renderComissoes(), ()=>renderFaturamento(), ()=>popularSelectsDinamicos()
+      ];
+      renders.forEach(fn => { try { fn(); } catch(e) { console.warn('Render error:', e); } });
+
+      try {
+        const tsEl = document.getElementById('sync-ts');
+        if(tsEl) tsEl.textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
+      } catch(e) {}
+    };
+
+    // Se conectado à nuvem, faz um pull rápido antes de validar para garantir usuários atualizados
+    if(configSync.conectado && configSync.dbUrl) {
+      const btnEl = document.getElementById('btn-entrar');
+      const stEl  = document.getElementById('login-sync-status');
+      if(btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Verificando…'; }
+      if(stEl)  { stEl.textContent = '⏳ Sincronizando usuários…'; stEl.style.display = 'block'; }
+      syncPull(true).then(() => {
+        if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+        if(stEl)  stEl.style.display = 'none';
+        _tentarEntrar();
+      }).catch(() => {
+        if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+        if(stEl)  stEl.style.display = 'none';
+        _tentarEntrar(); // tenta mesmo assim com dados locais
+      });
+    } else {
+      _tentarEntrar();
     }
-
-    usuarioLogado = usr;
-    usr.ultimoAcesso = new Date().toLocaleString('pt-BR').slice(0,14);
-
-    const loginScreen = document.getElementById('login-screen');
-    if(loginScreen) loginScreen.classList.add('hidden');
-
-    // Update topbar
-    try {
-      const av = usr.nome.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-      const avatarEl = document.getElementById('topbar-avatar');
-      const userEl   = document.getElementById('topbar-username');
-      const profEl   = document.getElementById('topbar-profile');
-      if(avatarEl) avatarEl.textContent = av;
-      if(userEl)   userEl.textContent   = usr.nome.split(' ')[0];
-      if(profEl)   profEl.textContent   = perfilLabels[usr.perfil]||usr.perfil;
-    } catch(e) { console.warn('Topbar:', e); }
-
-    try { addAudit(usr.login, 'Login no sistema', '🔐'); } catch(e) {}
-    try { aplicarVisibilidadeSidebar(); } catch(e) { console.warn('Sidebar:', e); }
-    try { toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!'); } catch(e) {}
-
-    // Renderiza módulos — cada um isolado para não travar se um falhar
-    const renders = [
-      ()=>renderOrcamentos(), ()=>renderPedidos(), ()=>renderMix(),
-      ()=>renderClientes(), ()=>renderIndustrias(), ()=>renderRedes(),
-      ()=>renderDashboard(), ()=>renderLogistica(), ()=>renderSaldo(),
-      ()=>renderComissoes(), ()=>renderFaturamento(), ()=>popularSelectsDinamicos()
-    ];
-    renders.forEach(fn => { try { fn(); } catch(e) { console.warn('Render error:', e); } });
-
-    try {
-      const tsEl = document.getElementById('sync-ts');
-      if(tsEl) tsEl.textContent = 'Sistema ativo · '+new Date().toLocaleString('pt-BR');
-    } catch(e) {}
 
   } catch(err) {
     alert('Erro inesperado no login: ' + err.message + '\n\nAbra o console do navegador (F12) para mais detalhes.');
@@ -11539,15 +11558,15 @@ function atualizarTextoAutoSave(swEl) {
     const _btnEntrar = document.getElementById('btn-entrar');
     const _loginSyncStatus = document.getElementById('login-sync-status');
     if (_btnEntrar) { _btnEntrar.disabled = true; _btnEntrar.textContent = '⏳ Aguarde…'; }
-    if (_loginSyncStatus) _loginSyncStatus.style.display = 'block';
+    if (_loginSyncStatus) { _loginSyncStatus.textContent = '⏳ Conectando à nuvem…'; _loginSyncStatus.style.display = 'block'; }
 
-    // Segurança: libera o botão após 8s independente do que acontecer
+    // Segurança: libera o botão após 15s independente do que acontecer
     const _safetyTimer = setTimeout(() => {
       const _b = document.getElementById('btn-entrar');
       const _s = document.getElementById('login-sync-status');
       if (_b && _b.disabled) { _b.disabled = false; _b.textContent = 'Entrar'; }
       if (_s) _s.style.display = 'none';
-    }, 8000);
+    }, 15000);
 
     setTimeout(async () => {
       try {
@@ -11559,18 +11578,16 @@ function atualizarTextoAutoSave(swEl) {
         });
         if (res.ok) {
           configSync.conectado = true;
-          // Auto-save ativado por padrão para todos
           configSync.autoSave = true;
           syncSetStatus('✅ Conectado · auto-save ativo para todos', configSync.dbUrl.replace('https://',''), 'conectado');
           syncHabilitarBotoes(true);
           syncLog('Reconexão automática OK — auto-save ativo para todos os usuários', 'ok');
-          // Ativa polling de recebimento (30s) para todos
           if (configSync.realtime) ativarPollingRealtime();
-          // Baixa dados mais recentes da nuvem ao entrar
+          // Atualiza mensagem enquanto baixa dados (incluindo usuários)
+          if (_loginSyncStatus) _loginSyncStatus.textContent = '⏳ Carregando usuários da nuvem…';
           await syncPull(true);
           _atualizarUltimoSalvo();
         } else {
-          // Mesmo sem confirmar a conexão, mantém credenciais para tentar no próximo save
           syncLog('Ping falhou — tentará auto-save na próxima alteração', 'aviso');
         }
       } catch(e) {
