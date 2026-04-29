@@ -698,7 +698,7 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Controle de Comissões</div><div class="section-sub">Valor previsto × valor efetivamente recebido · suporte a parcelas</div></div>
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
-          <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza o % de todas as comissões conforme as Regras Comerciais cadastradas">🔄 Recalcular %</button>
+          <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão de todas as comissões conforme Regras Comerciais e cadastro de indústrias">🔄 Recalcular % + Tipo</button>
           <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
           <button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Exportar Excel</button>
         </div>
@@ -4108,17 +4108,32 @@ function salvarNF() {
       syncAutoSaveHook();
       toast('NF de bonificação '+(jaTemNF?'atualizada':'registrada')+'! (sem geração de comissão)');
     }else{
-      if(!jaTemNF) gerarComissaoAuto(ped,liq); // CRÍTICO: não gera comissão duplicada
+      if(!jaTemNF) {
+        gerarComissaoAuto(ped,liq); // CRÍTICO: não gera comissão duplicada
+      } else {
+        // Re-registro de NF: atualiza comissão existente com nova base e recalcula mês
+        const cIdx = comissoes_data.findIndex(c => c.pedido === ped.id && c.status !== 'Recebida');
+        if(cIdx >= 0) {
+          const c = comissoes_data[cIdx];
+          const indCadNF = industrias.find(i => i.nome === ped.industria || i.id === ped.industria);
+          const tipoNF   = indCadNF?.tipoCom || c.tipo || 'Faturamento';
+          const cliCadNF = clientes.find(cl => cl.nome === ped.cliente || cl.id === ped.cliente);
+          const prazoNF  = ped.cond || cliCadNF?.prazo || '';
+          const dataNFUpd = nfObj.data || ped.data || new Date();
+          const mesNF = _calcMesPrevisaoComissao(dataNFUpd, tipoNF, prazoNF);
+          comissoes_data[cIdx] = {...c, baseLiq: liq, valor: liq * c.pct / 100, tipo: tipoNF, mesPrevisao: mesNF};
+        }
+      }
       // v5: gerar saldo automaticamente se pedido > NF
       const _saldoAuto = verificarEGerarSaldo(ped, nfObj);
       if (_saldoAuto && _saldoAuto > 0) {
         addAudit(usuarioLogado?.login||'sistema', `Saldo gerado: ${fmt(_saldoAuto)} — ${ped.cliente} / ${ped.industria}`, '📊');
       }
       closeModal('modal-nf');
-      renderFaturamento();renderPedidos();renderLogistica();renderSaldo();popularSelectsDinamicos();renderDashboard();
+      renderFaturamento();renderPedidos();renderLogistica();renderSaldo();renderComissoes();popularSelectsDinamicos();renderDashboard();
       syncAutoSaveHook();
       const _saldoMsg = _saldoAuto && _saldoAuto > 0 ? ` · Saldo de ${fmt(_saldoAuto)} gerado.` : '';
-      toast((jaTemNF ? 'NF atualizada com sucesso!' : 'NF registrada! Comissão calculada automaticamente.') + _saldoMsg);
+      toast((jaTemNF ? 'NF atualizada! Comissão recalculada.' : 'NF registrada! Comissão calculada automaticamente.') + _saldoMsg);
     }
   }else{
     closeModal('modal-nf');
@@ -4907,7 +4922,32 @@ function exportarSaldo(){
 ══════════════════════════ */
 let _recEditId = null; // id da comissão sendo editada no modal
 
+// ── Marca automaticamente comissões em atraso ──────────────────────────────
+function _atualizarStatusAtrasadas() {
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const mesAtual = agora.getMonth(); // 0-based
+  comissoes_data = comissoes_data.map(c => {
+    if(c.excluido || c.status === 'Recebida') return c;
+    if(!c.mesPrevisao) return c;
+    // Converte label ex. "Abr/26" para data
+    const partes = c.mesPrevisao.split('/');
+    if(partes.length !== 2) return c;
+    const mesIdx = meses.indexOf(partes[0]);
+    if(mesIdx === -1) return c;
+    const anoLabel = 2000 + parseInt(partes[1]);
+    // Se o mês de previsão já passou, marca como Atrasada
+    const jaPassou = anoLabel < anoAtual || (anoLabel === anoAtual && mesIdx < mesAtual);
+    if(jaPassou && c.status === 'Prevista') return {...c, status: 'Atrasada'};
+    // Se não passou mais (foi recalculado), volta a Prevista
+    if(!jaPassou && c.status === 'Atrasada') return {...c, status: 'Prevista'};
+    return c;
+  });
+}
+
 function renderComissoes() {
+  _atualizarStatusAtrasadas(); // Bug 4 fix: auto-marca atrasadas antes de renderizar
   const busca    = (el('com-busca')||{}).value?.toLowerCase()||'';
   const filtInd  = (el('com-filtro-ind')||{}).value||'';
   const filtSt   = (el('com-filtro-status')||{}).value||'';
@@ -5014,7 +5054,7 @@ function renderComissoes() {
 }
 
 function recalcularPctComissoes() {
-  if(!confirm('Recalcular o % de TODAS as comissões conforme as Regras Comerciais atuais?\n\nIsso corrigirá percentuais desatualizados (ex: 8% → 7%) e recalculará o Valor Previsto de cada comissão.\n\nComissões já "Recebida" não serão alteradas.')) return;
+  if(!confirm('Recalcular % E Tipo (Faturamento/Liquidez) de TODAS as comissões conforme as Regras Comerciais e o cadastro de indústrias atuais?\n\nIsso corrigirá percentuais, tipo e mês de previsão desatualizados.\n\nComissões já "Recebida" não serão alteradas.')) return;
   let total = 0, alteradas = 0;
   comissoes_data = comissoes_data.map(c => {
     if(c.excluido || c.status === 'Recebida') return c;
@@ -5031,13 +5071,20 @@ function recalcularPctComissoes() {
     )) || regrasComerciais.find(r => r.ativo && (r.industria==='Todas' || r.industria===c.industria));
     if(!regra) return c;
     const novoPct = regra.pct;
+    // ── Também atualiza tipo e mês de previsão ─────────────────────────────
+    const indCad = industrias.find(i => i.nome === c.industria || i.id === c.industria);
+    const novoTipo = indCad?.tipoCom || regra.tipo || 'Faturamento';
+    const ped = pedidos.find(p => p.id === c.pedido);
+    const prazo = ped?.cond || cliObj?.prazo || '';
+    const dataNF = ped?.nf?.data || ped?.data || c.dataNF || new Date();
+    const novoMes = _calcMesPrevisaoComissao(dataNF, novoTipo, prazo);
     total++;
-    if(novoPct !== c.pct) alteradas++;
-    return {...c, pct: novoPct, valor: c.baseLiq * novoPct / 100};
+    if(novoPct !== c.pct || novoTipo !== c.tipo) alteradas++;
+    return {...c, pct: novoPct, valor: c.baseLiq * novoPct / 100, tipo: novoTipo, mesPrevisao: novoMes};
   });
   renderComissoes();
   syncAutoSaveHook();
-  toast(`✅ ${total} comissão(ões) verificadas · ${alteradas} percentual(is) atualizado(s).`);
+  toast(`✅ ${total} comissão(ões) verificadas · ${alteradas} atualizada(s) (% e/ou tipo).`);
 }
 
 function recalcularTipoTodasComissoes() {
@@ -7379,7 +7426,7 @@ function baixarModeloOrcamento() {
 function recalcularTipoComissoesIndustria(nomeInd, novoTipo) {
   let atualizados = 0;
   comissoes_data = comissoes_data.map(c => {
-    if(c.industria === nomeInd && c.tipo !== novoTipo && c.status === 'Prevista') {
+    if(c.industria === nomeInd && c.tipo !== novoTipo && ['Prevista','Atrasada','Parcial'].includes(c.status)) {
       // Recalcula mês de previsão com o novo tipo
       const ped = pedidos.find(p => p.id === c.pedido);
       const cliCad = clientes.find(cl => cl.nome === c.cliente);
