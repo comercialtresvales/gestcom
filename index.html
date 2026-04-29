@@ -5089,14 +5089,22 @@ function recalcularPctComissoes() {
 
 function recalcularTipoTodasComissoes() {
   if(!confirm('Recalcular o Tipo (Faturamento / Liquidez) de TODAS as comissões conforme o cadastro atual das indústrias?\n\nIsso corrigirá comissões que ainda estão como "Faturamento" mas a indústria foi alterada para "Liquidez" (ou vice-versa), e recalculará o mês de previsão.\n\nComissões já "Recebida" não serão alteradas.')) return;
-  let verificadas = 0, alteradas = 0;
+  let verificadas = 0, alteradas = 0, semCadastro = 0;
   comissoes_data = comissoes_data.map(c => {
     if(c.excluido || c.status === 'Recebida') return c;
-    const indCad = industrias.find(i => i.nome === c.industria || i.id === c.industria);
-    if(!indCad) return c;
-    const novoTipo = indCad.tipoCom || 'Faturamento';
     verificadas++;
-    if(novoTipo === c.tipo) return c;
+    // Busca indústria com comparação case-insensitive e trim para evitar falhas por espaços/maiúsculas
+    const nomeInd = (c.industria || '').trim().toLowerCase();
+    const indCad = industrias.find(i =>
+      (i.nome || '').trim().toLowerCase() === nomeInd ||
+      (i.id   || '').trim().toLowerCase() === nomeInd
+    );
+    if(!indCad) {
+      semCadastro++;
+      return c; // indústria não encontrada no cadastro, mantém como está
+    }
+    const novoTipo = indCad.tipoCom || 'Faturamento';
+    if(novoTipo === c.tipo) return c; // já está correto, nada a fazer
     // Recalcula mês de previsão com o novo tipo
     const ped = pedidos.find(p => p.id === c.pedido);
     const cliCad = clientes.find(cl => cl.nome === c.cliente || cl.id === c.cliente);
@@ -5108,7 +5116,8 @@ function recalcularTipoTodasComissoes() {
   });
   renderComissoes();
   syncAutoSaveHook();
-  toast(`✅ ${verificadas} comissão(ões) verificadas · ${alteradas} tipo(s) corrigido(s).`);
+  const avisoSemCad = semCadastro > 0 ? ` · ⚠️ ${semCadastro} sem cadastro de indústria` : '';
+  toast(`✅ ${verificadas} comissão(ões) verificadas · ${alteradas} tipo(s) corrigido(s)${avisoSemCad}.`);
 }
 
 function excluirComissao(id) {
@@ -7425,8 +7434,10 @@ function baixarModeloOrcamento() {
 // Recalcula o tipo de comissão das comissões já geradas para uma indústria
 function recalcularTipoComissoesIndustria(nomeInd, novoTipo) {
   let atualizados = 0;
+  const nomeIndNorm = (nomeInd || '').trim().toLowerCase();
   comissoes_data = comissoes_data.map(c => {
-    if(c.industria === nomeInd && c.tipo !== novoTipo && ['Prevista','Atrasada','Parcial'].includes(c.status)) {
+    const cIndNorm = (c.industria || '').trim().toLowerCase();
+    if(cIndNorm === nomeIndNorm && c.tipo !== novoTipo && ['Prevista','Atrasada','Parcial'].includes(c.status)) {
       // Recalcula mês de previsão com o novo tipo
       const ped = pedidos.find(p => p.id === c.pedido);
       const cliCad = clientes.find(cl => cl.nome === c.cliente);
