@@ -127,6 +127,16 @@ tr:last-child td{border-bottom:none;}
 .status-prevista{background:#fff7ed;color:#d97706}
 .status-excluido{background:#f4f3ef;color:#999;text-decoration:line-through;}
 .status-recebida{background:#e8f5e9;color:#2d7a3a}
+.status-solucionada{background:#1a1a1a;color:var(--amarelo)}
+
+/* TRATATIVA ACOMPANHAMENTO */
+.trat-acomp-box{background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-top:10px;}
+.trat-acomp-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.trat-nota-item{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--cinza);font-size:12px;}
+.trat-nota-item:last-child{border-bottom:none;}
+.trat-nota-user{font-weight:700;color:var(--preto);white-space:nowrap;}
+.trat-nota-time{font-size:10px;color:#aaa;white-space:nowrap;}
+.trat-nota-text{flex:1;color:#444;}
 .status-atrasada{background:#fef2f2;color:#c0392b}
 
 /* SECTION */
@@ -864,16 +874,18 @@ tr:last-child td{border-bottom:none;}
         <select id="trat-filtro-status" onchange="renderTratativas()">
           <option value="">Todos os status</option>
           <option value="ativa">Ativa</option>
+          <option value="solucionada">Solucionada</option>
           <option value="cancelada">Cancelada</option>
         </select>
       </div>
 
       <!-- KPIs Tratativas -->
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+      <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
         <div class="kpi-card kpi-amarelo"><div class="kpi-label">Bonificações</div><div class="kpi-value" id="trat-kpi-bon">R$ 0</div><div class="kpi-sub">Não geram comissão</div></div>
         <div class="kpi-card kpi-vermelho"><div class="kpi-label">Devoluções</div><div class="kpi-value" id="trat-kpi-dev">R$ 0</div><div class="kpi-sub">Reduzem faturamento</div></div>
         <div class="kpi-card kpi-azul"><div class="kpi-label">Abatimentos</div><div class="kpi-value" id="trat-kpi-abat">R$ 0</div><div class="kpi-sub">Reduzem comissão</div></div>
         <div class="kpi-card kpi-roxo"><div class="kpi-label">Erros Corrigidos</div><div class="kpi-value" id="trat-kpi-erro">0</div><div class="kpi-sub">Recalculados</div></div>
+        <div class="kpi-card kpi-verde"><div class="kpi-label">Solucionadas</div><div class="kpi-value" id="trat-kpi-sol">0</div><div class="kpi-sub">Encerradas com solução</div></div>
       </div>
 
       <div class="card" style="padding:0;overflow:hidden">
@@ -2676,7 +2688,7 @@ function _carregarLocal() {
     if(Array.isArray(d.sellOutData))      sellOutData      = d.sellOutData;
     if(Array.isArray(d.metasData))        metasData        = d.metasData;
     if(Array.isArray(d.regrasComerciais)) regrasComerciais = d.regrasComerciais;
-    if(Array.isArray(d.tratativas))       tratativas       = d.tratativas;
+    if(Array.isArray(d.tratativas))       tratativas       = d.tratativas.map(t=>({notas:[],...t}));
     if(Array.isArray(d.mixProdutos))      mixProdutos      = d.mixProdutos;
     if(Array.isArray(d.bonificacoesData)) bonificacoesData = d.bonificacoesData;
     if(Array.isArray(d.usuarios))         usuarios         = d.usuarios;
@@ -9652,10 +9664,12 @@ function renderTratativas() {
   const dev  = tratativas.filter(t=>t.tipo==='devolucao'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
   const abat = tratativas.filter(t=>t.tipo==='abatimento'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
   const errs = tratativas.filter(t=>t.tipo==='erro'&&t.status==='ativa').length;
+  const sols = tratativas.filter(t=>t.status==='solucionada').length;
   if(el('trat-kpi-bon'))  el('trat-kpi-bon').textContent  = fmt(bon);
   if(el('trat-kpi-dev'))  el('trat-kpi-dev').textContent  = fmt(dev);
   if(el('trat-kpi-abat')) el('trat-kpi-abat').textContent = fmt(abat);
   if(el('trat-kpi-erro')) el('trat-kpi-erro').textContent = errs;
+  if(el('trat-kpi-sol'))  el('trat-kpi-sol').textContent  = sols;
 
   const tipoInfo = {
     prorrogacao: {label:'📅 Prorrogação',cls:'badge-azul'},
@@ -9684,9 +9698,13 @@ function renderTratativas() {
           <td style="max-width:160px;font-size:11px">${esc(t.tipoErro||t.motivo)}</td>
           <td style="font-size:11px">${esc(t.usuario)}</td>
           <td style="font-size:11px;white-space:nowrap">${t.dataHora}</td>
-          <td><span class="badge ${t.status==='ativa'?'badge-verde':'badge-cinza'}">${t.status}</span></td>
+          <td><span class="badge ${t.status==='ativa'?'badge-verde':t.status==='solucionada'?'badge-preto':'badge-cinza'}">${t.status}</span></td>
           <td>
-            ${t.status==='ativa'?`<button class="btn btn-danger btn-xs" onclick="cancelarTratativa('${t.id}')">Cancelar</button>`:''}
+            ${t.status==='ativa'?`
+              <button class="btn btn-success btn-xs" onclick="abrirSolucaoTratativa('${t.id}')" title="Marcar como solucionada">✅ Solucionar</button>
+              <button class="btn btn-info btn-xs" onclick="abrirAcompTratativa('${t.id}')" title="Adicionar acompanhamento">📝 Nota</button>
+              <button class="btn btn-danger btn-xs" onclick="cancelarTratativa('${t.id}')">Cancelar</button>
+            `:(t.status==='solucionada'?`<button class="btn btn-outline btn-xs" onclick="abrirAcompTratativa('${t.id}')" title="Ver acompanhamento">📋 Ver</button>`:'') }
             ${t.arquivo?`<span class="badge badge-azul" style="cursor:pointer" title="${t.arquivo}">📎 NFD</span>`:''}
           </td>
         </tr>`;
@@ -9696,8 +9714,9 @@ function renderTratativas() {
 }
 
 function cancelarTratativa(id) {
-  if(!confirm('Cancelar esta tratativa? O impacto será revertido.')) return;
   const t = tratativas.find(x=>x.id===id); if(!t) return;
+  if(t.status!=='ativa'){alert('Esta tratativa não está ativa — apenas tratativas ativas podem ser canceladas.');return;}
+  if(!confirm('Cancelar esta tratativa? O impacto financeiro será revertido.')) return;
   // Reverter impacto
   const ped = pedidos.find(p=>p.id===t.pedido);
   if(ped&&ped.nf) {
@@ -9706,16 +9725,16 @@ function cancelarTratativa(id) {
     if(t.tipo==='abatimento')  pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,abatimentos:Math.max(0,(p.nf.abatimentos||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
     // Reverter erro: restaura valorNF e liquida para o valor do pedido original
     if(t.tipo==='erro'&&t.valorCorrigido>0) {
+      // BUG FIX: captura o valor original ANTES de modificar o array de pedidos
+      const pedOriginal = pedidos.find(p=>p.id===t.pedido);
+      const valorOriginal = pedOriginal?.nf?.valorNF || pedOriginal?.total || 0;
       pedidos=pedidos.map(p=>{
         if(p.id!==t.pedido||!p.nf) return p;
-        const valorOriginal = p.total; // valor original do pedido
         return {...p,nf:{...p.nf,valorNF:valorOriginal,liquida:valorOriginal}};
       });
       comissoes_data=comissoes_data.map(c=>{
         if(c.pedido!==t.pedido) return c;
-        const ped2 = pedidos.find(p=>p.id===t.pedido);
-        const baseOriginal = ped2?.total || c.baseLiq;
-        return {...c,baseLiq:baseOriginal,valor:baseOriginal*c.pct/100};
+        return {...c,baseLiq:valorOriginal,valor:valorOriginal*c.pct/100};
       });
     }
     if(['bonificacao','devolucao','abatimento'].includes(t.tipo)) {
@@ -9746,6 +9765,85 @@ function cancelarTratativa(id) {
 function atualizarBadgeTratativas() {
   const b=el('badge-tratativas');
   if(b) b.textContent=tratativas.filter(t=>t.status==='ativa').length;
+}
+
+/* ===== ACOMPANHAMENTO DE TRATATIVAS ===== */
+function abrirAcompTratativa(id) {
+  const t = tratativas.find(x=>x.id===id); if(!t) return;
+  if(!t.notas) t.notas = [];
+  const tipoLabels = {prorrogacao:'📅 Prorrogação',bonificacao:'🎁 Bonificação',devolucao:'↩️ Devolução',abatimento:'✂️ Abatimento',erro:'⚠️ Erro Faturamento'};
+  const notasHtml = t.notas.length===0
+    ? `<div style="text-align:center;color:#aaa;padding:12px;font-size:12px">Nenhuma nota registrada ainda</div>`
+    : t.notas.map(n=>`
+        <div class="trat-nota-item">
+          <div style="flex-shrink:0">
+            <div class="trat-nota-user">👤 ${esc(n.usuario)}</div>
+            <div class="trat-nota-time">${n.dataHora}</div>
+          </div>
+          <div class="trat-nota-text">${esc(n.texto)}</div>
+        </div>`).join('');
+
+  el('modal-trat-acomp-titulo').textContent = `${tipoLabels[t.tipo]||t.tipo} — ${t.id}`;
+  el('modal-trat-acomp-id').value = id;
+  el('modal-trat-acomp-status').textContent = t.status;
+  el('modal-trat-acomp-status').className = `badge ${t.status==='ativa'?'badge-verde':t.status==='solucionada'?'badge-preto':'badge-cinza'}`;
+  el('modal-trat-acomp-info').innerHTML = `
+    <div class="mini-row"><span>Pedido</span><strong class="mono">${t.pedido}</strong></div>
+    <div class="mini-row"><span>Cliente</span><strong>${esc(t.cliente)}</strong></div>
+    <div class="mini-row"><span>Indústria</span><strong>${esc(t.industria)}</strong></div>
+    <div class="mini-row"><span>Motivo</span><span>${esc(t.tipoErro||t.motivo)}</span></div>
+    ${t.status==='solucionada'&&t.solucao?`<div class="mini-row" style="background:#e8f5e9;border-radius:4px;padding:6px 8px;margin-top:4px"><span>✅ Solução</span><span style="color:var(--verde)">${esc(t.solucao)}</span></div>`:''}
+  `;
+  el('modal-trat-acomp-notas').innerHTML = notasHtml;
+  el('trat-nova-nota').value = '';
+  // Mostrar/esconder campo de nova nota só se ativa
+  el('trat-nova-nota-area').style.display = t.status==='ativa' ? 'block' : 'none';
+  openModal('modal-trat-acomp');
+}
+
+function adicionarNotaTratativa() {
+  const id = el('modal-trat-acomp-id').value;
+  const texto = el('trat-nova-nota').value?.trim();
+  if(!texto){alert('Escreva uma nota antes de salvar.');return;}
+  const t = tratativas.find(x=>x.id===id); if(!t) return;
+  if(!t.notas) t.notas = [];
+  t.notas.push({
+    usuario: usuarioLogado?.login||'admin',
+    dataHora: new Date().toLocaleString('pt-BR').slice(0,14),
+    texto
+  });
+  syncAutoSaveHook();
+  toast('Nota adicionada com sucesso!');
+  abrirAcompTratativa(id); // re-render
+}
+
+function abrirSolucaoTratativa(id) {
+  const t = tratativas.find(x=>x.id===id); if(!t||t.status!=='ativa') return;
+  el('modal-solucao-trat-id').value = id;
+  el('modal-solucao-trat-info').textContent = `${t.id} — ${t.cliente} / ${t.industria}`;
+  el('trat-solucao-texto').value = '';
+  openModal('modal-trat-solucao');
+}
+
+function confirmarSolucaoTratativa() {
+  const id = el('modal-solucao-trat-id').value;
+  const solucao = el('trat-solucao-texto').value?.trim();
+  if(!solucao){alert('Descreva como a tratativa foi solucionada.');return;}
+  const t = tratativas.find(x=>x.id===id); if(!t) return;
+  if(!t.notas) t.notas = [];
+  // Registra nota final de solução
+  t.notas.push({
+    usuario: usuarioLogado?.login||'admin',
+    dataHora: new Date().toLocaleString('pt-BR').slice(0,14),
+    texto: `✅ SOLUCIONADA: ${solucao}`
+  });
+  tratativas = tratativas.map(x=>x.id===id?{...x,status:'solucionada',solucao,dataSolucao:new Date().toLocaleString('pt-BR').slice(0,14)}:x);
+  addAudit(usuarioLogado?.login||'admin', `Tratativa ${id} solucionada: ${solucao}`, '✅');
+  closeModal('modal-trat-solucao');
+  syncAutoSaveHook();
+  renderTratativas();
+  atualizarBadgeTratativas();
+  toast('Tratativa marcada como solucionada!');
 }
 
 /* ══════════════════════════
@@ -11765,6 +11863,60 @@ console.info('[GestCom v6.4] ✅ Auto-save para TODOS os usuários · polling 30
     </div>
     <div style="display:flex;justify-content:flex-end;margin-top:16px">
       <button class="btn btn-outline" onclick="closeModal('modal-sellin-edit')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ACOMPANHAMENTO TRATATIVA ===== -->
+<div class="modal-bg" id="modal-trat-acomp">
+  <div class="modal modal-xl">
+    <div class="modal-title">
+      <span id="modal-trat-acomp-titulo">Acompanhamento de Tratativa</span>
+      <span id="modal-trat-acomp-status" class="badge badge-verde" style="margin-left:8px">ativa</span>
+      <button class="close-btn" onclick="closeModal('modal-trat-acomp')">✕</button>
+    </div>
+    <input type="hidden" id="modal-trat-acomp-id">
+    <div class="nf-compare-grid" style="margin-bottom:14px">
+      <div class="nf-section">
+        <div class="nf-section-title">Dados da Tratativa</div>
+        <div id="modal-trat-acomp-info"></div>
+      </div>
+      <div class="nf-section">
+        <div class="nf-section-title">Histórico de Notas</div>
+        <div id="modal-trat-acomp-notas" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div id="trat-nova-nota-area">
+      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Adicionar nova nota de acompanhamento</div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div class="form-group" style="flex:1;margin-bottom:0">
+          <textarea id="trat-nova-nota" rows="2" placeholder="Descreva o andamento, contato realizado, próximos passos..." style="width:100%;padding:8px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--amarelo)'" onblur="this.style.borderColor='var(--cinza-medio)'"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="adicionarNotaTratativa()" style="flex-shrink:0">📝 Salvar Nota</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeModal('modal-trat-acomp')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL SOLUCIONAR TRATATIVA ===== -->
+<div class="modal-bg" id="modal-trat-solucao">
+  <div class="modal">
+    <div class="modal-title">✅ Solucionar Tratativa<button class="close-btn" onclick="closeModal('modal-trat-solucao')">✕</button></div>
+    <input type="hidden" id="modal-solucao-trat-id">
+    <div class="alert alert-success">Marcar como <strong>solucionada</strong> indica que a tratativa foi resolvida. O impacto financeiro já aplicado <strong>não será revertido</strong> — use "Cancelar" se quiser reverter.</div>
+    <div style="background:#f4f3ef;border-radius:6px;padding:10px 14px;font-size:12px;color:#555;margin-bottom:14px">
+      <strong>Tratativa:</strong> <span id="modal-solucao-trat-info"></span>
+    </div>
+    <div class="form-group">
+      <label>Como foi solucionada? *</label>
+      <textarea id="trat-solucao-texto" rows="3" placeholder="Descreva a solução adotada, ex: Crédito emitido em XX/XX, devolução aceita pela indústria, cliente confirmou recebimento..." style="width:100%;padding:8px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none" onfocus="this.style.borderColor='var(--amarelo)'" onblur="this.style.borderColor='var(--cinza-medio)'"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-outline" onclick="closeModal('modal-trat-solucao')">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarSolucaoTratativa()">✅ Confirmar Solução</button>
     </div>
   </div>
 </div>
