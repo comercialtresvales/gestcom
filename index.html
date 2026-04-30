@@ -10439,9 +10439,10 @@ function aplicarDadosDaNuvem(dados, silencioso=false) {
   if(Array.isArray(dados.sellOutData)) sellOutData = dados.sellOutData;
   if(Array.isArray(dados.metasData)) metasData = dados.metasData;
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
-  if(Array.isArray(dados.tratativas)) tratativas = dados.tratativas;
+  if(Array.isArray(dados.tratativas)) tratativas = dados.tratativas.map(t=>({notas:[],...t}));
   if(Array.isArray(dados.mixProdutos)) mixProdutos = dados.mixProdutos;
   if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
+  if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==="object") Object.assign(PRODUTOS_CAT, dados.PRODUTOS_CAT);
   if(dados.userPerms && typeof dados.userPerms==="object") Object.assign(userPerms, dados.userPerms);
   if(dados.configSistema && typeof dados.configSistema==="object") Object.assign(configSistema, dados.configSistema);
   if(Array.isArray(dados.saldoUsosData)) window.saldoUsosData = dados.saldoUsosData;
