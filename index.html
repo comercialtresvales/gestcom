@@ -710,6 +710,7 @@ tr:last-child td{border-bottom:none;}
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
           <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão de todas as comissões conforme Regras Comerciais e cadastro de indústrias">🔄 Recalcular % + Tipo</button>
           <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
+          <button class="btn btn-success btn-sm" onclick="recalcularMesPrevisaoTodasComissoes()" title="Recalcula apenas o mês de previsão — corrige DPC, DDL e outros prazos que não eram reconhecidos como número">📅 Corrigir Mês (DPC/DDL)</button>
           <button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Exportar Excel</button>
         </div>
       </div>
@@ -3953,10 +3954,15 @@ function salvarPedido() {
       if(cIdx>=0){
         const c = comissoes_data[cIdx];
         // Recalcula mês de previsão com dados atualizados (NF, prazo, tipo)
+        // Tipo: regra específica do cliente tem prioridade sobre tipoCom da indústria
+        const _cliUpdRede = clientes.find(cl => cl.nome === obj.cliente || cl.id === obj.cliente)?.rede || '';
+        const _regraUpd = regrasComerciais.find(r => r.ativo && (r.industria==='Todas'||r.industria===obj.industria) && r.cliente===obj.cliente)
+          || (_cliUpdRede && regrasComerciais.find(r => r.ativo && (r.industria==='Todas'||r.industria===obj.industria) && r.rede===_cliUpdRede))
+          || regrasComerciais.find(r => r.ativo && (r.industria==='Todas'||r.industria===obj.industria) && (r.cliente==='Todos'||!r.cliente) && !r.rede);
         const indCadUpd = industrias.find(i => i.nome === obj.industria || i.id === obj.industria);
-        const tipoUpd = indCadUpd?.tipoCom || c.tipo || 'Faturamento';
+        const tipoUpd = _regraUpd?.tipo || indCadUpd?.tipoCom || c.tipo || 'Faturamento';
         const cliCadUpd = clientes.find(cl => cl.nome === obj.cliente || cl.id === obj.cliente);
-        const prazoUpd = obj.cond || cliCadUpd?.prazo || '';
+        const prazoUpd = _regraUpd?.prazo || obj.cond || cliCadUpd?.prazo || '';
         const dataNFUpd = nfInline?.data || obj.nf?.data || obj.data || new Date();
         const mesLabelUpd = _calcMesPrevisaoComissao(dataNFUpd, tipoUpd, prazoUpd);
         comissoes_data[cIdx] = {...c, baseLiq: baseCom, valor: baseCom*c.pct/100, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
@@ -4127,10 +4133,14 @@ function salvarNF() {
         const cIdx = comissoes_data.findIndex(c => c.pedido === ped.id && c.status !== 'Recebida');
         if(cIdx >= 0) {
           const c = comissoes_data[cIdx];
+          const _cliNFRede = clientes.find(cl => cl.nome === ped.cliente || cl.id === ped.cliente)?.rede || '';
+          const _regraNF = regrasComerciais.find(r => r.ativo && (r.industria==='Todas'||r.industria===ped.industria) && r.cliente===ped.cliente)
+            || (_cliNFRede && regrasComerciais.find(r => r.ativo && (r.industria==='Todas'||r.industria===ped.industria) && r.rede===_cliNFRede))
+            || regrasComerciais.find(r => r.ativo && (r.industria==='Todas'||r.industria===ped.industria) && (r.cliente==='Todos'||!r.cliente) && !r.rede);
           const indCadNF = industrias.find(i => i.nome === ped.industria || i.id === ped.industria);
-          const tipoNF   = indCadNF?.tipoCom || c.tipo || 'Faturamento';
+          const tipoNF   = _regraNF?.tipo || indCadNF?.tipoCom || c.tipo || 'Faturamento';
           const cliCadNF = clientes.find(cl => cl.nome === ped.cliente || cl.id === ped.cliente);
-          const prazoNF  = ped.cond || cliCadNF?.prazo || '';
+          const prazoNF  = _regraNF?.prazo || ped.cond || cliCadNF?.prazo || '';
           const dataNFUpd = nfObj.data || ped.data || new Date();
           const mesNF = _calcMesPrevisaoComissao(dataNFUpd, tipoNF, prazoNF);
           comissoes_data[cIdx] = {...c, baseLiq: liq, valor: liq * c.pct / 100, tipo: tipoNF, mesPrevisao: mesNF};
@@ -4264,10 +4274,25 @@ function _addDias(date, n) {
   return d;
 }
 
-// ─── Utilitário: converte prazo "30D", "30/60D", "30+60" etc. → dias totais ─
+// ─── Utilitário: converte prazo "30D", "30/60D", "30+60", "DPC", "DDL" etc. → dias totais ─
 function _parsePrazoDias(prazoStr) {
   if(!prazoStr) return 0;
   const s = String(prazoStr).replace(/\s/g,'').toUpperCase();
+
+  // ── Termos especiais de prazo (sem número) ──────────────────────────────────
+  // DPC  = Depósito Por Conta / prazo combinado com indústria → padrão 60 dias
+  // DDL  = Dia De Liquidação / data-específica → padrão 30 dias
+  // DDU  = Dia Útil → padrão 30 dias
+  // VISTA / AV / CV = À vista → 0 dias (fatura no mês seguinte à NF, como Faturamento)
+  if(/^DPC/.test(s)) {
+    // Tenta extrair número após DPC, ex: "DPC60" ou "DPC 60" → 60; senão usa 60 padrão
+    const m = s.match(/DPC(\d+)/);
+    return m ? parseInt(m[1]) : 60;
+  }
+  if(/^DDL/.test(s)) { const m = s.match(/DDL(\d+)/); return m ? parseInt(m[1]) : 30; }
+  if(/^DDU/.test(s)) { const m = s.match(/DDU(\d+)/); return m ? parseInt(m[1]) : 30; }
+  if(/^(VISTA|AV|CV|AVISTA)$/.test(s)) return 0;
+
   // Remove sufixo D no final, ex: "60D" → "60", "30/60D" → "30/60"
   const clean = s.endsWith('D') ? s.slice(0,-1) : s;
   // Múltiplas parcelas: pega o MAIOR prazo (último vencimento)
@@ -4303,7 +4328,9 @@ function _calcMesPrevisaoComissao(dataNF, tipoCom, prazoCliente) {
   if(tipoCom === 'Liquidez') {
     // 1. Calcula vencimento do boleto: data NF + prazo em dias
     const dias = _parsePrazoDias(prazoCliente);
-    const dVenc = dias > 0 ? _addDias(dNF, dias) : dNF;
+    // Se dias = 0 (à vista ou prazo não identificado), trata como Faturamento
+    if(dias === 0) return _dateToMesLabel(_addMeses(dNF, 1));
+    const dVenc = _addDias(dNF, dias);
     // 2. Mês de recebimento = mês SEGUINTE ao vencimento
     const dRec = _addMeses(dVenc, 1);
     return _dateToMesLabel(dRec);
@@ -4317,27 +4344,39 @@ function _calcMesPrevisaoComissao(dataNF, tipoCom, prazoCliente) {
 function gerarComissaoAuto(ped, baseLiq) {
   if(!baseLiq || baseLiq <= 0) return; // não gera comissão R$0
 
-  // Busca a regra cadastrada para esta indústria/cliente/rede, senão usa padrão 5%
+  // Busca a regra cadastrada — PRIORIDADE: cliente específico > rede > global da indústria
   const _cliCadGCA = clientes.find(c => c.nome === ped.cliente || c.id === ped.cliente);
   const _redeGCA = _cliCadGCA?.rede || '';
-  const regra = regrasComerciais.find(r=>r.ativo &&
-    (r.industria==='Todas'||r.industria===ped.industria) &&
-    (r.cliente==='Todos'||r.cliente===ped.cliente)
-  ) || (_redeGCA && regrasComerciais.find(r=>r.ativo &&
-    (r.industria==='Todas'||r.industria===ped.industria) &&
-    r.rede===_redeGCA
-  )) || regrasComerciais.find(r=>r.ativo && (r.industria==='Todas'||r.industria===ped.industria));
+
+  // 1º: regra exclusiva para este cliente + indústria
+  const regraCliente = regrasComerciais.find(r => r.ativo &&
+    (r.industria==='Todas' || r.industria===ped.industria) &&
+    r.cliente === ped.cliente
+  );
+  // 2º: regra de rede + indústria
+  const regraRede = !regraCliente && _redeGCA
+    ? regrasComerciais.find(r => r.ativo &&
+        (r.industria==='Todas' || r.industria===ped.industria) &&
+        r.rede === _redeGCA)
+    : null;
+  // 3º: regra global da indústria (cliente='Todos', sem rede)
+  const regraGlobal = regrasComerciais.find(r => r.ativo &&
+    (r.industria==='Todas' || r.industria===ped.industria) &&
+    (r.cliente==='Todos' || !r.cliente) && !r.rede
+  );
+  const regra = regraCliente || regraRede || regraGlobal;
   const pct = regra ? regra.pct : 5;
 
-  // ── CORRIGIDO: busca tipoCom na indústria cadastrada ──────────────────────
+  // ── Tipo: vem da REGRA encontrada; fallback = tipoCom da indústria; fallback final = Faturamento
+  // (regra de cliente/rede específica pode ter tipo diferente do padrão da indústria)
   const indCad = industrias.find(i => i.nome === ped.industria || i.id === ped.industria);
-  const tipo = indCad?.tipoCom || (regra?.tipo) || 'Faturamento';
+  const tipo = (regra?.tipo) || indCad?.tipoCom || 'Faturamento';
 
-  // ── CORRIGIDO: busca prazo do cliente cadastrado ──────────────────────────
+  // ── Prazo: vem da regra (se preenchido), senão da condição do pedido, senão cadastro do cliente
   const cliCad = clientes.find(c => c.nome === ped.cliente || c.id === ped.cliente);
-  const prazoCliente = ped.cond || cliCad?.prazo || '';
+  const prazoCliente = regra?.prazo || ped.cond || cliCad?.prazo || '';
 
-  // ── CORRIGIDO: usa data da NF (não data atual) ────────────────────────────
+  // ── Data da NF
   const dataNF = ped.nf?.data || ped.data || new Date();
 
   // ── Calcula mês de previsão conforme regra ─────────────────────────────────
@@ -5084,18 +5123,18 @@ function recalcularPctComissoes() {
     // Prioridade: regra específica p/ cliente > regra de rede > regra global da indústria
     const regra = regrasComerciais.find(r => r.ativo &&
       (r.industria==='Todas' || r.industria===c.industria) &&
-      (r.cliente==='Todos'   || r.cliente===c.cliente)
+      r.cliente === c.cliente
     ) || (redeObj && regrasComerciais.find(r => r.ativo &&
       (r.industria==='Todas' || r.industria===c.industria) &&
       r.rede===redeObj
-    )) || regrasComerciais.find(r => r.ativo && (r.industria==='Todas' || r.industria===c.industria));
+    )) || regrasComerciais.find(r => r.ativo && (r.industria==='Todas' || r.industria===c.industria) && (r.cliente==='Todos'||!r.cliente) && !r.rede);
     if(!regra) return c;
     const novoPct = regra.pct;
-    // ── Também atualiza tipo e mês de previsão ─────────────────────────────
+    // ── Tipo: regra tem prioridade; fallback = tipoCom da indústria ─────────
     const indCad = industrias.find(i => i.nome === c.industria || i.id === c.industria);
-    const novoTipo = indCad?.tipoCom || regra.tipo || 'Faturamento';
+    const novoTipo = regra.tipo || indCad?.tipoCom || 'Faturamento';
     const ped = pedidos.find(p => p.id === c.pedido);
-    const prazo = ped?.cond || cliObj?.prazo || '';
+    const prazo = regra.prazo || ped?.cond || cliObj?.prazo || '';
     const dataNF = ped?.nf?.data || ped?.data || c.dataNF || new Date();
     const novoMes = _calcMesPrevisaoComissao(dataNF, novoTipo, prazo);
     total++;
@@ -5138,6 +5177,33 @@ function recalcularTipoTodasComissoes() {
   syncAutoSaveHook();
   const avisoSemCad = semCadastro > 0 ? ` · ⚠️ ${semCadastro} sem cadastro de indústria` : '';
   toast(`✅ ${verificadas} comissão(ões) verificadas · ${alteradas} tipo(s) corrigido(s)${avisoSemCad}.`);
+}
+
+// ─── Recalcula APENAS o mês de previsão de todas as comissões (sem alterar % nem tipo) ─
+// Útil quando o prazo estava como "DPC", "DDL" ou outro termo textual e era ignorado.
+function recalcularMesPrevisaoTodasComissoes() {
+  if(!confirm(
+    'Recalcular o MÊS DE PREVISÃO de TODAS as comissões pendentes?\n\n' +
+    'Isso corrige comissões com prazo "DPC", "DDL" ou outros termos especiais que estavam sendo ignorados.\n' +
+    'O % e o tipo (Faturamento/Liquidez) NÃO serão alterados.\n\n' +
+    'Comissões já "Recebida" não serão tocadas.'
+  )) return;
+  let verificadas = 0, alteradas = 0;
+  comissoes_data = comissoes_data.map(c => {
+    if(c.excluido || c.status === 'Recebida') return c;
+    verificadas++;
+    const ped    = pedidos.find(p => p.id === c.pedido);
+    const cliCad = clientes.find(cl => cl.nome === c.cliente || cl.id === c.cliente);
+    const prazo  = ped?.cond || cliCad?.prazo || '';
+    const dataNF = ped?.nf?.data || ped?.data || c.dataNF || new Date();
+    const novoMes = _calcMesPrevisaoComissao(dataNF, c.tipo, prazo);
+    if(novoMes === c.mesPrevisao) return c;
+    alteradas++;
+    return {...c, mesPrevisao: novoMes};
+  });
+  renderComissoes();
+  syncAutoSaveHook();
+  toast(`✅ ${verificadas} comissão(ões) verificadas · ${alteradas} mês(es) corrigido(s).`, alteradas > 0 ? 'success' : 'info');
 }
 
 function excluirComissao(id) {
