@@ -465,7 +465,7 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="search-bar">
-        <input id="orc-busca" placeholder="🔍 Buscar orçamento, cliente..." oninput="renderOrcamentos()">
+        <input id="orc-busca" placeholder="🔍 Nº orçamento, cliente, indústria..." oninput="renderOrcamentos()">
         <select id="orc-filtro-status" onchange="renderOrcamentos()">
           <option value="">Todos os status</option>
           <option>Rascunho</option><option>Em análise</option><option>Enviado</option>
@@ -527,7 +527,7 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="search-bar">
-        <input id="ped-busca" placeholder="🔍 Nº pedido, cliente..." oninput="clearTimeout(window._pedST);window._pedST=setTimeout(()=>{window._pedPag=1;renderPedidos();},280)">
+        <input id="ped-busca" placeholder="🔍 Nº pedido, cliente, indústria..." oninput="clearTimeout(window._pedST);window._pedST=setTimeout(()=>{window._pedPag=1;renderPedidos();},280)">
         <select id="ped-filtro-tipo" onchange="renderPedidos()">
           <option value="">Todos os tipos</option>
           <option value="venda">🛒 Venda</option>
@@ -639,7 +639,7 @@ tr:last-child td{border-bottom:none;}
       </div>
 
       <div class="search-bar">
-        <input id="log-busca" placeholder="🔍 Pedido, cliente..." oninput="renderLogistica()">
+        <input id="log-busca" placeholder="🔍 Pedido, cliente, indústria..." oninput="renderLogistica()">
         <select id="log-filtro-status" onchange="renderLogistica()">
           <option value="">Todos os status</option>
           <option>Pedido Digitado</option><option>Pedido Enviado</option><option>Em Separação</option>
@@ -714,7 +714,7 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="search-bar">
-        <input id="com-busca" placeholder="🔍 Cliente, indústria..." oninput="renderComissoes()">
+        <input id="com-busca" placeholder="🔍 Cliente, indústria, Nº NF, Nº Pedido..." oninput="renderComissoes()">
         <select id="com-filtro-ind" onchange="renderComissoes()">
           <option value="">Todas as indústrias</option>
         </select>
@@ -2858,7 +2858,7 @@ function renderOrcamentos() {
   const filtInd = (el('orc-filtro-ind')||{}).value||'';
   const tbody = el('orc-tbody'); if(!tbody) return;
   const list = orcamentos.filter(o=>{
-    if(busca&&!o.id.toLowerCase().includes(busca)&&!o.cliente.toLowerCase().includes(busca)) return false;
+    if(busca&&!o.id.toLowerCase().includes(busca)&&!o.cliente.toLowerCase().includes(busca)&&!o.industria.toLowerCase().includes(busca)) return false;
     if(filtSt&&o.status!==filtSt) return false;
     if(filtInd&&o.industria!==filtInd) return false;
     return true;
@@ -3284,7 +3284,7 @@ function renderPedidos() {
   const list = pedidos.filter(p=>{
     // Por padrão, oculta excluídos; mostra só se checkbox marcado
     if(p.excluido && !mostrarExcluidos) return false;
-    if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)) return false;
+    if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)&&!p.industria.toLowerCase().includes(busca)) return false;
     // Pedidos excluídos sempre passam pelos filtros de status/indústria/tipo quando mostrarExcluidos está ativo
     const isExcShowing = mostrarExcluidos && p.excluido;
     if(filtSt && !isExcShowing && p.status!==filtSt) return false;
@@ -4452,7 +4452,7 @@ function renderNFCompare() {
   const busca=(el('cmp-busca')||{}).value?.toLowerCase()||'';
   const list=pedidos.filter(p=>{
     if(p.excluido) return false;
-    if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca))return false;
+    if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)&&!(p.nf?.numero||'').toLowerCase().includes(busca))return false;
     if(filtDiv==='com'&&!p.nf)return false;
     if(filtDiv==='sem'){
       // "Sem divergência" = tem NF e diferença <= R$1
@@ -4968,7 +4968,15 @@ function renderComissoes() {
 
   let list = comissoes_data.filter(c=>{
     if(c.excluido) return false; // oculta comissões vinculadas a pedidos excluídos
-    if(busca && !c.cliente.toLowerCase().includes(busca) && !c.industria.toLowerCase().includes(busca)) return false;
+    if(busca) {
+      const pedVincFilt = pedidos.find(p=>p.id===c.pedido);
+      const nfNumFilt   = (pedVincFilt?.nf?.numero||'').toLowerCase();
+      const pedIdFilt   = (c.pedido||'').toLowerCase();
+      if(!c.cliente.toLowerCase().includes(busca) &&
+         !c.industria.toLowerCase().includes(busca) &&
+         !nfNumFilt.includes(busca) &&
+         !pedIdFilt.includes(busca)) return false;
+    }
     if(filtInd && c.industria!==filtInd) return false;
     if(filtSt  && c.status!==filtSt)    return false;
     if(filtMes && c.mesPrevisao!==filtMes) return false;
@@ -8603,7 +8611,7 @@ function renderLogistica() {
   }
 
   // Aplica filtros
-  if(busca)   list = list.filter(l => l.pedId.toLowerCase().includes(busca) || l.cliente.toLowerCase().includes(busca));
+  if(busca)   list = list.filter(l => l.pedId.toLowerCase().includes(busca) || l.cliente.toLowerCase().includes(busca) || l.industria.toLowerCase().includes(busca));
   if(filtSt)  list = list.filter(l => l.statusLog === filtSt);
   if(filtInd) list = list.filter(l => l.industria === filtInd);
   if(filtAlerta === 'atrasado')    list = list.filter(l => _logIsAtrasado(l));
@@ -9557,6 +9565,7 @@ function salvarTratativa() {
     pedido:pedId, nfOriginal:(el('t-nf')||{}).value||'',
     cliente:ped?.cliente||'', industria:ped?.industria||'',
     valor, motivo,
+    valorNFAntes: tratativaAtualTipo==='erro' ? (ped?.nf?.valorNF || ped?.total || 0) : 0,
     tipoErro:      (el('t-tipo-erro')||{}).value||'',
     valorCorrigido: parseFloat((el('t-valor-correto')||{}).value)||0,
     qtdDevolvida:   parseInt((el('t-qtd')||{}).value)||0,
@@ -9723,18 +9732,16 @@ function cancelarTratativa(id) {
     if(t.tipo==='bonificacao') pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,bonif:Math.max(0,(p.nf.bonif||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
     if(t.tipo==='devolucao')   pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,devolucoes:Math.max(0,(p.nf.devolucoes||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
     if(t.tipo==='abatimento')  pedidos=pedidos.map(p=>p.id===t.pedido?{...p,nf:{...p.nf,abatimentos:Math.max(0,(p.nf.abatimentos||0)-t.valor),liquida:p.nf.liquida+t.valor}}:p);
-    // Reverter erro: restaura valorNF e liquida para o valor do pedido original
+    // Reverter erro: restaura valorNF e liquida para o valor registrado ANTES da tratativa
     if(t.tipo==='erro'&&t.valorCorrigido>0) {
-      // BUG FIX: captura o valor original ANTES de modificar o array de pedidos
-      const pedOriginal = pedidos.find(p=>p.id===t.pedido);
-      const valorOriginal = pedOriginal?.nf?.valorNF || pedOriginal?.total || 0;
+      const valorAntes = t.valorNFAntes || t.valor || 0;
       pedidos=pedidos.map(p=>{
         if(p.id!==t.pedido||!p.nf) return p;
-        return {...p,nf:{...p.nf,valorNF:valorOriginal,liquida:valorOriginal}};
+        return {...p,nf:{...p.nf,valorNF:valorAntes,liquida:valorAntes}};
       });
       comissoes_data=comissoes_data.map(c=>{
         if(c.pedido!==t.pedido) return c;
-        return {...c,baseLiq:valorOriginal,valor:valorOriginal*c.pct/100};
+        return {...c,baseLiq:valorAntes,valor:valorAntes*c.pct/100};
       });
     }
     if(['bonificacao','devolucao','abatimento'].includes(t.tipo)) {
