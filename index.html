@@ -1447,9 +1447,12 @@ tr:last-child td{border-bottom:none;}
     <!-- Linha de adição de produto -->
     <div style="background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Adicionar produto</div>
-      <div style="display:grid;grid-template-columns:90px 1fr 110px 90px 80px 90px auto;gap:8px;align-items:end">
+      <div style="display:grid;grid-template-columns:90px 130px 1fr 110px 90px 80px 90px auto;gap:8px;align-items:end">
         <div class="form-group" style="margin:0"><label>Código</label>
           <input type="text" id="orc-add-cod" class="mono" placeholder="LAB-001" oninput="orcAutoFill(this.value,'orc')">
+        </div>
+        <div class="form-group" style="margin:0"><label style="display:flex;align-items:center;gap:4px">EAN <span style="font-size:9px;background:#e3f2fd;color:#1a5fa8;border-radius:3px;padding:1px 4px;font-weight:700">buscar</span></label>
+          <input type="text" id="orc-add-ean" class="mono" placeholder="7891234..." maxlength="14" oninput="orcAutoFillEAN(this.value,'orc')" style="font-size:11px;letter-spacing:.3px">
         </div>
         <div class="form-group" style="margin:0"><label>Descrição</label>
           <input type="text" id="orc-add-desc" placeholder="Auto...">
@@ -1550,9 +1553,12 @@ tr:last-child td{border-bottom:none;}
     <!-- Adicionar produto ao pedido -->
     <div style="background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Adicionar produto</div>
-      <div style="display:grid;grid-template-columns:90px 1fr 110px 70px 70px 100px 90px auto;gap:8px;align-items:end">
+      <div style="display:grid;grid-template-columns:90px 130px 1fr 110px 70px 70px 100px 90px auto;gap:8px;align-items:end">
         <div class="form-group" style="margin:0"><label>Código</label>
           <input type="text" id="ped-add-cod" class="mono" placeholder="LAB-001" oninput="orcAutoFill(this.value,'ped')">
+        </div>
+        <div class="form-group" style="margin:0"><label style="display:flex;align-items:center;gap:4px">EAN <span style="font-size:9px;background:#e3f2fd;color:#1a5fa8;border-radius:3px;padding:1px 4px;font-weight:700">buscar</span></label>
+          <input type="text" id="ped-add-ean" class="mono" placeholder="7891234..." maxlength="14" oninput="orcAutoFillEAN(this.value,'ped')" style="font-size:11px;letter-spacing:.3px">
         </div>
         <div class="form-group" style="margin:0"><label>Descrição</label>
           <input type="text" id="ped-add-desc" placeholder="Auto...">
@@ -2944,6 +2950,19 @@ function _getMixItem(cliNome, codProd) {
 }
 
 /* ── Retorna o preço negociado do mix (ou tabela se não houver mix) ── */
+function orcAutoFillEAN(ean, prefix) {
+  const eanClean = (ean||'').trim();
+  if(eanClean.length < 8) return;
+  const found = _buscarProdutoPorEAN(eanClean);
+  if(!found) return;
+  // Preenche o campo Código com o código real do produto
+  const codEl = el(prefix+'-add-cod');
+  if(codEl) codEl.value = found.cod;
+  // Limpa o campo EAN após encontrar (feedback visual)
+  // Dispara o autoFill normalmente pelo código
+  orcAutoFill(found.cod, prefix);
+}
+
 function _getPrecoMix(cliNome, codProd) {
   const mixItem = _getMixItem(cliNome, codProd);
   if(mixItem) {
@@ -2955,9 +2974,37 @@ function _getPrecoMix(cliNome, codProd) {
   return { precoTab: p ? p.preco : 0, descPct: 0, precoNeg: p ? p.preco : 0, deMix: false };
 }
 
+function _buscarProdutoPorEAN(ean) {
+  if(!ean || ean.length < 8) return null;
+  // Busca no PRODUTOS_CAT pelo EAN base ou EAN por UF
+  for(const [cod, p] of Object.entries(PRODUTOS_CAT)) {
+    if((p.ean||'').trim() === ean) return { cod, ...p };
+    if(p.eanUF) {
+      for(const ufEan of Object.values(p.eanUF)) {
+        if((ufEan||'').trim() === ean) return { cod, ...p };
+      }
+    }
+  }
+  return null;
+}
+
 function orcAutoFill(cod, prefix) {
   const codUp = cod.toUpperCase();
-  const p = PRODUTOS_CAT[codUp];
+  let p = PRODUTOS_CAT[codUp];
+  let resolvedCod = codUp;
+
+  // Se não achou pelo código, tenta buscar pelo EAN
+  if(!p && /^\d{8,14}$/.test(cod)) {
+    const byEan = _buscarProdutoPorEAN(cod);
+    if(byEan) {
+      p = byEan;
+      resolvedCod = byEan.cod;
+      // Substitui o campo de código pelo código real do produto
+      const codEl = el(prefix+'-add-cod');
+      if(codEl) codEl.value = resolvedCod;
+    }
+  }
+
   if(!p) return;
 
   // Preenche descrição e indústria
@@ -2965,7 +3012,7 @@ function orcAutoFill(cod, prefix) {
   if(el(prefix+'-add-ind'))  el(prefix+'-add-ind').value  = p.ind;
 
   const cliNome = el(prefix+'-cli')?.value || '';
-  const mixInfo = _getPrecoMix(cliNome, codUp);
+  const mixInfo = _getPrecoMix(cliNome, resolvedCod);
 
   // Preenche % desconto do mix se existir
   const descEl = el(prefix+'-add-desc-pct');
@@ -3029,7 +3076,7 @@ function orcAddItem() {
   const total = precoUnit*qtd;
   if(!cod||!desc){alert('Preencha o código e a descrição.');return;}
   orcItens.push({cod,desc,ind,precoTab,qtd,descPct,precoUnit,total});
-  el('orc-add-cod').value='';el('orc-add-desc').value='';el('orc-add-ind').value='';
+  el('orc-add-cod').value='';el('orc-add-ean').value='';el('orc-add-desc').value='';el('orc-add-ind').value='';
   el('orc-add-qtd').value=1;el('orc-add-desc-pct').value=0;el('orc-add-total').value='';
   renderOrcItens();
 }
@@ -3613,7 +3660,7 @@ function pedAddItem() {
     console.info(`[GestCom] Produto ${cod}: preço manual R$ ${fmtN(unitManual)} difere da referência R$ ${fmtN(precoRef)}. Inserido como informado.`);
   }
   pedItens.push({cod,desc,ind,precoTab,qtd,descPct,precoUnit,total});
-  el('ped-add-cod').value='';el('ped-add-desc').value='';el('ped-add-ind').value='';
+  el('ped-add-cod').value='';el('ped-add-ean').value='';el('ped-add-desc').value='';el('ped-add-ind').value='';
   el('ped-add-ind').value='';el('ped-add-qtd').value=1;el('ped-add-desc-pct').value=0;
   el('ped-add-preco-unit').value='';el('ped-add-total').value='';
   if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display='none';
@@ -6591,6 +6638,9 @@ function importarCadastro(tipo) {
   openModal('modal-import');
 }
 
+// Dados pendentes de confirmação para importação de orçamentos
+let _orcImportPendente = null;
+
 function importarArquivo(tipo){
   if(tipo==='orcamento'){
     const input = document.createElement('input');
@@ -6624,6 +6674,7 @@ function importarArquivo(tipo){
           const cSt     = fc(['status']);
           const cObs    = fc(['obs']);
           const cCod    = fc(['codigo','cod','sku','ref']);
+          const cEAN    = fc(['ean','codigo de barras','barcode','gtin','cod barras']);
           const cDesc   = fc(['descricao','desc','produto','item','nome produto']);
           const cQtd    = fc(['qtd','quantidade','quant','qty']);
           const cDescPct= fc(['desconto','desc %','% desconto','descpct']);
@@ -6638,7 +6689,15 @@ function importarArquivo(tipo){
             if(!cli) return;
             const dataKey = String(row[cData]||'').trim() || '__SEMDATA__';
             const condKey = String(row[cCond]||'').trim() || '__SEMCOND__';
-            const cod = cCod ? String(row[cCod]||'').trim().toUpperCase() : '';
+            let cod = cCod ? String(row[cCod]||'').trim().toUpperCase() : '';
+            let eanResolvido = false;
+            if(!cod && cEAN) {
+              const eanVal = String(row[cEAN]||'').trim();
+              if(eanVal.length >= 8) {
+                const byEan = _buscarProdutoPorEAN(eanVal);
+                if(byEan) { cod = byEan.cod; eanResolvido = true; }
+              }
+            }
             const descItem = cDesc ? String(row[cDesc]||'').trim() : '';
             const temItem = !!(cod || descItem);
             const chave = temItem
@@ -6666,23 +6725,41 @@ function importarArquivo(tipo){
               let precoUnit  = parseMoney(cPreco ? row[cPreco] : '');
               const totalRow = parseMoney(cTotal ? row[cTotal] : '');
               if(!precoUnit && totalRow && qtd) precoUnit = parseFloat((totalRow/qtd).toFixed(2));
-              const totalFinal = totalRow > 0 ? totalRow : parseFloat((precoUnit*qtd*(1-descPct/100)).toFixed(2));
-              grupos[chave].itens.push({cod:cod||'ITEM', desc:descItem||cod, ind, precoTab:0, qtd, descPct, precoUnit, total:totalFinal});
+
+              // ── Auto-fill: se preço unitário ainda zerado, busca mix ou tabela ──
+              let precoTab = 0;
+              let _autoDescPct = descPct;
+              let _autoPreenchido = false;
+              if(!precoUnit && cod && cod !== 'ITEM') {
+                const cliImport = String(row[cCli]||'').trim();
+                const mixInfo = _getPrecoMix(cliImport, cod);
+                if(mixInfo && mixInfo.precoTab > 0) {
+                  precoTab = mixInfo.precoTab;
+                  // Se veio do mix e não tem desconto manual, usa desconto do mix
+                  if(!descPct && mixInfo.descPct > 0) _autoDescPct = mixInfo.descPct;
+                  precoUnit = parseFloat((precoTab * (1 - _autoDescPct/100)).toFixed(2));
+                  _autoPreenchido = mixInfo.deMix ? 'mix' : 'tabela';
+                }
+              } else {
+                // Tenta recuperar precoTab do produto mesmo quando precoUnit veio da planilha
+                if(cod && cod !== 'ITEM') {
+                  const mixInfo = _getPrecoMix(String(row[cCli]||'').trim(), cod);
+                  if(mixInfo) precoTab = mixInfo.precoTab || 0;
+                }
+              }
+
+              const totalFinal = totalRow > 0 ? totalRow : parseFloat((precoUnit*qtd*(1-_autoDescPct/100)).toFixed(2));
+              grupos[chave].itens.push({cod:cod||'ITEM', desc:descItem||cod, ind, precoTab, qtd, descPct:_autoDescPct, precoUnit, total:totalFinal, _eanResolvido:eanResolvido, _autoPreenchido});
             }
           });
 
-          let adicionados = 0;
-          Object.values(grupos).forEach(g => {
-            const total = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : 0;
-            let n=orcamentos.length+1,id;
-            do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));
-            orcamentos.push({id, cliente:g.cliente, industria:g.industria, data:g.data,
-              validade:g.validade, cond:g.cond, status:g.status, obs:g.obs, itens:g.itens, total});
-            adicionados++;
-          });
-          addAudit(usuarioLogado?.login||'admin',`Importou ${adicionados} orçamento(s)`,'📥');
-          renderOrcamentos(); renderDashboard(); syncAutoSaveHook();
-          toast(`✅ ${adicionados} orçamento(s) importado(s)!`);
+          const listaGrupos = Object.values(grupos);
+          if(listaGrupos.length===0){toast('Nenhum orçamento encontrado na planilha.','error');return;}
+
+          // ── PREVIEW antes de confirmar ──────────────────────────────────────
+          _orcImportPendente = listaGrupos;
+          _mostrarPreviewOrcImport(listaGrupos, file.name);
+
         } catch(err){toast('Erro ao ler arquivo: '+err.message,'error');}
       };
       reader.readAsBinaryString(file);
@@ -6691,6 +6768,107 @@ function importarArquivo(tipo){
   } else {
     importarCadastro(tipo);
   }
+}
+
+function _mostrarPreviewOrcImport(grupos, fileName) {
+  const totalItens = grupos.reduce((s,g)=>s+g.itens.length,0);
+  const totalValor = grupos.reduce((s,g)=>s+g.itens.reduce((ss,i)=>ss+i.total,0),0);
+  const fmt2 = v => 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Monta cards de resumo por orçamento
+  const cards = grupos.map((g,idx) => {
+    const tot = g.itens.reduce((s,i)=>s+i.total,0);
+    const statusCls = {
+      'Rascunho':'status-rascunho','Em análise':'status-analise','Enviado':'status-enviado',
+      'Aprovado':'status-aprovado','Reprovado':'status-reprovado','Cancelado':'status-cancelado',
+      'Convertido em pedido':'status-convertido'
+    }[g.status]||'status-rascunho';
+
+    const itensHtml = g.itens.length > 0 ? `
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:11px">
+        <thead><tr style="background:#f4f3ef">
+          <th style="padding:4px 8px;text-align:left;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Cód</th>
+          <th style="padding:4px 8px;text-align:left;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Descrição</th>
+          <th style="padding:4px 8px;text-align:right;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Qtd</th>
+          <th style="padding:4px 8px;text-align:right;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Unit</th>
+          <th style="padding:4px 8px;text-align:right;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px">Total</th>
+        </tr></thead>
+        <tbody>${g.itens.map(it=>`<tr style="border-bottom:1px solid #f0ede6">
+          <td style="padding:4px 8px;font-family:monospace;font-size:10px;color:#555">${esc(it.cod)}${it._eanResolvido?'<span title="Código resolvido via EAN" style="margin-left:3px;background:#e3f2fd;color:#1a5fa8;border-radius:3px;padding:1px 4px;font-size:9px;font-weight:700">EAN</span>':''}</td>
+          <td style="padding:4px 8px">${esc(it.desc||'—')}</td>
+          <td style="padding:4px 8px;text-align:right">${it.qtd}</td>
+          <td style="padding:4px 8px;text-align:right;color:#555">${it.precoUnit>0?(it._autoPreenchido==='mix'?`<span style="color:#6c3db5;font-weight:600" title="Preço do Mix">${fmt2(it.precoUnit)}<span style="margin-left:3px;font-size:9px;background:#f3e8ff;color:#6c3db5;border-radius:3px;padding:1px 4px;font-weight:700">MIX</span></span>`:it._autoPreenchido==='tabela'?`<span style="color:#1a5fa8;font-weight:600" title="Preço da Tabela">${fmt2(it.precoUnit)}<span style="margin-left:3px;font-size:9px;background:#e3f2fd;color:#1a5fa8;border-radius:3px;padding:1px 4px;font-weight:700">TAB</span></span>`:fmt2(it.precoUnit)):'—'}</td>
+          <td style="padding:4px 8px;text-align:right;font-weight:600;color:var(--verde)">${it.total>0?fmt2(it.total):'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>` : '<div style="font-size:11px;color:#aaa;padding:6px 0">Nenhum item</div>';
+
+    return `<div style="background:#fff;border:1px solid var(--cinza-medio);border-radius:8px;margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#fafaf8;border-bottom:1px solid var(--cinza-medio)">
+        <div>
+          <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">${esc(g.cliente)}</span>
+          <span class="tag" style="margin-left:6px;font-size:10px">${esc(g.industria||'—')}</span>
+          <span class="badge ${statusCls}" style="margin-left:6px">${esc(g.status)}</span>
+        </div>
+        <div style="text-align:right;font-size:11px;color:#888">
+          ${g.data?`<div>📅 ${esc(g.data)}${g.validade?' → '+esc(g.validade):''}</div>`:''}
+          ${g.cond?`<div>💳 ${esc(g.cond)}</div>`:''}
+        </div>
+      </div>
+      <div style="padding:8px 14px">
+        ${itensHtml}
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px;padding-top:8px;margin-top:6px;border-top:1px solid #f0ede6">
+          <span style="font-size:11px;color:#888">${g.itens.length} item${g.itens.length!==1?'s':''}</span>
+          <span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--verde)">${fmt2(tot)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Monta o modal de preview reaproveitando o modal-import existente
+  importTipo = 'orc-preview';
+  const titulo = el('import-modal-titulo');
+  if(titulo) titulo.textContent = '📥 Prévia da Importação — Orçamentos';
+
+  const tpl = el('import-template-info');
+  if(tpl) tpl.innerHTML = `<div class="alert alert-info" style="margin-bottom:0">
+    📄 Arquivo: <strong>${esc(fileName)}</strong> · <strong>${grupos.length}</strong> orçamento${grupos.length!==1?'s':''} encontrado${grupos.length!==1?'s':''} ·
+    <strong>${totalItens}</strong> item${totalItens!==1?'s':''} · Total: <strong>${fmt2(totalValor)}</strong>
+    <br><span style="font-size:11px;color:#0d47a1">Revise abaixo e clique em <strong>Confirmar Importação</strong> para salvar.</span>
+  </div>`;
+
+  const prevTable = el('import-preview-table');
+  if(prevTable) prevTable.innerHTML = `<div style="padding:12px">${cards}</div>`;
+
+  const prevMsg = el('import-preview-msg');
+  if(prevMsg) { prevMsg.style.display='none'; }
+
+  el('import-preview').style.display = 'block';
+
+  const btn = el('import-confirm-btn');
+  if(btn) { btn.style.display='inline-flex'; btn.textContent='✅ Confirmar Importação'; }
+
+  const btnModelo = el('import-modelo-btn');
+  if(btnModelo) btnModelo.style.display='none';
+
+  openModal('modal-import');
+}
+
+function _confirmarOrcImport() {
+  if(!_orcImportPendente || _orcImportPendente.length===0) return;
+  let adicionados = 0;
+  _orcImportPendente.forEach(g => {
+    const total = g.itens.length>0 ? g.itens.reduce((s,i)=>s+i.total,0) : 0;
+    let n=orcamentos.length+1,id;
+    do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));
+    orcamentos.push({id, cliente:g.cliente, industria:g.industria, data:g.data,
+      validade:g.validade, cond:g.cond, status:g.status, obs:g.obs, itens:g.itens, total});
+    adicionados++;
+  });
+  _orcImportPendente = null;
+  addAudit(usuarioLogado?.login||'admin',`Importou ${adicionados} orçamento(s)`,'📥');
+  renderOrcamentos(); renderDashboard(); syncAutoSaveHook();
+  closeModal('modal-import');
+  toast(`✅ ${adicionados} orçamento(s) importado(s)!`);
 }
 function importarNF(){
   importTipo='nf';
@@ -7142,6 +7320,9 @@ function _importPreviewMsg(msg, tipo='success') {
 }
 
 function confirmarImport() {
+  // Rota para confirmação de importação de orçamentos (com preview)
+  if(importTipo === 'orc-preview') { _confirmarOrcImport(); return; }
+
   if(!importDados || importDados.length === 0) {
     toast('Nenhum dado para importar.','error'); return;
   }
@@ -7473,12 +7654,12 @@ function confirmarImport() {
 
 function baixarModeloOrcamento() {
   const wb = XLSX.utils.book_new();
-  const header = ['Cliente *', 'Indústria *', 'Data', 'Validade', 'Condição Pgto', 'Status', 'Observações', 'Código Produto', 'Descrição', 'Qtd', 'Desconto %', 'Preço Unit', 'Total Item'];
+  const header = ['Cliente *', 'Indústria *', 'Data', 'Validade', 'Condição Pgto', 'Status', 'Observações', 'Código Produto', 'EAN', 'Descrição', 'Qtd', 'Desconto %', 'Preço Unit', 'Total Item'];
   const exemplos = [
-    ['Farmácia Central', 'GUMMY',     '01/04/2026', '30/04/2026', '30D', 'Rascunho', 'Orçamento Q2', 'GUM-001', 'Gummy Vitamina C 60cp', '10', '5',  '28.00', '266.00'],
-    ['Farmácia Central', 'GUMMY',     '01/04/2026', '30/04/2026', '30D', 'Rascunho', '',             'GUM-002', 'Gummy Colágeno 50cp',   '5',  '0',  '32.00', '160.00'],
-    ['DCA Bahia',        'EXCLUSIVE', '05/04/2026', '20/04/2026', '60D', 'Enviado',  'Aprox. client','EXC-010', 'Whey Protein 900g',     '3',  '10', '89.00', '240.30'],
-    ['DCA Bahia',        'EXCLUSIVE', '05/04/2026', '20/04/2026', '60D', 'Enviado',  '',             'EXC-020', 'Creatina 300g',         '6',  '0',  '45.00', '270.00'],
+    ['Farmácia Central', 'GUMMY',     '01/04/2026', '30/04/2026', '30D', 'Rascunho', 'Orçamento Q2', 'GUM-001', '7891234000011', 'Gummy Vitamina C 60cp', '10', '5',  '28.00', '266.00'],
+    ['Farmácia Central', 'GUMMY',     '01/04/2026', '30/04/2026', '30D', 'Rascunho', '',             'GUM-002', '',              'Gummy Colágeno 50cp',   '5',  '0',  '32.00', '160.00'],
+    ['DCA Bahia',        'EXCLUSIVE', '05/04/2026', '20/04/2026', '60D', 'Enviado',  'Aprox. client','',        '7899876000099', 'Whey Protein 900g',     '3',  '10', '89.00', '240.30'],
+    ['DCA Bahia',        'EXCLUSIVE', '05/04/2026', '20/04/2026', '60D', 'Enviado',  '',             'EXC-020', '',              'Creatina 300g',         '6',  '0',  '45.00', '270.00'],
   ];
   const rows = [header, ...exemplos];
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -7489,7 +7670,7 @@ function baixarModeloOrcamento() {
       if(ws[addr]){ws[addr].t='s';ws[addr].z='@';}
     }
   });
-  ws['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:12},{wch:14},{wch:22},{wch:22},{wch:14},{wch:28},{wch:6},{wch:10},{wch:12},{wch:12}];
+  ws['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:12},{wch:14},{wch:22},{wch:22},{wch:14},{wch:16},{wch:28},{wch:6},{wch:10},{wch:12},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Orçamentos');
   const wsInst = XLSX.utils.aoa_to_sheet([
     ['INSTRUÇÕES DE IMPORTAÇÃO DE ORÇAMENTOS'],[''],
@@ -7501,7 +7682,8 @@ function baixarModeloOrcamento() {
     ['Condição Pgto','Ex: 30D, 28D, 30/60D','Não'],
     ['Status','Rascunho / Em análise / Enviado / Aprovado / Reprovado / Cancelado','Não (padrão: Rascunho)'],
     ['Observações','Texto livre (repetir em todas as linhas do mesmo orçamento)','Não'],
-    ['Código Produto','Código do produto (opcional — pode deixar em branco)','Não'],
+    ['Código Produto','Código do produto cadastrado no sistema','Não (use Código OU EAN)'],
+    ['EAN','Código de barras (8–14 dígitos). Se informado e o Código estiver vazio, o sistema resolve automaticamente','Não (use EAN OU Código)'],
     ['Descrição','Descrição do item','Não'],
     ['Qtd','Quantidade numérica','Não'],
     ['Desconto %','Percentual de desconto (ex: 10 = 10%)','Não'],
@@ -8419,15 +8601,26 @@ function fazerLogin() {
 
     // Tenta encontrar o usuário nos dados já carregados
     const _tentarEntrar = () => {
+      // Busca por login OU por e-mail (resolve problema de autocomplete no PC que preenche com e-mail)
       const usr = usuarios.find(u =>
-        (u.login||'').trim().toLowerCase() === login &&
+        ((u.login||'').trim().toLowerCase() === login ||
+         (u.email||'').trim().toLowerCase() === login) &&
         (u.senha||'').trim() === senha &&
         (u.status||'').toLowerCase() === 'ativo'
       );
 
       if(!usr) {
+        // Diagnóstico: verifica se existe o usuário mas a senha está errada
+        const usrExiste = usuarios.find(u =>
+          (u.login||'').trim().toLowerCase() === login ||
+          (u.email||'').trim().toLowerCase() === login
+        );
         if(errEl) {
-          errEl.textContent = 'Usuário ou senha incorretos. (Use admin / admin123 para acesso padrão)';
+          if(usrExiste && (usrExiste.status||'').toLowerCase() !== 'ativo') {
+            errEl.textContent = 'Usuário inativo. Contate o administrador do sistema.';
+          } else {
+            errEl.textContent = 'Usuário ou senha incorretos. (Use admin / admin123 para acesso padrão)';
+          }
           errEl.style.display = 'block';
         } else {
           alert('Usuário ou senha incorretos.');
