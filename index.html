@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6705,15 +6706,15 @@ function importarArquivo(tipo){
             const condKey = String(row[cCond]||'').trim() || '__SEMCOND__';
             let cod = cCod ? String(row[cCod]||'').trim().toUpperCase() : '';
             let eanResolvido = false;
-            if(!cod && cEAN) {
-              const eanVal = String(row[cEAN]||'').trim();
-              if(eanVal.length >= 8) {
-                const byEan = _buscarProdutoPorEAN(eanVal);
-                if(byEan) { cod = byEan.cod; eanResolvido = true; }
-              }
+            let eanBruto = cEAN ? String(row[cEAN]||'').trim() : '';
+            if(!cod && eanBruto && eanBruto.length >= 8) {
+              const byEan = _buscarProdutoPorEAN(eanBruto);
+              if(byEan) { cod = byEan.cod; eanResolvido = true; }
+              else { cod = eanBruto; } // usa o próprio EAN como código se não encontrar no cadastro
             }
-            const descItem = cDesc ? String(row[cDesc]||'').trim() : '';
-            const temItem = !!(cod || descItem);
+            const descItem = cDesc ? String(row[cDesc]||'').trim() : (eanBruto ? 'EAN: '+eanBruto : '');
+            // temItem = true se tiver qualquer dado de produto (cod, desc ou EAN)
+            const temItem = !!(cod || descItem || eanBruto);
             // Sempre agrupa pelo mesmo cliente+indústria+data+condição — nunca cria um orçamento por linha
             const chave = [cli,ind,dataKey,condKey].join('|');
 
