@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -478,7 +479,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Validade</th><th>Itens</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th style="width:90px">#</th><th>Cliente</th><th style="width:100px">Indústria</th><th style="width:85px">Data</th><th style="width:85px">Validade</th><th style="width:45px;text-align:center">Itens</th><th style="width:100px">Total</th><th style="width:90px">Criado por</th><th style="width:110px">Status</th><th style="width:170px">Ações</th></tr></thead>
           <tbody id="orc-tbody"></tbody>
         </table>
       </div>
@@ -2656,6 +2657,18 @@ const parsePrecoBR = v => {
   return parseFloat(s) || 0;
 };
 const today = () => new Date().toISOString().split('T')[0];
+// Normaliza qualquer formato de data para YYYY-MM-DD para comparação correta
+function normDate(d) {
+  if(!d) return '';
+  d = String(d).trim();
+  // DD/MM/YYYY → YYYY-MM-DD
+  const br = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(br) return `${br[3]}-${br[2]}-${br[1]}`;
+  // DD-MM-YYYY → YYYY-MM-DD
+  const br2 = d.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if(br2) return `${br2[3]}-${br2[2]}-${br2[1]}`;
+  return d; // assume já está em YYYY-MM-DD
+}
 const el = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -2864,21 +2877,22 @@ function renderOrcamentos() {
   const filtSt = (el('orc-filtro-status')||{}).value||'';
   const filtInd = (el('orc-filtro-ind')||{}).value||'';
   const tbody = el('orc-tbody'); if(!tbody) return;
-  const list = orcamentos.filter(o=>{
+  const list = orcamentos.map(o=>({...o, itens: o.itens||[]})).filter(o=>{
     if(busca&&!o.id.toLowerCase().includes(busca)&&!o.cliente.toLowerCase().includes(busca)&&!o.industria.toLowerCase().includes(busca)) return false;
     if(filtSt&&o.status!==filtSt) return false;
     if(filtInd&&o.industria!==filtInd) return false;
     return true;
   });
-  tbody.innerHTML = list.length===0 ? `<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px">Nenhum orçamento encontrado</td></tr>` :
+  tbody.innerHTML = list.length===0 ? `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum orçamento encontrado</td></tr>` :
   list.map(o=>`<tr>
     <td class="mono bold">${o.id}</td>
-    <td><strong>${esc(o.cliente)}</strong></td>
-    <td><span class="tag">${esc(o.industria)}</span></td>
+    <td style="max-width:160px"><strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(o.cliente)}">${esc(o.cliente)}</strong></td>
+    <td><span class="tag" style="white-space:nowrap">${esc(o.industria)}</span></td>
     <td>${o.data}</td>
-    <td style="${o.validade<today()?'color:var(--vermelho);font-weight:600':''}">${o.validade}</td>
-    <td>${o.itens.length}</td>
+    <td style="${normDate(o.validade)<today()?'color:var(--vermelho);font-weight:600':''}">${o.validade}</td>
+    <td style="text-align:center">${(o.itens||[]).length}</td>
     <td class="bold verde">${fmt(o.total)}</td>
+    <td><span style="font-size:11px;color:#666">${esc(o.criadorPor||'admin')}</span></td>
     <td><span class="badge ${statusClass(o.status)}">${o.status}</span></td>
     <td>
       <div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -3148,6 +3162,7 @@ function salvarOrcamento() {
     cliente: cli, industria: el('orc-ind').value, data: el('orc-data').value||today(),
     validade: el('orc-validade').value, cond: el('orc-cond').value,
     status: el('orc-status').value, itens: [...orcItens], total, obs: el('orc-obs').value,
+    criadorPor: orcEditId ? (orcamentos.find(x=>x.id===orcEditId)?.criadorPor || usuarioLogado?.login || 'admin') : (usuarioLogado?.login || 'admin'),
   };
   if(orcEditId) { orcamentos = orcamentos.map(x=>x.id===orcEditId?obj:x); }
   else { orcamentos.push(obj); }
@@ -6700,9 +6715,8 @@ function importarArquivo(tipo){
             }
             const descItem = cDesc ? String(row[cDesc]||'').trim() : '';
             const temItem = !!(cod || descItem);
-            const chave = temItem
-              ? [cli,ind,dataKey,condKey].join('|')
-              : [cli,ind,dataKey,condKey,'__SEQ__'+(++_seq)].join('|');
+            // Sempre agrupa pelo mesmo cliente+indústria+data+condição — nunca cria um orçamento por linha
+            const chave = [cli,ind,dataKey,condKey].join('|');
 
             if(!grupos[chave]) {
               grupos[chave] = {
@@ -8567,7 +8581,7 @@ function renderDashboard() {
   const alertDiv = el('dash-alertas');
   if(alertDiv) {
     const alertas = [];
-    const vencendo = orcamentos.filter(o=>o.validade && o.validade <= today() && !['Cancelado','Convertido em pedido'].includes(o.status));
+    const vencendo = orcamentos.filter(o=>o.validade && normDate(o.validade) <= today() && !['Cancelado','Convertido em pedido'].includes(o.status));
     if(vencendo.length>0) alertas.push(`<div class="alert alert-warning" style="margin-bottom:6px">⚠️ ${vencendo.length} orçamento${vencendo.length!==1?'s':''} com validade vencida</div>`);
     const atrasadas = comissoes_data.filter(c=>!c.excluido&&c.status==='Atrasada');
     if(atrasadas.length>0) alertas.push(`<div class="alert alert-danger" style="margin-bottom:6px">💰 ${atrasadas.length} comissão${atrasadas.length!==1?'ões':''} em atraso</div>`);
@@ -8663,21 +8677,27 @@ function fazerLogin() {
       } catch(e) {}
     };
 
-    // Se conectado à nuvem, faz um pull rápido antes de validar para garantir usuários atualizados
+    // Se conectado à nuvem, faz um pull forçado antes de entrar para garantir dados atualizados
     if(configSync.conectado && configSync.dbUrl) {
       const btnEl = document.getElementById('btn-entrar');
       const stEl  = document.getElementById('login-sync-status');
       if(btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Verificando…'; }
-      if(stEl)  { stEl.textContent = '⏳ Sincronizando usuários…'; stEl.style.display = 'block'; }
-      syncPull(true).then(() => {
-        if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
-        if(stEl)  stEl.style.display = 'none';
-        _tentarEntrar();
-      }).catch(() => {
-        if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
-        if(stEl)  stEl.style.display = 'none';
-        _tentarEntrar(); // tenta mesmo assim com dados locais
-      });
+      if(stEl)  { stEl.textContent = '⏳ Sincronizando dados da nuvem…'; stEl.style.display = 'block'; }
+      // Força download direto do Firebase, ignorando cache local
+      _rtdbLastTs = 0;
+      fetch(configSync.dbUrl.replace(/\/$/, '') + '/gestcom/dados.json' + (configSync.apiKey ? '?auth=' + configSync.apiKey : ''))
+        .then(r => r.ok ? r.json() : null)
+        .then(dados => {
+          if(dados) { aplicarDadosDaNuvem(dados, true, true); _rtdbLastTs = dados._ts || Date.now(); }
+          if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+          if(stEl)  stEl.style.display = 'none';
+          _tentarEntrar();
+        })
+        .catch(() => {
+          if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
+          if(stEl)  stEl.style.display = 'none';
+          _tentarEntrar();
+        });
     } else {
       _tentarEntrar();
     }
@@ -10690,10 +10710,12 @@ function coletarDadosParaSync() {
   };
 }
 
-function aplicarDadosDaNuvem(dados, silencioso=false) {
+function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(!dados) return;
-  if(dados._ts && dados._ts <= (_rtdbLastTs||0)) return;
-  if(dados._usuario === usuarioLogado?.login && Date.now()-dados._ts < 3000) return;
+  // Só bloqueia pelo timestamp se for polling automático (não forçado)
+  if(!forcado && dados._ts && dados._ts <= (_rtdbLastTs||0)) return;
+  // Bloqueia loop: ignora dados enviados por mim mesmo há menos de 3s (apenas em polling)
+  if(!forcado && dados._usuario === usuarioLogado?.login && Date.now()-dados._ts < 3000) return;
   _rtdbLastTs = dados._ts || Date.now();
   if(Array.isArray(dados.pedidos)) pedidos = dados.pedidos;
   if(Array.isArray(dados.orcamentos)) orcamentos = dados.orcamentos;
@@ -10731,7 +10753,11 @@ async function syncPush(silencioso=false){
 }
 async function syncPull(silencioso){
   if(!configSync.conectado||!configSync.dbUrl) return;
-  try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
+  // forcado=true garante que o pull manual sempre aplica os dados, ignorando comparação de timestamp
+  const forcado = !silencioso;
+  // Pull manual: zera o timestamp local para garantir que os dados da nuvem sejam sempre aplicados
+  if(forcado) _rtdbLastTs = 0;
+  try{const res=await fetch(rtdbUrl('gestcom/dados'));if(!res.ok)throw new Error('HTTP '+res.status);const dados=await res.json();if(!dados){if(!silencioso)syncLog('Nuvem vazia','info');return;}aplicarDadosDaNuvem(dados,silencioso,forcado);_rtdbLastTs=dados._ts||Date.now();if(!silencioso){syncLog('✅ Recebido','success');feedbackFb('Atualizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
 function ativarPollingRealtime(){
   if(_rtdbPollInterval) clearInterval(_rtdbPollInterval);
@@ -10789,7 +10815,15 @@ try{popularSelectsDinamicos();}catch(e){}
     const res = await fetch(url);
     if (res.ok) {
       const dados = await res.json();
-      if (dados) { aplicarDadosDaNuvem(dados, true); _rtdbLastTs = dados._ts || Date.now(); }
+      if (dados) {
+        // Aguarda um tick para garantir que _carregarLocal() já rodou antes de aplicar a nuvem
+        // Isso garante que os dados da nuvem sempre prevalecem sobre os dados locais
+        setTimeout(() => {
+          aplicarDadosDaNuvem(dados, true, true);
+          _rtdbLastTs = dados._ts || Date.now();
+          try { renderOrcamentos(); renderDashboard(); renderPedidos(); } catch(e) {}
+        }, 300);
+      }
       configSync.conectado = true;
       try { localStorage.setItem('gestcom_rtdb', JSON.stringify({dbUrl: configSync.dbUrl, apiKey: configSync.apiKey, realtime: configSync.realtime})); } catch(e) {}
       if (configSync.realtime) ativarPollingRealtime();
@@ -12041,7 +12075,7 @@ function atualizarTextoAutoSave(swEl) {
           if (configSync.realtime) ativarPollingRealtime();
           // Atualiza mensagem enquanto baixa dados (incluindo usuários)
           if (_loginSyncStatus) _loginSyncStatus.textContent = '⏳ Carregando usuários da nuvem…';
-          await syncPull(true);
+          await syncPull(false); // false = não silencioso = força aplicação dos dados e re-render
           _atualizarUltimoSalvo();
         } else {
           syncLog('Ping falhou — tentará auto-save na próxima alteração', 'aviso');
