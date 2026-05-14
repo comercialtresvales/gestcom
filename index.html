@@ -2939,7 +2939,14 @@ function editarOrcamento(id) {
   orcEditId = id;
   orcItens = o.itens.map(i=>({...i}));
   el('orc-modal-titulo').textContent = 'Editar Orçamento '+id;
-  el('orc-cli').value = o.cliente;
+  // Garante que o cliente do orçamento existe no select, mesmo que não esteja cadastrado
+  const selCli = el('orc-cli');
+  if(o.cliente && ![...selCli.options].some(op=>op.value===o.cliente)) {
+    const opt = document.createElement('option');
+    opt.value = o.cliente; opt.textContent = o.cliente + ' ⚠️ (não cadastrado)';
+    selCli.appendChild(opt);
+  }
+  selCli.value = o.cliente;
   el('orc-ind').value = o.industria;
   el('orc-data').value = o.data;
   el('orc-validade').value = o.validade;
@@ -3575,10 +3582,18 @@ function editarPedido(id) {
   // Preenche campos do formulário
   popularSelectsDinamicos();
   setTimeout(()=>{
-    if(el('ped-cli')) el('ped-cli').value = p.cliente;
+    // Garante que o cliente do pedido existe no select, mesmo que não esteja cadastrado
+    if(el('ped-cli')) {
+      const selPedCli = el('ped-cli');
+      if(p.cliente && ![...selPedCli.options].some(op=>op.value===p.cliente)) {
+        const opt = document.createElement('option');
+        opt.value = p.cliente; opt.textContent = p.cliente + ' ⚠️ (não cadastrado)';
+        selPedCli.appendChild(opt);
+      }
+      selPedCli.value = p.cliente;
+    }
     if(el('ped-ind')) el('ped-ind').value = p.industria;
   }, 0);
-  el('ped-cli').value    = p.cliente;
   el('ped-ind').value    = p.industria;
   el('ped-data').value   = p.data;
   el('ped-cond').value   = p.cond   || '';
