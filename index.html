@@ -8597,6 +8597,28 @@ function renderDashboard() {
   }
 }
 
+// ── Corrige orçamentos e pedidos importados onde desc ficou igual ao cod ──
+function _corrigirDescricoesSalvas() {
+  let corrigidos = 0;
+  const fixItens = itens => (itens||[]).map(it => {
+    // Considera errado quando desc está igual ao cod (bug da importação)
+    if(it.desc && it.cod && it.desc.trim().toUpperCase() === it.cod.trim().toUpperCase()) {
+      const prod = PRODUTOS_CAT[it.cod.trim().toUpperCase()];
+      if(prod && prod.desc) {
+        corrigidos++;
+        return {...it, desc: prod.desc, ind: it.ind || prod.ind || ''};
+      }
+    }
+    return it;
+  });
+  orcamentos = orcamentos.map(o => ({...o, itens: fixItens(o.itens)}));
+  pedidos    = pedidos.map(p    => ({...p, itens: fixItens(p.itens)}));
+  if(corrigidos > 0) {
+    _salvarLocal();
+    console.log('[GestCom] ✅ Descrições corrigidas em ' + corrigidos + ' item(ns).');
+  }
+}
+
 /* ══════════════════════════
    LOGIN / AUTH
 ══════════════════════════ */
@@ -8662,6 +8684,8 @@ function fazerLogin() {
       } catch(e) { console.warn('Topbar:', e); }
 
       try { addAudit(usr.login, 'Login no sistema', '🔐'); } catch(e) {}
+      // ── Corrige descrições de orçamentos/pedidos importados com desc=cod ──
+      try { _corrigirDescricoesSalvas(); } catch(e) { console.warn('Correção desc:', e); }
       try { aplicarVisibilidadeSidebar(); } catch(e) { console.warn('Sidebar:', e); }
       try { toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!'); } catch(e) {}
 
