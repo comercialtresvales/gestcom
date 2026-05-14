@@ -6763,7 +6763,9 @@ function importarArquivo(tipo){
               }
 
               const totalFinal = totalRow > 0 ? totalRow : parseFloat((precoUnit*qtd*(1-_autoDescPct/100)).toFixed(2));
-              grupos[chave].itens.push({cod:cod||'ITEM', desc:descItem||cod, ind, precoTab, qtd, descPct:_autoDescPct, precoUnit, total:totalFinal, _eanResolvido:eanResolvido, _autoPreenchido});
+              const _prodCatOrc = PRODUTOS_CAT[(cod||'').toUpperCase()] || null;
+              const _descFinal = descItem || _prodCatOrc?.desc || '';
+              grupos[chave].itens.push({cod:cod||'ITEM', desc:_descFinal, ind, precoTab, qtd, descPct:_autoDescPct, precoUnit, total:totalFinal, _eanResolvido:eanResolvido, _autoPreenchido});
             }
           });
 
@@ -7550,7 +7552,7 @@ function confirmarImport() {
       const cod = (row.cod||'').toString().trim().toUpperCase();
       if(cod) {
         const prodCat = PRODUTOS_CAT[cod] || PRODUTOS_CAT[cod.replace(/^0+/,'')] || null;
-        const desc    = (row.desc||'').toString().trim() || (prodCat?.desc||cod);
+        const desc    = (row.desc||'').toString().trim() || prodCat?.desc || '';
         const indItem = ind || (prodCat?.ind||'');
         const qtd     = parseMoney(row.qtd) || 1;
         const descPct = parseMoney(row.descPct) || 0;
