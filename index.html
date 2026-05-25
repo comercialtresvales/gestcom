@@ -2887,7 +2887,7 @@ function renderOrcamentos() {
   const filtMes = (el('orc-filtro-mes')||{}).value||'';
   const tbody = el('orc-tbody'); if(!tbody) return;
 
-  // Popula select de meses
+  // Popula select de meses dinamicamente
   const selMes = el('orc-filtro-mes');
   if(selMes) {
     const mesesSet = new Set();
@@ -3241,7 +3241,8 @@ function exportarOrcamentoPDF() {
   const cli = el('orc-cli').value||'Cliente';
   const orcId = orcEditId || ('ORC-' + String(orcamentos.length+1).padStart(4,'0'));
   const total = orcItens.reduce((s,i)=>s+i.total,0);
-  gerarOrcPDF({id:orcId,cliente:cli,industria:el('orc-ind').value,data:today(),validade:el('orc-validade').value,cond:el('orc-cond').value,itens:orcItens,total,obs:el('orc-obs').value});
+  const orcStatus = el('orc-status') ? el('orc-status').value : 'rascunho';
+  gerarOrcPDF({id:orcId,cliente:cli,industria:el('orc-ind').value,data:today(),validade:el('orc-validade').value,cond:el('orc-cond').value,itens:orcItens,total,obs:el('orc-obs').value,status:orcStatus});
 }
 
 function exportarOrcamentoPDFById(id) {
@@ -3250,91 +3251,195 @@ function exportarOrcamentoPDFById(id) {
 }
 
 function gerarOrcPDF(o) {
-  if(typeof window.jspdf === 'undefined' && typeof jspdf === 'undefined') {
-    alert('Biblioteca PDF não carregada. Tente novamente em alguns segundos.');return;
-  }
-  const {jsPDF} = window.jspdf||jspdf;
-  const doc = new jsPDF();
-  const yw = doc.internal.pageSize.getWidth();
+  try {
+  if(typeof window.jspdf==='undefined'&&typeof jspdf==='undefined'){alert('Biblioteca PDF não carregada.');return;}
+  const {jsPDF}=window.jspdf||jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pw=210,ph=297,ml=18,mr=18,usable=pw-ml-mr;
 
-  // Header preto
-  doc.setFillColor(26,26,26);
-  doc.rect(0,0,yw,32,'F');
-  doc.setFillColor(245,197,0);
-  doc.rect(0,30,yw,2,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(18);doc.setFont('helvetica','bold');
-  doc.text('COMERCIAL TRÊS VALES',14,14);
-  doc.setFontSize(9);doc.setFont('helvetica','normal');
-  doc.setTextColor(200,200,200);
-  doc.text('Gestão Comercial Profissional',14,21);
-  doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')}`,yw-14,21,{align:'right'});
+  function fc(r,g,b){doc.setFillColor(r,g,b);}
+  function tc(r,g,b){doc.setTextColor(r,g,b);}
+  function dc(r,g,b){doc.setDrawColor(r,g,b);}
 
-  // Título orçamento
-  doc.setTextColor(26,26,26);
-  doc.setFontSize(14);doc.setFont('helvetica','bold');
-  doc.text(`ORÇAMENTO ${o.id}`,14,44);
-  doc.setFontSize(9);doc.setFont('helvetica','normal');
-  doc.setTextColor(100,100,100);
-  doc.text(`Status: ${o.status}`,14,51);
+  // ── Header ──
+  fc(245,197,0); doc.rect(0,0,pw,24,'F');
+  fc(22,22,22);  doc.rect(0,24,pw,8,'F');
+  tc(22,22,22);
+  doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text('COMERCIAL TRES VALES',ml,16);
+  tc(160,158,152);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text('Gestao Comercial Profissional',ml,29.5);
+  doc.text('Emitido em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),pw-mr,29.5,{align:'right'});
 
-  // Info
-  doc.setTextColor(26,26,26);
-  doc.setFontSize(9);
-  let y=62;
-  const infoRows = [
-    ['Cliente:',o.cliente,'Indústria:',o.industria||'—'],
-    ['Data:',o.data,'Validade:',o.validade||'—'],
-    ['Condição:',o.cond||'—','',''],
-  ];
-  doc.setFillColor(244,243,239);
-  doc.rect(10,y-5,yw-20,infoRows.length*8+4,'F');
-  infoRows.forEach(row=>{
-    doc.setFont('helvetica','bold');doc.text(row[0],14,y);
-    doc.setFont('helvetica','normal');doc.text(row[1],40,y);
-    if(row[2]){doc.setFont('helvetica','bold');doc.text(row[2],110,y);}
-    if(row[3]){doc.setFont('helvetica','normal');doc.text(row[3],135,y);}
-    y+=8;
-  });
-  y+=6;
+  // ── Titulo ──
+  let y=46;
+  tc(22,22,22);
+  doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text('ORCAMENTO',ml,y);
+  const nw=doc.getTextWidth('ORCAMENTO ');
+  tc(245,197,0);
+  doc.text(String(o.id),ml+nw,y);
 
-  // Tabela itens
-  doc.setFillColor(26,26,26);
-  doc.rect(10,y,yw-20,7,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold');doc.setFontSize(8);
-  doc.text('CÓD.',14,y+5);doc.text('DESCRIÇÃO',30,y+5);doc.text('IND.',95,y+5);
-  doc.text('QTD',115,y+5);doc.text('% DESC.',128,y+5);doc.text('UNIT.',145,y+5);doc.text('TOTAL',165,y+5);
+  // badge status
+  const SM={
+    rascunho: {bg:[208,206,202],fg:[88,86,82], tx:'RASCUNHO'},
+    analise:  {bg:[255,242,196],fg:[122,82,0],  tx:'EM ANALISE'},
+    enviado:  {bg:[204,222,255],fg:[14,62,162], tx:'ENVIADO'},
+    aprovado: {bg:[204,235,208],fg:[14,104,40], tx:'APROVADO'},
+    reprovado:{bg:[255,208,204],fg:[152,22,14], tx:'REPROVADO'},
+    cancelado:{bg:[222,220,216],fg:[94,92,88],  tx:'CANCELADO'},
+    convertido:{bg:[224,208,255],fg:[74,22,162],tx:'CONVERTIDO'},
+  };
+  const sk=String(o.status||'rascunho').toLowerCase().replace(/\s/g,'');
+  const sm=SM[sk]||SM['rascunho'];
+  fc(sm.bg[0],sm.bg[1],sm.bg[2]);
+  doc.roundedRect(pw-mr-30,y-10,30,9,2,2,'F');
+  doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+  tc(sm.fg[0],sm.fg[1],sm.fg[2]);
+  doc.text(sm.tx,pw-mr-15,y-4.8,{align:'center'});
+
   y+=7;
+  fc(245,197,0); doc.rect(ml,y,usable,1.2,'F');
+  y+=10;
 
-  doc.setTextColor(26,26,26);doc.setFont('helvetica','normal');
-  o.itens.forEach((it,i)=>{
-    if(i%2===0){doc.setFillColor(250,250,248);doc.rect(10,y,yw-20,7,'F');}
-    doc.text(String(it.cod||''),14,y+5);
-    doc.text(String(it.desc||'').substring(0,30),30,y+5);
-    doc.text(String(it.ind||'').substring(0,10),95,y+5);
-    doc.text(String(it.qtd||''),115,y+5);
-    doc.text((it.descPct||0)+'%',128,y+5);
-    doc.text('R$ '+fmtN(it.precoUnit),143,y+5);
-    doc.setFont('helvetica','bold');
-    doc.text('R$ '+fmtN(it.total),163,y+5);
+  // ── Cards de dados ──
+  const colW=(usable-6)/2;
+  const dataH=44;
+
+  function dataBox(x,cy,label,value,acento){
+    fc(250,249,246); doc.rect(x,cy,colW,dataH,'F');
+    if(acento){fc(245,197,0);}else{fc(215,213,208);}
+    doc.rect(x,cy,colW,1,'F');
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
+    doc.text(String(label).toUpperCase(),x+5,cy+9);
+    doc.setFontSize(10.5); doc.setFont('helvetica','bold'); tc(22,22,22);
+    const lines=doc.splitTextToSize(String(value||'-'),colW-10);
+    doc.text(lines[0],x+5,cy+20);
+    if(lines[1]){doc.setFontSize(9);doc.text(lines[1],x+5,cy+28);}
+  }
+
+  dataBox(ml,        y,'Cliente',         o.cliente,          true);
+  dataBox(ml+colW+6, y,'Industria',       o.industria||'-',   false);
+  y+=dataH+5;
+  dataBox(ml,        y,'Data de Emissao', o.data||'-',        false);
+  dataBox(ml+colW+6, y,'Validade',        o.validade||'-',    false);
+  y+=dataH+5;
+
+  // condicao linha inteira
+  fc(250,249,246); doc.rect(ml,y,usable,32,'F');
+  fc(215,213,208); doc.rect(ml,y,usable,1,'F');
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
+  doc.text('CONDICAO DE PAGAMENTO',ml+5,y+9);
+  doc.setFontSize(10.5); doc.setFont('helvetica','bold'); tc(22,22,22);
+  doc.text(String(o.cond||'-'),ml+5,y+20);
+  y+=38;
+
+  // ── Tabela ──
+  const C={
+    cod: {label:'COD.',    x:ml,      w:20, al:'left'},
+    desc:{label:'DESCRICAO',x:ml+22,  w:76, al:'left'},
+    ind: {label:'INDUSTRIA',x:ml+100, w:26, al:'left'},
+    qtd: {label:'QTD',     x:ml+128,  w:12, al:'right'},
+    dsc: {label:'DESCONTO',x:ml+142,  w:16, al:'right'},
+    unit:{label:'UNIT.',   x:ml+160,  w:18, al:'right'},
+    tot: {label:'TOTAL',   x:ml+180,  w:12, al:'right'},
+  };
+  const rowH=12, thH=10;
+
+  function drawTh(yy){
+    fc(22,22,22); doc.rect(ml,yy,usable,thH,'F');
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); tc(245,197,0);
+    Object.values(C).forEach(function(c){
+      var tx=c.al==='right'?c.x+c.w:c.x+2;
+      doc.text(c.label,tx,yy+6.8,{align:c.al});
+    });
+  }
+  drawTh(y); y+=thH;
+
+  var subtotal=(o.itens||[]).reduce(function(s,i){return s+((i.precoTab||i.precoUnit||0)*(i.qtd||1));},0);
+  var descTotal=subtotal-(o.itens||[]).reduce(function(s,i){return s+i.total;},0);
+
+  (o.itens||[]).forEach(function(it,i){
+    if(y+rowH>ph-26){
+      _orcPDFRodape(doc,pw,ph,ml,mr,o.id);
+      doc.addPage(); y=20; drawTh(y); y+=thH;
+    }
+    if(i%2===0){fc(250,249,246);}else{fc(255,255,255);}
+    doc.rect(ml,y,usable,rowH,'F');
+    dc(215,213,208); doc.line(ml,y+rowH,ml+usable,y+rowH);
+    var cy=y+8;
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold'); tc(22,22,22);
+    doc.text(String(it.cod||''),C.cod.x+2,cy);
     doc.setFont('helvetica','normal');
-    y+=7;
-    if(y>270){doc.addPage();y=20;}
+    doc.text(doc.splitTextToSize(String(it.desc||''),C.desc.w)[0],C.desc.x+2,cy);
+    tc(155,152,146);
+    doc.text(String(it.ind||'').substring(0,13),C.ind.x+2,cy);
+    tc(22,22,22);
+    doc.text(String(it.qtd||''),C.qtd.x+C.qtd.w,cy,{align:'right'});
+    var dp=it.descPct||0;
+    if(dp>0){tc(22,118,48);}else{tc(200,198,193);}
+    doc.text(dp+'%',C.dsc.x+C.dsc.w,cy,{align:'right'});
+    tc(155,152,146);
+    doc.text('R$ '+fmtN(it.precoUnit),C.unit.x+C.unit.w,cy,{align:'right'});
+    doc.setFont('helvetica','bold'); tc(22,22,22);
+    doc.text('R$ '+fmtN(it.total),C.tot.x+C.tot.w,cy,{align:'right'});
+    y+=rowH;
   });
 
-  // Total
-  y+=4;
-  doc.setFillColor(245,197,0);
-  doc.rect(130,y,yw-140,8,'F');
-  doc.setTextColor(0,0,0);doc.setFont('helvetica','bold');doc.setFontSize(10);
-  doc.text('TOTAL DO ORÇAMENTO:',132,y+6);
-  doc.text('R$ '+fmtN(o.total),yw-14,y+6,{align:'right'});
+  // ── Totais ──
+  y+=8;
+  if(y+40>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,o.id);doc.addPage();y=20;}
+  var tx2=ml+96, tw2=usable-96;
 
-  if(o.obs){y+=14;doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);doc.text('Obs: '+o.obs,14,y);}
+  if(descTotal>0.005){
+    fc(250,249,246); doc.rect(tx2,y,tw2,11,'F');
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal'); tc(155,152,146);
+    doc.text('Subtotal',tx2+4,y+7.5);
+    doc.text('R$ '+fmtN(subtotal),ml+usable,y+7.5,{align:'right'});
+    y+=11;
+    fc(230,248,234); doc.rect(tx2,y,tw2,11,'F');
+    tc(22,118,48);
+    doc.text('Desconto',tx2+4,y+7.5);
+    doc.text('- R$ '+fmtN(descTotal),ml+usable,y+7.5,{align:'right'});
+    y+=12;
+  }
 
-  doc.save(`Orcamento_${o.id}_${o.cliente.replace(/\s/g,'_')}.pdf`);
+  fc(245,197,0); doc.rect(tx2,y,tw2,16,'F');
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); tc(22,22,22);
+  doc.text('TOTAL DO ORCAMENTO',tx2+5,y+7);
+  doc.setFontSize(15); tc(22,22,22);
+  doc.text('R$ '+fmtN(o.total),ml+usable,y+12.5,{align:'right'});
+  y+=20;
+
+  // ── Obs ──
+  if(o.obs){
+    if(y+22>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,o.id);doc.addPage();y=20;}
+    var obsLines=doc.splitTextToSize(o.obs,usable-12);
+    var obsH=obsLines.length*6+16;
+    fc(250,249,246); doc.rect(ml,y,usable,obsH,'F');
+    fc(245,197,0);   doc.rect(ml,y,3,obsH,'F');
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
+    doc.text('OBSERVACOES',ml+7,y+8);
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); tc(22,22,22);
+    doc.text(obsLines,ml+7,y+15);
+  }
+
+  _orcPDFRodape(doc,pw,ph,ml,mr,o.id);
+  doc.save('Orcamento_'+o.id+'_'+(o.cliente||'').replace(/\s+/g,'_')+'.pdf');
   toast('PDF exportado!');
+  }catch(err){alert('Erro PDF: '+err.message);console.error(err);}
+}
+
+function _orcPDFRodape(doc,pw,ph,ml,mr,id){
+  doc.setFillColor(22,22,22);
+  doc.rect(0,ph-14,pw,14,'F');
+  doc.setFillColor(245,197,0);
+  doc.rect(0,ph-14,pw,1.2,'F');
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(110,108,104);
+  doc.text('Comercial Tres Vales - GestCom v5',ml,ph-5.5);
+  doc.text(id+' - '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),pw-mr,ph-5.5,{align:'right'});
 }
 
 /* ══════════════════════════
@@ -3391,7 +3496,7 @@ function renderPedidos() {
   const mostrarExcluidos = el('ped-mostrar-excluidos')?.checked || false;
   const tbody = el('ped-tbody'); if(!tbody) return;
 
-  // Popula select de meses
+  // Popula select de meses dinamicamente
   const selMes = el('ped-filtro-mes');
   if(selMes) {
     const mesesSet = new Set();
@@ -3414,10 +3519,8 @@ function renderPedidos() {
   }
 
   const list = pedidos.filter(p=>{
-    // Por padrão, oculta excluídos; mostra só se checkbox marcado
     if(p.excluido && !mostrarExcluidos) return false;
     if(busca&&!p.id.toLowerCase().includes(busca)&&!p.cliente.toLowerCase().includes(busca)&&!p.industria.toLowerCase().includes(busca)) return false;
-    // Pedidos excluídos sempre passam pelos filtros de status/indústria/tipo quando mostrarExcluidos está ativo
     const isExcShowing = mostrarExcluidos && p.excluido;
     if(filtSt && !isExcShowing && p.status!==filtSt) return false;
     if(filtInd && !isExcShowing && p.industria!==filtInd) return false;
@@ -4140,40 +4243,130 @@ function exportarPedidoPDFById(id){const p=pedidos.find(x=>x.id===id);if(p)gerar
 function gerarPedPDF(p) {
   if(typeof window.jspdf==='undefined'&&typeof jspdf==='undefined'){alert('Biblioteca PDF não carregada.');return;}
   const {jsPDF}=window.jspdf||jspdf;
-  const doc=new jsPDF();
-  const yw=doc.internal.pageSize.getWidth();
-  doc.setFillColor(26,26,26);doc.rect(0,0,yw,32,'F');
-  doc.setFillColor(245,197,0);doc.rect(0,30,yw,2,'F');
-  doc.setTextColor(255,255,255);doc.setFontSize(18);doc.setFont('helvetica','bold');
-  doc.text('COMERCIAL TRÊS VALES',14,14);
-  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(200,200,200);
-  doc.text('Gestão Comercial',14,21);
-  doc.setTextColor(26,26,26);doc.setFontSize(14);doc.setFont('helvetica','bold');
-  doc.text(`PEDIDO ${p.id}${p.tipo==='bonificacao'?' — BONIFICAÇÃO':''}`,14,44);
-  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
-  doc.text(`Status: ${p.status}  |  Tipo: ${p.tipo==='bonificacao'?'Bonificação':'Venda'}`,14,51);
-  doc.setTextColor(26,26,26);
-  let y=62;
-  doc.setFillColor(244,243,239);doc.rect(10,y-5,yw-20,20,'F');
-  doc.setFont('helvetica','bold');doc.text('Cliente:',14,y);doc.setFont('helvetica','normal');doc.text(p.cliente,40,y);y+=8;
-  doc.setFont('helvetica','bold');doc.text('Indústria:',14,y);doc.setFont('helvetica','normal');doc.text(p.industria||'—',40,y);
-  doc.setFont('helvetica','bold');doc.text('Condição:',110,y);doc.setFont('helvetica','normal');doc.text(p.cond||'—',135,y);y+=14;
-  doc.setFillColor(26,26,26);doc.rect(10,y,yw-20,7,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-  doc.text('CÓD.',14,y+5);doc.text('DESCRIÇÃO',30,y+5);doc.text('QTD',115,y+5);doc.text('% DESC.',128,y+5);doc.text('UNIT.',145,y+5);doc.text('TOTAL',165,y+5);
-  y+=7;doc.setTextColor(26,26,26);doc.setFont('helvetica','normal');
-  (p.itens||[]).forEach((it,i)=>{
-    if(i%2===0){doc.setFillColor(250,250,248);doc.rect(10,y,yw-20,7,'F');}
-    doc.text(String(it.cod||''),14,y+5);doc.text(String(it.desc||'').substring(0,30),30,y+5);
-    doc.text(String(it.qtd||0),115,y+5);doc.text((it.descPct||0)+'%',128,y+5);
-    doc.text('R$ '+fmtN(it.precoUnit||0),143,y+5);
-    doc.setFont('helvetica','bold');doc.text('R$ '+fmtN(it.total||0),163,y+5);doc.setFont('helvetica','normal');
-    y+=7;if(y>270){doc.addPage();y=20;}
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pw=210,ph=297,ml=18,mr=18,usable=pw-ml-mr;
+  const isBonif=p.tipo==='bonificacao';
+
+  function fc(r,g,b){doc.setFillColor(r,g,b);}
+  function tc(r,g,b){doc.setTextColor(r,g,b);}
+  function dc(r,g,b){doc.setDrawColor(r,g,b);}
+
+  // Header
+  fc(245,197,0); doc.rect(0,0,pw,24,'F');
+  fc(22,22,22);  doc.rect(0,24,pw,8,'F');
+  tc(22,22,22);  doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text('COMERCIAL TRES VALES',ml,16);
+  tc(160,158,152); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text('Gestao Comercial Profissional',ml,29.5);
+  doc.text('Emitido em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),pw-mr,29.5,{align:'right'});
+
+  // Titulo
+  let y=46;
+  var docLabel=isBonif?'BONIFICACAO':'PEDIDO';
+  tc(22,22,22); doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text(docLabel,ml,y);
+  var nw=doc.getTextWidth(docLabel+' ');
+  tc(245,197,0); doc.text(String(p.id),ml+nw,y);
+
+  var badgeBg=isBonif?[255,241,194]:[202,220,255];
+  var badgeFg=isBonif?[120,80,0]:[12,60,160];
+  var badgeTx=isBonif?'BONIFICACAO':(p.status||'PEDIDO').toUpperCase().substring(0,12);
+  fc(badgeBg[0],badgeBg[1],badgeBg[2]);
+  doc.roundedRect(pw-mr-30,y-10,30,9,2,2,'F');
+  doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+  tc(badgeFg[0],badgeFg[1],badgeFg[2]);
+  doc.text(badgeTx,pw-mr-15,y-4.8,{align:'center'});
+
+  y+=7; fc(245,197,0); doc.rect(ml,y,usable,1.2,'F'); y+=10;
+
+  // Cards
+  var colW=(usable-6)/2, dataH=44;
+  function dataBox(x,cy,label,value,acento){
+    fc(250,249,246); doc.rect(x,cy,colW,dataH,'F');
+    if(acento){fc(245,197,0);}else{fc(215,213,208);}
+    doc.rect(x,cy,colW,1,'F');
+    doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
+    doc.text(String(label).toUpperCase(),x+5,cy+9);
+    doc.setFontSize(10.5); doc.setFont('helvetica','bold'); tc(22,22,22);
+    var lines=doc.splitTextToSize(String(value||'-'),colW-10);
+    doc.text(lines[0],x+5,cy+20);
+    if(lines[1]){doc.setFontSize(9);doc.text(lines[1],x+5,cy+28);}
+  }
+
+  dataBox(ml,        y,'Cliente',   p.cliente,         true);
+  dataBox(ml+colW+6, y,'Industria', p.industria||'-',  false);
+  y+=dataH+5;
+  dataBox(ml,        y,'Data',      p.data||'-',       false);
+  dataBox(ml+colW+6, y,'Condicao',  p.cond||'-',       false);
+  y+=dataH+5;
+
+  fc(250,249,246); doc.rect(ml,y,usable,32,'F');
+  fc(215,213,208); doc.rect(ml,y,usable,1,'F');
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
+  doc.text('STATUS / TIPO',ml+5,y+9);
+  doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+  if(isBonif){tc(172,92,0);}else{tc(22,22,22);}
+  doc.text((p.status||'-')+(isBonif?' - Bonificacao':''),ml+5,y+20);
+  y+=38;
+
+  // Tabela
+  var C={
+    cod:{label:'COD.',    x:ml,      w:20, al:'left'},
+    desc:{label:'DESCRICAO',x:ml+22, w:76, al:'left'},
+    ind:{label:'INDUSTRIA',x:ml+100, w:26, al:'left'},
+    qtd:{label:'QTD',     x:ml+128,  w:12, al:'right'},
+    dsc:{label:'DESCONTO',x:ml+142,  w:16, al:'right'},
+    unit:{label:'UNIT.',  x:ml+160,  w:18, al:'right'},
+    tot:{label:'TOTAL',   x:ml+180,  w:12, al:'right'},
+  };
+  var rowH=12, thH=10;
+  function drawTh(yy){
+    fc(22,22,22); doc.rect(ml,yy,usable,thH,'F');
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold'); tc(245,197,0);
+    Object.values(C).forEach(function(c){
+      var tx=c.al==='right'?c.x+c.w:c.x+2;
+      doc.text(c.label,tx,yy+6.8,{align:c.al});
+    });
+  }
+  drawTh(y); y+=thH;
+
+  (p.itens||[]).forEach(function(it,i){
+    if(y+rowH>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,p.id);doc.addPage();y=20;drawTh(y);y+=thH;}
+    if(i%2===0){fc(250,249,246);}else{fc(255,255,255);}
+    doc.rect(ml,y,usable,rowH,'F');
+    dc(215,213,208); doc.line(ml,y+rowH,ml+usable,y+rowH);
+    var cy=y+8;
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold'); tc(22,22,22);
+    doc.text(String(it.cod||''),C.cod.x+2,cy);
+    doc.setFont('helvetica','normal');
+    doc.text(doc.splitTextToSize(String(it.desc||''),C.desc.w)[0],C.desc.x+2,cy);
+    tc(155,152,146);
+    doc.text(String(it.ind||'').substring(0,13),C.ind.x+2,cy);
+    tc(22,22,22);
+    doc.text(String(it.qtd||0),C.qtd.x+C.qtd.w,cy,{align:'right'});
+    var dp=it.descPct||0;
+    if(dp>0){tc(22,118,48);}else{tc(200,198,193);}
+    doc.text(dp+'%',C.dsc.x+C.dsc.w,cy,{align:'right'});
+    tc(155,152,146);
+    doc.text('R$ '+fmtN(it.precoUnit||0),C.unit.x+C.unit.w,cy,{align:'right'});
+    doc.setFont('helvetica','bold'); tc(22,22,22);
+    doc.text('R$ '+fmtN(it.total||0),C.tot.x+C.tot.w,cy,{align:'right'});
+    y+=rowH;
   });
-  y+=4;doc.setFillColor(245,197,0);doc.rect(130,y,yw-140,8,'F');
-  doc.setTextColor(0,0,0);doc.setFont('helvetica','bold');doc.setFontSize(10);
-  doc.text('TOTAL DO PEDIDO:',132,y+6);doc.text('R$ '+fmtN(p.total),yw-14,y+6,{align:'right'});
-  doc.save(`Pedido_${p.id}_${p.cliente.replace(/\s/g,'_')}.pdf`);
+
+  // Total
+  y+=8;
+  if(y+20>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,p.id);doc.addPage();y=20;}
+  var tx2=ml+96, tw2=usable-96;
+  fc(245,197,0); doc.rect(tx2,y,tw2,16,'F');
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); tc(22,22,22);
+  doc.text(isBonif?'TOTAL DA BONIFICACAO':'TOTAL DO PEDIDO',tx2+5,y+7);
+  doc.setFontSize(15); tc(22,22,22);
+  doc.text('R$ '+fmtN(p.total),ml+usable,y+12.5,{align:'right'});
+
+  _orcPDFRodape(doc,pw,ph,ml,mr,p.id);
+  doc.save('Pedido_'+p.id+'_'+(p.cliente||'').replace(/\s+/g,'_')+'.pdf');
   toast('PDF do pedido exportado!');
 }
 
@@ -8999,32 +9192,25 @@ function renderLogistica() {
     }
   }
 
-  // ── Popula select de meses dinamicamente ──
+  // Popula select de meses dinamicamente
   const selMes = el('log-filtro-mes');
   if(selMes) {
     const mesesSet = new Set();
     pedElegiveis.forEach(p => {
       if(p.data) {
-        // suporta dd/mm/aaaa e aaaa-mm-dd
         let ano, mes;
-        if(p.data.includes('/')) {
-          const parts = p.data.split('/');
-          mes = parts[1]; ano = parts[2];
-        } else if(p.data.includes('-')) {
-          const parts = p.data.split('-');
-          ano = parts[0]; mes = parts[1];
-        }
+        if(p.data.includes('/')) { const pt=p.data.split('/'); mes=pt[1]; ano=pt[2]; }
+        else if(p.data.includes('-')) { const pt=p.data.split('-'); ano=pt[0]; mes=pt[1]; }
         if(ano && mes) mesesSet.add(`${ano}-${mes}`);
       }
     });
-    const mesesOrdenados = Array.from(mesesSet).sort().reverse();
     const nomeMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const mesesOrdenados = Array.from(mesesSet).sort().reverse();
     const valorAtual = selMes.value;
     selMes.innerHTML = '<option value="">📅 Todos os meses</option>' +
       mesesOrdenados.map(m => {
         const [a,mm] = m.split('-');
-        const label = `${nomeMes[parseInt(mm,10)-1]}/${a}`;
-        return `<option value="${m}" ${valorAtual===m?'selected':''}>${label}</option>`;
+        return `<option value="${m}" ${valorAtual===m?'selected':''}>${nomeMes[parseInt(mm,10)-1]}/${a}</option>`;
       }).join('');
   }
 
@@ -9035,13 +9221,13 @@ function renderLogistica() {
   if(filtMes)  list = list.filter(l => {
     if(!l.data) return false;
     let ano, mes;
-    if(l.data.includes('/')) { const p=l.data.split('/'); mes=p[1]; ano=p[2]; }
-    else if(l.data.includes('-')) { const p=l.data.split('-'); ano=p[0]; mes=p[1]; }
+    if(l.data.includes('/')) { const pt=l.data.split('/'); mes=pt[1]; ano=pt[2]; }
+    else if(l.data.includes('-')) { const pt=l.data.split('-'); ano=pt[0]; mes=pt[1]; }
     return ano && mes && `${ano}-${mes}` === filtMes;
   });
-  if(filtAlerta === 'atrasado')    list = list.filter(l => _logIsAtrasado(l));
+  if(filtAlerta === 'atrasado')     list = list.filter(l => _logIsAtrasado(l));
   if(filtAlerta === 'sem-previsao') list = list.filter(l => !l.previsao && !['Entregue','Finalizado','Cancelado'].includes(l.statusLog));
-  if(filtAlerta === 'hoje')        list = list.filter(l => _logIsHoje(l));
+  if(filtAlerta === 'hoje')         list = list.filter(l => _logIsHoje(l));
 
   if(list.length===0){
     tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">
