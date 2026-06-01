@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -308,6 +309,522 @@ tr:last-child td{border-bottom:none;}
 .audit-icon{width:26px;height:26px;border-radius:50%;background:var(--cinza);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
 .audit-time{font-size:10px;color:#aaa;white-space:nowrap;}
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GestCom">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+/*
+ * ============================================================
+ *  GestCom — CSS Responsivo Mobile
+ *  Compatível com gestcom_v24.html
+ *  Adicione no <head> APÓS o <style> existente:
+ *  <link rel="stylesheet" href="gestcom_mobile.css">
+ *  (ou cole o conteúdo abaixo direto no final do <style>)
+ * ============================================================
+ */
+
+/* ═══════════════════════════════════════════════
+   VARIÁVEIS EXTRAS PARA MOBILE
+═══════════════════════════════════════════════ */
+:root {
+  --bottomnav-h: 62px;
+  --topbar-mobile-h: 52px;
+}
+
+/* ═══════════════════════════════════════════════
+   MEDIA QUERY PRINCIPAL — telas até 768px
+═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ─── BODY / LAYOUT BASE ─── */
+  body {
+    display: block;
+    font-size: 13px;
+    padding-bottom: var(--bottomnav-h);
+  }
+
+  /* ─── SIDEBAR — oculta em mobile ─── */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* ─── MAIN — ocupa tela toda ─── */
+  .main {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* ─── TOPBAR — compacta ─── */
+  .topbar {
+    padding: 10px 14px;
+    height: var(--topbar-mobile-h);
+  }
+  .topbar-title {
+    font-size: 14px;
+  }
+  #sync-ts {
+    display: none;
+  }
+
+  /* ─── CONTENT ─── */
+  .content {
+    padding: 14px 12px;
+  }
+
+  /* ─── SECTION BAR ─── */
+  .section-title {
+    font-size: 17px;
+  }
+  .section-bar {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .export-btns {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .export-btns .btn {
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    min-width: 120px;
+  }
+
+  /* ─── KPI GRIDS — 2 colunas ─── */
+  .kpi-grid,
+  .rel-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kpi-value {
+    font-size: 18px;
+  }
+
+  /* ─── GRIDS GERAIS ─── */
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* ─── FORM GRIDS ─── */
+  .form-grid,
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .form-group.full {
+    grid-column: 1 / -1;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px; /* evita zoom automático no iPhone */
+  }
+
+  /* ─── SEARCH BAR ─── */
+  .search-bar {
+    flex-direction: column;
+    gap: 7px;
+  }
+  .search-bar input,
+  .search-bar select {
+    width: 100%;
+    min-width: unset;
+    font-size: 16px;
+  }
+
+  /* ─── TABELAS → CARDS EMPILHADOS ─── */
+  .card {
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  /* Wrapper de tabela vira scroll horizontal em mobile
+     (melhor que quebrar células em cards para tabelas muito complexas) */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+
+  table {
+    min-width: 600px; /* garante que tabela rola ao invés de quebrar */
+  }
+
+  /* Tabelas simples (dashboard) viram cards linha a linha */
+  .card > table,
+  .card > .table-wrap > table {
+    min-width: unset;
+  }
+  .card > table thead,
+  .card > .table-wrap > table thead {
+    display: none;
+  }
+  .card > table tr,
+  .card > .table-wrap > table tr {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--cinza);
+    gap: 4px;
+  }
+  .card > table tr:last-child,
+  .card > .table-wrap > table tr:last-child {
+    border-bottom: none;
+  }
+  .card > table td,
+  .card > .table-wrap > table td {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 0;
+    border: none;
+    font-size: 12px;
+  }
+  /* Primeira td (geralmente nº do pedido) — ocupa linha toda */
+  .card > table td:first-child,
+  .card > .table-wrap > table td:first-child {
+    width: 100%;
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  /* ─── MODAIS → DRAWER DE BAIXO ─── */
+  .modal-bg {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal,
+  .modal.modal-xl {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 16px 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Alça visual do drawer */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--cinza-medio);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .modal-title {
+    font-size: 14px;
+  }
+
+  /* ─── TABS ─── */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    gap: 0;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  /* ─── BOTÕES ─── */
+  .btn {
+    min-height: 44px; /* área mínima de toque */
+    font-size: 12px;
+  }
+  .btn-sm {
+    min-height: 38px;
+  }
+  .btn-xs {
+    min-height: 32px;
+  }
+
+  /* ─── MONTH PILLS ─── */
+  .month-pills {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+  }
+  .month-pills::-webkit-scrollbar {
+    display: none;
+  }
+  .month-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ─── CARD HEADER ─── */
+  .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ─── SALDO HEADER ─── */
+  .saldo-header {
+    flex-wrap: wrap;
+  }
+  .saldo-stats {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  /* ─── NF COMPARE GRID ─── */
+  .nf-compare-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ─── ITENS TABLE (pedido/orçamento) — scroll horizontal ─── */
+  .itens-table {
+    min-width: 560px;
+  }
+  div:has(> .itens-table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ─── IMPORT ZONE ─── */
+  .import-zone {
+    padding: 16px 12px;
+  }
+
+  /* ─── LOGIN ─── */
+  .login-box {
+    border-radius: 16px;
+    padding: 28px 20px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  /* ─── USER MENU ─── */
+  .user-name {
+    display: none;
+  }
+  .user-profile {
+    display: none;
+  }
+  .topbar-user {
+    padding: 4px;
+  }
+
+  /* ─── ALERT ─── */
+  .alert {
+    font-size: 12px;
+  }
+
+  /* ─── SECTION SUB ─── */
+  .section-sub {
+    font-size: 11px;
+    margin-bottom: 12px;
+  }
+
+  /* ─── SELL OUT FORM ─── */
+  .sellout-form {
+    padding: 12px;
+  }
+
+} /* fim @media 768px */
+
+
+/* ═══════════════════════════════════════════════
+   BOTTOM NAVIGATION MOBILE
+   Inserida via JS (initMobileNav) — ver instruções
+═══════════════════════════════════════════════ */
+#gc-bottomnav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #gc-bottomnav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bottomnav-h);
+    background: var(--preto);
+    border-top: 1px solid #333;
+    z-index: 150;
+    align-items: stretch;
+  }
+
+  .gc-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    color: #666;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border: none;
+    background: transparent;
+    padding: 6px 4px;
+    transition: color 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  .gc-nav-btn .gc-nav-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .gc-nav-btn.active {
+    color: var(--amarelo);
+  }
+  .gc-nav-btn .gc-nav-badge {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 14px);
+    background: var(--vermelho);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 10px;
+    min-width: 14px;
+    text-align: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   FAB — BOTÃO + FLUTUANTE
+═══════════════════════════════════════════════ */
+#gc-fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #gc-fab {
+    display: flex;
+    position: fixed;
+    bottom: calc(var(--bottomnav-h) + 14px);
+    right: 16px;
+    width: 50px;
+    height: 50px;
+    background: var(--amarelo);
+    border-radius: 14px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 149;
+    border: none;
+    font-size: 26px;
+    color: #000;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s;
+  }
+  #gc-fab:active {
+    transform: scale(0.93);
+  }
+
+  /* Sheet do FAB */
+  #gc-fab-sheet {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 160;
+    align-items: flex-end;
+  }
+  #gc-fab-sheet.open {
+    display: flex;
+  }
+  #gc-fab-sheet-inner {
+    background: #fff;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 16px 16px 32px;
+  }
+  #gc-fab-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--cinza-medio);
+    border-radius: 2px;
+    margin: 0 auto 14px;
+  }
+  #gc-fab-sheet-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--preto);
+  }
+  #gc-fab-sheet-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .gc-fab-item {
+    background: var(--cinza);
+    border-radius: 12px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    border: 1px solid var(--cinza-medio);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .gc-fab-item:active {
+    background: var(--cinza-medio);
+  }
+  .gc-fab-item-icon {
+    font-size: 22px;
+  }
+  .gc-fab-item-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--preto);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TELAS MUITO PEQUENAS — 375px (iPhone SE)
+═══════════════════════════════════════════════ */
+@media (max-width: 390px) {
+  .content {
+    padding: 10px 10px;
+  }
+  .kpi-grid,
+  .rel-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .kpi-value {
+    font-size: 16px;
+  }
+  .btn {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+  .section-title {
+    font-size: 15px;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -358,6 +875,7 @@ tr:last-child td{border-bottom:none;}
   <div class="sidebar-section">
     <div class="sidebar-label">Financeiro</div>
     <div class="nav-item" onclick="showPanel('saldo',this)"><span class="nav-icon">📊</span> Saldo Cli. × Indústria</div>
+    <div class="nav-item" onclick="showPanel('ctrlsaldo',this)"><span class="nav-icon">🏦</span> Controle de Saldos <span class="nav-badge" id="badge-ctrlsaldo" style="display:none">!</span></div>
     <div class="nav-item" onclick="showPanel('comissoes',this)"><span class="nav-icon">💰</span> Comissões</div>
     <div class="nav-item" onclick="showPanel('fatmensal',this)"><span class="nav-icon">📅</span> Fat. Mensal por Indústria</div>
     <div class="nav-item" onclick="showPanel('sellinout',this)"><span class="nav-icon">↕️</span> Sell In / Sell Out</div>
@@ -558,7 +1076,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>#</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Condição</th><th>Itens</th><th>Total Pedido</th><th>NF Líquida</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>#</th><th>Nº Ped. Cliente</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Condição</th><th>Itens</th><th>Total Pedido</th><th>NF Líquida</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="ped-tbody"></tbody>
         </table>
       </div>
@@ -645,7 +1163,7 @@ tr:last-child td{border-bottom:none;}
       </div>
 
       <div class="search-bar">
-        <input id="log-busca" placeholder="🔍 Pedido, cliente, indústria..." oninput="renderLogistica()">
+        <input id="log-busca" placeholder="🔍 Pedido, cliente, indústria, Nº NF, Nº pedido cliente..." oninput="renderLogistica()">
         <select id="log-filtro-mes" onchange="renderLogistica()">
           <option value="">📅 Todos os meses</option>
         </select>
@@ -670,7 +1188,7 @@ tr:last-child td{border-bottom:none;}
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Data</th>
+              <th>Pedido</th><th>Nº Ped. Cliente</th><th>NF</th><th>Cliente</th><th>Indústria</th><th>Data</th>
               <th>Transportadora</th><th>Previsão Entrega</th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
             </tr></thead>
             <tbody id="log-tbody"></tbody>
@@ -682,33 +1200,252 @@ tr:last-child td{border-bottom:none;}
     <!-- ===== SALDO CLI × INDUSTRIA ===== -->
     <div class="panel" id="panel-saldo">
       <div class="section-bar">
-        <div><div class="section-title">Saldo por Cliente × Indústria</div><div class="section-sub">Acompanhamento financeiro e comissional por cliente e indústria</div></div>
+        <div><div class="section-title">Saldo por Cliente × Indústria</div><div class="section-sub">Acompanhamento financeiro · análise de saldos por indústria e cliente</div></div>
         <div class="export-btns">
           <button class="btn btn-success btn-sm" onclick="abrirUsarSaldo()">💳 Usar Saldo</button>
-          <button class="btn btn-danger btn-sm" onclick="zerarTodosSaldos()">🔄 Zerar Todos os Saldos</button>
-          <button class="btn btn-info btn-sm" onclick="exportarSaldo()">📤 Exportar Excel</button>
+          <button class="btn btn-danger btn-sm" onclick="zerarTodosSaldos()">🔄 Zerar Todos</button>
+          <button class="btn btn-info btn-sm" onclick="exportarSaldoAnalise()">📤 Exportar Excel</button>
         </div>
       </div>
-      <div class="search-bar">
-        <select id="saldo-cli" onchange="renderSaldo()">
+
+      <!-- Filtros globais (afetam todas as abas) -->
+      <div class="search-bar" style="margin-bottom:0">
+        <select id="saldo-cli" onchange="renderSaldoAtivo()">
           <option value="">Todos os clientes</option>
         </select>
-        <select id="saldo-ind" onchange="renderSaldo()">
+        <select id="saldo-ind" onchange="renderSaldoAtivo()">
           <option value="">Todas as indústrias</option>
         </select>
-        <select id="saldo-mes" onchange="renderSaldo()">
-          <option value="">Todos os meses</option>
-          <option>Jan/26</option><option>Fev/26</option><option>Mar/26</option>
-          <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
-          <option>Jul/26</option><option>Ago/26</option><option>Set/26</option>
-          <option>Out/26</option><option>Nov/26</option><option>Dez/26</option>
-          <option>Jan/25</option><option>Fev/25</option><option>Mar/25</option>
-          <option>Abr/25</option><option>Mai/25</option><option>Jun/25</option>
-          <option>Jul/25</option><option>Ago/25</option><option>Set/25</option>
-          <option>Out/25</option><option>Nov/25</option><option>Dez/25</option>
+        <select id="saldo-mes" onchange="renderSaldoAtivo()">
+          <option value="">📅 Todos os meses</option>
         </select>
+        <button class="btn btn-outline btn-sm" onclick="limparFiltrosSaldo()" title="Limpar todos os filtros">✕ Limpar</button>
       </div>
-      <div id="saldo-content"></div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="saldo-tabs" style="margin-top:14px">
+        <div class="tab active" id="tab-saldo-detalhe" onclick="showSaldoTab('detalhe',this)">📋 Detalhe por Cliente</div>
+        <div class="tab" id="tab-saldo-industria" onclick="showSaldoTab('industria',this)">🏭 Análise por Indústria</div>
+        <div class="tab" id="tab-saldo-cliente" onclick="showSaldoTab('cliente',this)">👥 Análise por Cliente</div>
+        <div class="tab" id="tab-saldo-ranking" onclick="showSaldoTab('ranking',this)">🏆 Ranking</div>
+      </div>
+
+      <!-- TAB: Detalhe por Cliente (existente) -->
+      <div id="saldo-tab-detalhe">
+        <div id="saldo-content"></div>
+      </div>
+
+      <!-- TAB: Análise por Indústria -->
+      <div id="saldo-tab-industria" style="display:none">
+        <!-- KPIs indústria -->
+        <div class="kpi-grid" id="saldo-ind-kpis" style="margin-bottom:16px;grid-template-columns:repeat(4,1fr)"></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <thead><tr>
+              <th>Indústria</th>
+              <th style="text-align:right">Qtd Clientes</th>
+              <th style="text-align:right">Qtd Pedidos</th>
+              <th style="text-align:right">Total Pedidos</th>
+              <th style="text-align:right">Total Faturado NF</th>
+              <th style="text-align:right">NF Líquida</th>
+              <th style="text-align:right">Saldo em Aberto</th>
+              <th style="text-align:right">NF &gt; Pedido</th>
+              <th style="text-align:right">% Cobertura NF</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody id="saldo-ind-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Barra visual por indústria -->
+        <div id="saldo-ind-bars" style="margin-top:16px"></div>
+      </div>
+
+      <!-- TAB: Análise por Cliente -->
+      <div id="saldo-tab-cliente" style="display:none">
+        <!-- KPIs cliente -->
+        <div class="kpi-grid" id="saldo-cli-kpis" style="margin-bottom:16px;grid-template-columns:repeat(4,1fr)"></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <thead><tr>
+              <th>Cliente</th>
+              <th style="text-align:right">Qtd Indústrias</th>
+              <th style="text-align:right">Qtd Pedidos</th>
+              <th style="text-align:right">Total Pedidos</th>
+              <th style="text-align:right">Total Faturado NF</th>
+              <th style="text-align:right">NF Líquida</th>
+              <th style="text-align:right">Saldo em Aberto</th>
+              <th style="text-align:right">NF &gt; Pedido</th>
+              <th style="text-align:right">% Cobertura NF</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody id="saldo-cli-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: Ranking -->
+      <div id="saldo-tab-ranking" style="display:none">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏭 Top Indústrias — Maior Saldo em Aberto</div>
+            </div>
+            <div id="saldo-rank-ind-aberto"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">👥 Top Clientes — Maior Saldo em Aberto</div>
+            </div>
+            <div id="saldo-rank-cli-aberto"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏭 Top Indústrias — Maior Faturamento</div>
+            </div>
+            <div id="saldo-rank-ind-fat"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">👥 Top Clientes — Maior Faturamento</div>
+            </div>
+            <div id="saldo-rank-cli-fat"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CONTROLE DE SALDOS ===== -->
+    <div class="panel" id="panel-ctrlsaldo">
+      <div class="section-bar">
+        <div>
+          <div class="section-title">🏦 Controle de Saldos por Pedido</div>
+          <div class="section-sub">Saldos automáticos gerados pela diferença entre valor do pedido e valor faturado na NF · utilização automática por número do pedido do cliente</div>
+        </div>
+        <div class="export-btns">
+          <button class="btn btn-info btn-sm" onclick="exportarCtrlSaldo()">📤 Exportar Excel</button>
+          <button class="btn btn-outline btn-sm" onclick="showCtrlSaldoTab('historico')">📜 Histórico Completo</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="ctrlsaldo-kpis" style="margin-bottom:16px;grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card kpi-amarelo"><div class="kpi-label">Saldo Disponível Total</div><div class="kpi-value" id="cs-kpi-disp">R$ 0</div><div class="kpi-sub" id="cs-kpi-disp-sub">0 registros</div></div>
+        <div class="kpi-card kpi-azul"><div class="kpi-label">Saldo Utilizado Total</div><div class="kpi-value" id="cs-kpi-util">R$ 0</div><div class="kpi-sub" id="cs-kpi-util-sub">0 utilizações</div></div>
+        <div class="kpi-card kpi-verde"><div class="kpi-label">Utilizado Parcialmente</div><div class="kpi-value" id="cs-kpi-parc">R$ 0</div><div class="kpi-sub">Em aberto</div></div>
+        <div class="kpi-card kpi-roxo"><div class="kpi-label">Saldo Gerado (Total Histórico)</div><div class="kpi-value" id="cs-kpi-total">R$ 0</div><div class="kpi-sub">Desde o início</div></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="ctrlsaldo-tabs">
+        <div class="tab active" onclick="showCtrlSaldoTab('saldos',this)" id="tab-cs-saldos">📋 Saldos Ativos</div>
+        <div class="tab" onclick="showCtrlSaldoTab('utilizacoes',this)" id="tab-cs-util">💳 Utilizações</div>
+        <div class="tab" onclick="showCtrlSaldoTab('historico',this)" id="tab-cs-hist">📜 Histórico / Auditoria</div>
+        <div class="tab" onclick="showCtrlSaldoTab('dashboard',this)" id="tab-cs-dash">📊 Dashboard</div>
+      </div>
+
+      <!-- TAB: Saldos Ativos -->
+      <div id="ctrlsaldo-tab-saldos">
+        <div class="search-bar">
+          <input id="cs-busca" placeholder="🔍 Nº pedido cliente, cliente, indústria..." oninput="renderCtrlSaldos()">
+          <select id="cs-filtro-cli" onchange="renderCtrlSaldos()"><option value="">Todos os clientes</option></select>
+          <select id="cs-filtro-ind" onchange="renderCtrlSaldos()"><option value="">Todas as indústrias</option></select>
+          <select id="cs-filtro-status" onchange="renderCtrlSaldos()">
+            <option value="">Todos os status</option>
+            <option value="Disponível">Disponível</option>
+            <option value="Utilizado Parcialmente">Utilizado Parcialmente</option>
+            <option value="Utilizado Totalmente">Utilizado Totalmente</option>
+            <option value="NF Maior que Pedido">NF Maior que Pedido</option>
+          </select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <thead><tr>
+              <th>#</th>
+              <th>Nº Pedido Cliente</th>
+              <th>Cliente</th>
+              <th>Indústria</th>
+              <th>Total Pedidos do Grupo</th>
+              <th>Total NFs do Grupo</th>
+              <th>Saldo do Grupo</th>
+              <th>Utilizado Manualmente</th>
+              <th>Disponível</th>
+              <th>Última Atualização</th>
+              <th>Pedidos / NFs</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="cs-saldos-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: Utilizações -->
+      <div id="ctrlsaldo-tab-utilizacoes" style="display:none">
+        <div class="search-bar">
+          <input id="cs-util-busca" placeholder="🔍 Nº pedido, cliente, indústria..." oninput="renderCtrlUtilizacoes()">
+          <select id="cs-util-filtro-cli" onchange="renderCtrlUtilizacoes()"><option value="">Todos os clientes</option></select>
+          <select id="cs-util-filtro-ind" onchange="renderCtrlUtilizacoes()"><option value="">Todas as indústrias</option></select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <thead><tr>
+              <th>#</th>
+              <th>Data Utilização</th>
+              <th>Nº Pedido Cliente</th>
+              <th>Cliente</th>
+              <th>Indústria</th>
+              <th>Saldo Origem</th>
+              <th>Valor Utilizado</th>
+              <th>Saldo Restante</th>
+              <th>Pedido Destino</th>
+              <th>NF Destino</th>
+              <th>Comissão Gerada</th>
+              <th>Usuário</th>
+            </tr></thead>
+            <tbody id="cs-util-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: Histórico / Auditoria -->
+      <div id="ctrlsaldo-tab-historico" style="display:none">
+        <div class="search-bar">
+          <input id="cs-hist-busca" placeholder="🔍 Buscar no histórico..." oninput="renderCtrlHistorico()">
+          <select id="cs-hist-tipo" onchange="renderCtrlHistorico()">
+            <option value="">Todos os tipos</option>
+            <option value="geracao">Geração de Saldo</option>
+            <option value="utilizacao">Utilização</option>
+            <option value="estorno">Estorno</option>
+          </select>
+        </div>
+        <div id="cs-historico-list"></div>
+      </div>
+
+      <!-- TAB: Dashboard -->
+      <div id="ctrlsaldo-tab-dashboard" style="display:none">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top 10 — Clientes com Maior Saldo</div></div>
+            <div id="cs-dash-top-clientes"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top 10 — Indústrias com Maior Saldo</div></div>
+            <div id="cs-dash-top-industrias"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Saldo por Cliente</div></div>
+            <div id="cs-dash-por-cliente"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Saldo por Indústria</div></div>
+            <div id="cs-dash-por-industria"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== COMISSÕES ===== -->
@@ -1530,6 +2267,13 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-group"><label>Indústria *</label>
         <select id="ped-ind"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group" style="border-left:3px solid var(--amarelo);padding-left:10px;background:var(--amarelo-claro,#fffbdc);border-radius:0 6px 6px 0">
+        <label style="color:var(--amarelo-mid,#b8900a)">🔑 Nº Pedido do Cliente <span style="font-size:9px;background:var(--amarelo);color:#000;padding:1px 5px;border-radius:3px;font-weight:700">CHAVE</span></label>
+        <input type="text" id="ped-num-cliente" placeholder="Ex: 10001, REF-2026-05..." maxlength="60"
+          oninput="verificarNumPedidoClienteDup(this.value)"
+          style="font-weight:600;font-family:monospace;font-size:13px">
+        <div id="ped-num-cliente-status" style="font-size:10px;margin-top:3px;color:#888">Informe o número do pedido fornecido pelo cliente — será a chave principal</div>
       </div>
       <div class="form-group"><label>Data do Pedido</label><input type="date" id="ped-data"></div>
       <div class="form-group"><label>Condição Comercial</label><input type="text" id="ped-cond" placeholder="Ex: 28D, 30/60D"></div>
@@ -2428,6 +3172,55 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- Modal Controle de Saldos — Utilização Manual -->
+<div class="modal-bg" id="modal-ctrlsaldo-uso">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="cs-modal-titulo">Utilizar Saldo</span>
+      <button class="close-btn" onclick="closeModal('modal-ctrlsaldo-uso')">✕</button>
+    </div>
+    <div id="cs-uso-info"></div>
+    <div class="alert alert-success" style="margin-bottom:12px">
+      💳 Saldo disponível: <strong id="cs-uso-saldo-disp">R$ 0,00</strong>
+    </div>
+    <div class="callout amarelo" style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:#fffbeb;border:1px solid #f5c500">
+      ℹ️ Ao registrar uma utilização do tipo <strong>Venda</strong>, a comissão será calculada automaticamente conforme as regras da indústria.
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tipo de Utilização *</label>
+        <select id="cs-uso-tipo">
+          <option value="venda">💼 Venda (gera comissão)</option>
+          <option value="bonificacao">🎁 Bonificação (sem comissão)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valor a Utilizar (R$) *</label>
+        <input type="number" id="cs-uso-valor" placeholder="0,00" step="0.01" min="0.01" oninput="
+          const s=ctrlSaldosData.find(x=>x.id===_csEditSaldoId);
+          if(s){ const rest=s.valorRestante-(parseFloat(this.value)||0);
+          this.style.borderColor=rest<-0.01?'var(--vermelho)':'var(--cinza-medio)'; }">
+      </div>
+      <div class="form-group">
+        <label>Pedido Destino (opcional)</label>
+        <select id="cs-uso-pedido-dest"></select>
+      </div>
+      <div class="form-group">
+        <label>NF Destino (opcional)</label>
+        <input id="cs-uso-nf-dest" placeholder="Número da NF de destino...">
+      </div>
+      <div class="form-group full">
+        <label>Observação</label>
+        <textarea id="cs-uso-obs" rows="2" placeholder="Motivo da utilização, referências adicionais..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeModal('modal-ctrlsaldo-uso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarUsarSaldoCtrl()">💳 Confirmar Utilização</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" style="position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;display:none;align-items:center;gap:8px"></div>
 
@@ -2513,7 +3306,7 @@ let configSistema = {
   diasAlerta:   5,
   emailAdmin:   '',
   modulosAtivos: ['dashboard','orcamentos','pedidos','faturamento','nfcompare','logistica',
-    'tratativas','saldo','comissoes','fatmensal','sellinout','metas','relatorios',
+    'tratativas','saldo','ctrlsaldo','comissoes','fatmensal','sellinout','metas','relatorios',
     'mix','redes','clientes','industrias','produtos','regras','usuarios','configuracoes','importexport','sync']
 };
 
@@ -2525,6 +3318,14 @@ let metasData = [];
 
 let regrasComerciais = [];
 let regraEditId = null;
+
+// ══════════════════════════
+//   CONTROLE DE SALDOS — DADOS
+// ══════════════════════════
+// Cada saldo gerado automaticamente ao registrar NF com valor < pedido
+let ctrlSaldosData = [];
+// Histórico de utilizações (débitos de saldo)
+let ctrlSaldosHistorico = [];
 
 let auditLog = [];
 
@@ -2545,6 +3346,7 @@ const TODOS_MODULOS = [
   {key:'logistica',   label:'Logística',              icone:'🚚'},
   {key:'tratativas',  label:'Tratativas',             icone:'🔁'},
   {key:'saldo',       label:'Saldo Cli × Indústria',  icone:'📊'},
+  {key:'ctrlsaldo',   label:'Controle de Saldos',      icone:'🏦'},
   {key:'comissoes',   label:'Comissões',              icone:'💰'},
   {key:'fatmensal',   label:'Fat. Mensal Indústria',  icone:'📅'},
   {key:'sellinout',   label:'Sell In / Sell Out',     icone:'↕️'},
@@ -2691,7 +3493,9 @@ function _salvarLocal() {
       pedidos, orcamentos, clientes, industrias, redes, comissoes_data,
       logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
       PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms,
-      configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]), _ts: Date.now()
+      configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
+      ctrlSaldosData, ctrlSaldosHistorico,
+      _ts: Date.now()
     });
     localStorage.setItem('gestcom_dados', payload);
   } catch(e) {
@@ -2725,6 +3529,8 @@ function _carregarLocal() {
     if(d.configSistema && typeof d.configSistema ==='object') Object.assign(configSistema,   d.configSistema);
     if(Array.isArray(d.auditLog))         auditLog             = d.auditLog;
     if(Array.isArray(d.saldoUsosData))    window.saldoUsosData = d.saldoUsosData;
+    if(Array.isArray(d.ctrlSaldosData))       ctrlSaldosData       = d.ctrlSaldosData;
+    if(Array.isArray(d.ctrlSaldosHistorico))  ctrlSaldosHistorico  = d.ctrlSaldosHistorico;
     // Migração: cria entradas de logística para pedidos antigos
     pedidos.filter(p=>!p.excluido).forEach(p=>{
       if(!logisticaData.find(l=>l.pedId===p.id))
@@ -2817,6 +3623,7 @@ const panelTitles = {
   sync:'Sincronização em Nuvem',pedidos:'Gestão de Pedidos',bonificacoes:'Bonificações',
   faturamento:'Faturamento / Notas Fiscais',nfcompare:'Comparação Pedido × NF',
   logistica:'Controle Logístico',saldo:'Saldo por Cliente × Indústria',
+  ctrlsaldo:'Controle de Saldos por Pedido',
   comissoes:'Controle de Comissões',sellinout:'Sell In / Sell Out',
   fatmensal:'Faturamento Mensal por Indústria',
   metas:'Controle de Metas',tratativas:'Tratativas Pós-Faturamento',
@@ -2855,7 +3662,8 @@ function showPanel(name, navEl) {
   if(name==='faturamento')  renderFaturamento();
   if(name==='nfcompare')    renderNFCompare();
   if(name==='comissoes')    renderComissoes();
-  if(name==='saldo')        renderSaldo();
+  if(name==='saldo')        { popularSaldoMeses(); renderSaldoAtivo(); }
+  if(name==='ctrlsaldo')    { _atualizarBadgeCtrlSaldo(); showCtrlSaldoTab('saldos'); popularCtrlSaldoSelects(); }
   if(name==='mix')          renderMix();
   if(name==='produtos')     renderProdutos();
   if(name==='logistica')    renderLogistica();
@@ -3548,7 +4356,7 @@ function renderPedidos() {
       <button class="btn btn-outline btn-xs" onclick="window._pedPag=Math.min(${_ppPages},window._pedPag+1);renderPedidos()" ${window._pedPag>=_ppPages?'disabled':''}>Próxima ›</button>
     </div>`;
 
-  tbody.innerHTML = listShow.length===0 ? `<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
+  tbody.innerHTML = listShow.length===0 ? `<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px">Nenhum pedido encontrado</td></tr>` :
   listShow.map(p=>{
     const isBonif = p.tipo === 'bonificacao';
     const isExcluido = !!p.excluido;
@@ -3556,8 +4364,16 @@ function renderPedidos() {
       ? `<span class="badge badge-laranja" title="Bonificação — sem comissão">🎁 BONIF</span>`
       : `<span class="badge badge-azul" title="Pedido de venda">🛒 Venda</span>`;
     const rowStyle = isExcluido ? 'opacity:0.5;background:#f9f9f9;' : '';
+    // Saldo disponível para este pedido
+    const saldoDisp = p.numPedidoCliente
+      ? ctrlSaldosData.filter(s=>s.numPedidoCliente===p.numPedidoCliente&&s.cliente===p.cliente&&s.industria===p.industria&&s.status!=='Utilizado Totalmente').reduce((a,s)=>a+s.valorRestante,0)
+      : 0;
+    const numCliCell = p.numPedidoCliente
+      ? `<span class="mono" style="font-weight:700;color:var(--azul);font-size:12px">${esc(p.numPedidoCliente)}</span>${saldoDisp>0.01?`<div style="font-size:9px;color:var(--verde);font-weight:700">💰 Saldo: ${fmt(saldoDisp)}</div>`:''}`
+      : `<span style="color:#ccc;font-size:11px">—</span>`;
     return `<tr style="${rowStyle}">
     <td class="mono bold">${p.id}${isExcluido?` <span class="badge badge-cinza" style="font-size:9px">EXCLUÍDO</span>`:''}</td>
+    <td style="white-space:nowrap">${numCliCell}</td>
     <td>${tipoBadge}</td>
     <td><strong>${esc(p.cliente)}</strong></td>
     <td><span class="tag">${esc(p.industria)}</span></td>
@@ -3714,6 +4530,8 @@ function novoPedido() {
   el('ped-tipo').value = 'venda';
   el('ped-obs').value = '';
   el('ped-orc-origem').value = '';
+  if(el('ped-num-cliente')) { el('ped-num-cliente').value = ''; el('ped-num-cliente').style.borderColor = ''; }
+  if(el('ped-num-cliente-status')) el('ped-num-cliente-status').textContent = 'Informe o número do pedido fornecido pelo cliente — será a chave principal';
   if(el('ped-add-preco-unit')) el('ped-add-preco-unit').value = '';
   if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display = 'none';
   if(el('ped-rede-info-group')) el('ped-rede-info-group').style.display = 'none';
@@ -3773,6 +4591,8 @@ function editarPedido(id) {
   pedTipoChange(p.tipo   || 'venda');
   el('ped-obs').value        = p.obs       || '';
   el('ped-orc-origem').value = p.orcOrigem || '';
+  if(el('ped-num-cliente')) el('ped-num-cliente').value = p.numPedidoCliente || '';
+  if(el('ped-num-cliente-status')) el('ped-num-cliente-status').textContent = p.numPedidoCliente ? '✅ Número registrado' : 'Informe o número do pedido fornecido pelo cliente';
   if(el('ped-rede-info-group')) el('ped-rede-info-group').style.display = 'none';
   if(el('ped-add-preco-unit')) el('ped-add-preco-unit').value = '';
   if(el('ped-add-preco-badge')) el('ped-add-preco-badge').style.display = 'none';
@@ -4164,11 +4984,17 @@ function salvarPedido() {
   const obj = {
     id: pedEditId || _gerarIdPedido(),
     tipo,
+    numPedidoCliente: (el('ped-num-cliente')?.value||'').trim() || '',
     cliente:cli, industria:el('ped-ind').value, data:el('ped-data').value||today(),
     cond:el('ped-cond').value, status:el('ped-status').value,
     itens:[...pedItens], total, obs:el('ped-obs').value, orcOrigem,
     _importado: pedExistente?._importado || false
   };
+
+  // O número do pedido do cliente PODE se repetir — é a chave do GRUPO de saldo.
+  // Quem diferencia cada faturamento é o número da NF (faturamento, comissão etc.).
+  // Por isso não há bloqueio por número de pedido repetido; o motor de saldo agrupa
+  // por número do pedido + cliente + indústria e recalcula a cada novo faturamento.
 
   const jaTemNF = !!(pedExistente && pedExistente.nf);
   const novaStatus = nfInline
@@ -4489,11 +5315,18 @@ function salvarNF() {
       if (_saldoAuto && _saldoAuto > 0) {
         addAudit(usuarioLogado?.login||'sistema', `Saldo gerado: ${fmt(_saldoAuto)} — ${ped.cliente} / ${ped.industria}`, '📊');
       }
+      // v25: abater saldo existente automaticamente se este pedido tem numPedidoCliente com saldo pendente
+      const _abatidoAuto = _abaterSaldoAutomatico(ped, nfObj);
+      if (_abatidoAuto > 0) {
+        addAudit(usuarioLogado?.login||'sistema', `Saldo abatido automaticamente: ${fmt(_abatidoAuto)} — ${ped.cliente}/${ped.industria} — pedido ${ped.id}`, '💳');
+        _atualizarBadgeCtrlSaldo();
+      }
       closeModal('modal-nf');
       renderFaturamento();renderPedidos();renderLogistica();renderSaldo();renderComissoes();popularSelectsDinamicos();renderDashboard();
       syncAutoSaveHook();
       const _saldoMsg = _saldoAuto && _saldoAuto > 0 ? ` · Saldo de ${fmt(_saldoAuto)} gerado.` : '';
-      toast((jaTemNF ? 'NF atualizada! Comissão recalculada.' : 'NF registrada! Comissão calculada automaticamente.') + _saldoMsg);
+      const _abatMsg  = _abatidoAuto > 0 ? ` · 💳 Saldo de ${fmt(_abatidoAuto)} abatido automaticamente!` : '';
+      toast((jaTemNF ? 'NF atualizada! Comissão recalculada.' : 'NF registrada! Comissão calculada automaticamente.') + _saldoMsg + _abatMsg);
     }
   }else{
     closeModal('modal-nf');
@@ -5100,12 +5933,226 @@ function anexarArquivoNF(pedId, tipo, input) {
 function exportarComparacaoPDF() { toast('PDF da comparação exportado!'); }
 
 /* ══════════════════════════
+   SALDO CLI × INDUSTRIA — HELPERS
+══════════════════════════ */
+
+// Popula o select de meses com os meses reais que existem nos pedidos/NFs
+function popularSaldoMeses() {
+  const sel = el('saldo-mes'); if (!sel) return;
+  const cur = sel.value;
+  const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Coleta todos os meses presentes nos pedidos (data da NF se faturado, senão data do pedido)
+  const mesesSet = new Set();
+  pedidos.filter(p=>!p.excluido).forEach(p=>{
+    const dataRef = (p.nf && p.nf.data) ? p.nf.data : p.data;
+    if (!dataRef || dataRef.length < 7) return;
+    const [ano, mes] = dataRef.split('-');
+    if (!ano || !mes) return;
+    const mIdx = parseInt(mes, 10) - 1;
+    if (mIdx < 0 || mIdx > 11) return;
+    mesesSet.add(`${mesesAbrev[mIdx]}/${String(ano).slice(2)}`);
+  });
+
+  // Ordena: mais recentes primeiro
+  const mesesOrdenados = [...mesesSet].sort((a, b) => {
+    const toDate = s => { const p=s.split('/'); return parseInt('20'+p[1])*100+mesesAbrev.indexOf(p[0]); };
+    return toDate(b) - toDate(a);
+  });
+
+  sel.innerHTML = '<option value="">📅 Todos os meses</option>' +
+    mesesOrdenados.map(m => `<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+}
+
+function limparFiltrosSaldo() {
+  if(el('saldo-cli')) el('saldo-cli').value = '';
+  if(el('saldo-ind')) el('saldo-ind').value = '';
+  if(el('saldo-mes')) el('saldo-mes').value = '';
+  renderSaldoAtivo();
+}
+
+/* ── Controla qual aba do saldo está ativa ── */
+let _saldoTabAtiva = 'detalhe';
+function showSaldoTab(tab, btnEl) {
+  _saldoTabAtiva = tab;
+  ['detalhe','industria','cliente','ranking'].forEach(t=>{
+    const d = el('saldo-tab-'+t); if(d) d.style.display = t===tab ? '' : 'none';
+    const b = el('tab-saldo-'+t); if(b) b.classList.toggle('active', t===tab);
+  });
+  renderSaldoAtivo();
+}
+function renderSaldoAtivo() {
+  popularSaldoMeses();
+  if(_saldoTabAtiva==='detalhe')        renderSaldo();
+  else if(_saldoTabAtiva==='industria') renderSaldoAnaliseIndustria();
+  else if(_saldoTabAtiva==='cliente')   renderSaldoAnaliseCliente();
+  else if(_saldoTabAtiva==='ranking')   renderSaldoRanking();
+}
+function _getSaldoDadosFiltrados() {
+  const filtCli=(el('saldo-cli')||{}).value||'';
+  const filtInd=(el('saldo-ind')||{}).value||'';
+  const filtMes=(el('saldo-mes')||{}).value||'';
+  const mesesAbrev=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function _pfx(lbl){if(!lbl)return'';const pts=lbl.split('/');if(pts.length!==2)return'';const mi=mesesAbrev.findIndex(m=>m===pts[0]);if(mi===-1)return'';return(2000+parseInt(pts[1],10))+'-'+String(mi+1).padStart(2,'0');}
+  const pfx=_pfx(filtMes);
+  return pedidos.filter(p=>{
+    if(p.excluido)return false;
+    if(filtCli&&p.cliente!==filtCli)return false;
+    if(filtInd&&p.industria!==filtInd)return false;
+    if(pfx){const dr=(p.nf&&p.nf.data)?p.nf.data:p.data;if(!dr||!dr.startsWith(pfx))return false;}
+    return true;
+  });
+}
+function renderSaldoAnaliseIndustria(){
+  const tbody=el('saldo-ind-tbody');if(!tbody)return;
+  const peds=_getSaldoDadosFiltrados();
+  const iM={};
+  peds.forEach(p=>{
+    if(!iM[p.industria])iM[p.industria]={clis:new Set(),qtd:0,totPed:0,totNF:0,totLiq:0};
+    iM[p.industria].clis.add(p.cliente);iM[p.industria].qtd++;
+    iM[p.industria].totPed+=p.total;
+    if(p.nf){iM[p.industria].totNF+=p.nf.valorNF;iM[p.industria].totLiq+=p.nf.liquida;}
+  });
+  const inds=Object.entries(iM).map(([ind,d])=>{
+    const dif=parseFloat((d.totPed-d.totNF).toFixed(2));
+    return{ind,clientes:d.clis.size,qtdPeds:d.qtd,totPed:d.totPed,totNF:d.totNF,totLiq:d.totLiq,dif,cobertura:d.totPed>0?d.totNF/d.totPed*100:0};
+  }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  const tP=inds.reduce((s,x)=>s+x.totPed,0),tN=inds.reduce((s,x)=>s+x.totNF,0);
+  const tAb=inds.filter(x=>x.dif>0.01).reduce((s,x)=>s+x.dif,0);
+  const tNM=inds.filter(x=>x.dif<-0.01).reduce((s,x)=>s+Math.abs(x.dif),0);
+  const ke=el('saldo-ind-kpis');
+  if(ke)ke.innerHTML=`<div class="kpi-card kpi-amarelo"><div class="kpi-label">Total Pedidos</div><div class="kpi-value">${fmt(tP)}</div><div class="kpi-sub">${inds.length} indústria(s)</div></div><div class="kpi-card kpi-verde"><div class="kpi-label">Total Faturado NF</div><div class="kpi-value">${fmt(tN)}</div><div class="kpi-sub">${tP>0?(tN/tP*100).toFixed(1):'0'}% cobertura</div></div><div class="kpi-card kpi-azul"><div class="kpi-label">Saldo em Aberto</div><div class="kpi-value">${fmt(tAb)}</div><div class="kpi-sub">${inds.filter(x=>x.dif>0.01).length} indústria(s)</div></div><div class="kpi-card kpi-vermelho"><div class="kpi-label">NF Maior que Pedido</div><div class="kpi-value">${fmt(tNM)}</div><div class="kpi-sub">${inds.filter(x=>x.dif<-0.01).length} indústria(s)</div></div>`;
+  if(!inds.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">Nenhum dado para os filtros selecionados</td></tr>';if(el('saldo-ind-bars'))el('saldo-ind-bars').innerHTML='';return;}
+  tbody.innerHTML=inds.map(x=>{
+    const dz=Math.abs(x.dif)<0.01,dp=x.dif>=0.01,dn=x.dif<=-0.01;
+    const cc=x.cobertura>=100?'verde':x.cobertura>=80?'amarelo':'vermelho';
+    const st=dz?'<span class="badge badge-verde">✅ Zerado</span>':dp?'<span class="badge badge-amarelo">Saldo aberto</span>':'<span class="badge badge-vermelho">NF maior</span>';
+    return`<tr><td><span class="tag">${esc(x.ind)}</span></td><td style="text-align:right">${x.clientes}</td><td style="text-align:right">${x.qtdPeds}</td><td style="text-align:right" class="bold">${fmt(x.totPed)}</td><td style="text-align:right">${x.totNF>0?fmt(x.totNF):'<span style="color:#aaa">—</span>'}</td><td style="text-align:right" class="verde">${x.totLiq>0?fmt(x.totLiq):'—'}</td><td style="text-align:right" class="bold ${dp?'amarelo':dn?'vermelho':'verde'}">${dz?'—':(dp?'+':'')+fmt(x.dif)}</td><td style="text-align:right" class="${dn?'vermelho':''}">${dn?fmt(Math.abs(x.dif)):'—'}</td><td style="text-align:right"><span class="${cc}" style="font-weight:700">${x.cobertura.toFixed(1)}%</span><div style="margin-top:3px;height:4px;border-radius:99px;background:var(--cinza-medio);overflow:hidden;width:60px"><div style="height:4px;background:${x.cobertura>=100?'var(--verde)':x.cobertura>=80?'var(--amarelo)':'var(--vermelho)'};width:${Math.min(100,x.cobertura).toFixed(0)}%"></div></div></td><td>${st}</td></tr>`;
+  }).join('')+`<tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)"><td>TOTAL GERAL</td><td style="text-align:right">${[...new Set(peds.map(p=>p.cliente))].length}</td><td style="text-align:right">${peds.length}</td><td style="text-align:right">${fmt(tP)}</td><td style="text-align:right">${fmt(tN)}</td><td style="text-align:right" class="verde">${fmt(inds.reduce((s,x)=>s+x.totLiq,0))}</td><td style="text-align:right" class="${tAb>0.01?'amarelo':'verde'}">${tAb>0.01?'+'+fmt(tAb):'—'}</td><td style="text-align:right" class="${tNM>0.01?'vermelho':''}">${tNM>0.01?fmt(tNM):'—'}</td><td style="text-align:right">${tP>0?'<strong>'+(tN/tP*100).toFixed(1)+'%</strong>':'—'}</td><td></td></tr>`;
+  const be=el('saldo-ind-bars');if(!be)return;
+  const maxV=Math.max(...inds.map(x=>x.totPed),1);
+  be.innerHTML=`<div class="card" style="margin-top:4px"><div class="card-header"><div class="card-title">📊 Comparativo Visual — Pedido × NF por Indústria</div></div><div style="display:flex;flex-direction:column;gap:12px;padding-top:4px">${inds.map(x=>{const pp=(x.totPed/maxV*100).toFixed(1),pn=(x.totNF/maxV*100).toFixed(1),dz=Math.abs(x.dif)<0.01,dp=x.dif>=0.01;return`<div style="display:grid;grid-template-columns:150px 1fr 120px;gap:10px;align-items:center"><div title="${esc(x.ind)}" style="overflow:hidden"><span class="tag" style="font-size:10px;max-width:140px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.ind)}</span></div><div><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:${pp}%;height:11px;background:var(--preto);border-radius:2px;min-width:2px"></div><span style="font-size:10px;color:#888;white-space:nowrap">${fmt(x.totPed)}</span></div><div style="display:flex;align-items:center;gap:6px"><div style="width:${pn}%;height:11px;background:${dp?'var(--verde)':dz?'var(--verde)':'var(--vermelho)'};border-radius:2px;min-width:${x.totNF>0?2:0}px"></div><span style="font-size:10px;color:#888;white-space:nowrap">${x.totNF>0?fmt(x.totNF):'—'}</span></div></div><div style="text-align:right"><span class="bold" style="font-size:12px;color:${dp?'var(--amarelo)':dz?'var(--verde)':'var(--vermelho)'}">${dz?'✅ Ok':(dp?'+':'')+fmt(x.dif)}</span><div style="font-size:10px;color:#aaa">${x.cobertura.toFixed(1)}% NF/Ped</div></div></div>`;}).join('')}<div style="display:flex;gap:20px;padding-top:8px;border-top:1px solid var(--cinza-medio);font-size:11px;color:#888"><span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:8px;background:var(--preto);border-radius:2px"></span>Valor Pedido</span><span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:8px;background:var(--verde);border-radius:2px"></span>Valor NF</span></div></div></div>`;
+}
+function renderSaldoAnaliseCliente(){
+  const tbody=el('saldo-cli-tbody');if(!tbody)return;
+  const peds=_getSaldoDadosFiltrados();
+  const cM={};
+  peds.forEach(p=>{
+    if(!cM[p.cliente])cM[p.cliente]={inds:new Set(),qtd:0,totPed:0,totNF:0,totLiq:0};
+    cM[p.cliente].inds.add(p.industria);cM[p.cliente].qtd++;
+    cM[p.cliente].totPed+=p.total;
+    if(p.nf){cM[p.cliente].totNF+=p.nf.valorNF;cM[p.cliente].totLiq+=p.nf.liquida;}
+  });
+  const clis=Object.entries(cM).map(([cli,d])=>{
+    const dif=parseFloat((d.totPed-d.totNF).toFixed(2));
+    return{cli,industrias:d.inds.size,qtdPeds:d.qtd,totPed:d.totPed,totNF:d.totNF,totLiq:d.totLiq,dif,cobertura:d.totPed>0?d.totNF/d.totPed*100:0,indsLista:[...d.inds].join(', ')};
+  }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  const tP=clis.reduce((s,x)=>s+x.totPed,0),tN=clis.reduce((s,x)=>s+x.totNF,0);
+  const tAb=clis.filter(x=>x.dif>0.01).reduce((s,x)=>s+x.dif,0);
+  const tNM=clis.filter(x=>x.dif<-0.01).reduce((s,x)=>s+Math.abs(x.dif),0);
+  const ke=el('saldo-cli-kpis');
+  if(ke)ke.innerHTML=`<div class="kpi-card kpi-amarelo"><div class="kpi-label">Total Pedidos</div><div class="kpi-value">${fmt(tP)}</div><div class="kpi-sub">${clis.length} cliente(s)</div></div><div class="kpi-card kpi-verde"><div class="kpi-label">Total Faturado NF</div><div class="kpi-value">${fmt(tN)}</div><div class="kpi-sub">${tP>0?(tN/tP*100).toFixed(1):'0'}% cobertura</div></div><div class="kpi-card kpi-azul"><div class="kpi-label">Saldo em Aberto</div><div class="kpi-value">${fmt(tAb)}</div><div class="kpi-sub">${clis.filter(x=>x.dif>0.01).length} cliente(s)</div></div><div class="kpi-card kpi-vermelho"><div class="kpi-label">NF Maior que Pedido</div><div class="kpi-value">${fmt(tNM)}</div><div class="kpi-sub">${clis.filter(x=>x.dif<-0.01).length} cliente(s)</div></div>`;
+  if(!clis.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">Nenhum dado para os filtros selecionados</td></tr>';return;}
+  tbody.innerHTML=clis.map(x=>{
+    const dz=Math.abs(x.dif)<0.01,dp=x.dif>=0.01,dn=x.dif<=-0.01;
+    const cc=x.cobertura>=100?'verde':x.cobertura>=80?'amarelo':'vermelho';
+    const st=dz?'<span class="badge badge-verde">✅ Zerado</span>':dp?'<span class="badge badge-amarelo">Saldo aberto</span>':'<span class="badge badge-vermelho">NF maior</span>';
+    const av=x.cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:var(--preto);color:var(--amarelo);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Syne',sans-serif">${av}</div><div><div style="font-weight:600;font-size:12.5px">${esc(x.cli)}</div><div style="font-size:10px;color:#aaa;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.indsLista)}</div></div></div></td><td style="text-align:right">${x.industrias}</td><td style="text-align:right">${x.qtdPeds}</td><td style="text-align:right" class="bold">${fmt(x.totPed)}</td><td style="text-align:right">${x.totNF>0?fmt(x.totNF):'<span style="color:#aaa">—</span>'}</td><td style="text-align:right" class="verde">${x.totLiq>0?fmt(x.totLiq):'—'}</td><td style="text-align:right" class="bold ${dp?'amarelo':dn?'vermelho':'verde'}">${dz?'—':(dp?'+':'')+fmt(x.dif)}</td><td style="text-align:right" class="${dn?'vermelho':''}">${dn?fmt(Math.abs(x.dif)):'—'}</td><td style="text-align:right"><span class="${cc}" style="font-weight:700">${x.cobertura.toFixed(1)}%</span><div style="margin-top:3px;height:4px;border-radius:99px;background:var(--cinza-medio);overflow:hidden;width:60px"><div style="height:4px;background:${x.cobertura>=100?'var(--verde)':x.cobertura>=80?'var(--amarelo)':'var(--vermelho)'};width:${Math.min(100,x.cobertura).toFixed(0)}%"></div></div></td><td>${st}</td></tr>`;
+  }).join('')+`<tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)"><td>TOTAL GERAL</td><td style="text-align:right">${[...new Set(peds.map(p=>p.industria))].length}</td><td style="text-align:right">${peds.length}</td><td style="text-align:right">${fmt(tP)}</td><td style="text-align:right">${fmt(tN)}</td><td style="text-align:right" class="verde">${fmt(clis.reduce((s,x)=>s+x.totLiq,0))}</td><td style="text-align:right" class="${tAb>0.01?'amarelo':'verde'}">${tAb>0.01?'+'+fmt(tAb):'—'}</td><td style="text-align:right" class="${tNM>0.01?'vermelho':''}">${tNM>0.01?fmt(tNM):'—'}</td><td style="text-align:right">${tP>0?'<strong>'+(tN/tP*100).toFixed(1)+'%</strong>':'—'}</td><td></td></tr>`;
+}
+function renderSaldoRanking(){
+  const peds=_getSaldoDadosFiltrados();
+  function _rHTML(items,lk,isTag){
+    if(!items.length)return'<div style="color:#aaa;font-size:12px;padding:12px">Sem dados</div>';
+    const mv=items[0].val||1;
+    return items.slice(0,10).map((x,i)=>`<div class="rank-row"><div class="rank-num">${i+1}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isTag?'<span class="tag" style="font-size:10px">'+esc(x[lk])+'</span>':esc(x[lk])}</div><div class="rank-bar-wrap" style="margin-top:3px"><div class="rank-bar" style="width:${(x.val/mv*100).toFixed(0)}%"></div></div></div><div class="bold" style="font-size:12px;white-space:nowrap;margin-left:8px">${fmt(x.val)}</div></div>`).join('');
+  }
+  const iAb={},iFat={},cAb={},cFat={};
+  peds.forEach(p=>{
+    const dif=parseFloat((p.total-(p.nf?p.nf.valorNF:0)).toFixed(2));
+    if(!iAb[p.industria])iAb[p.industria]=0;if(!iFat[p.industria])iFat[p.industria]=0;
+    if(!cAb[p.cliente])cAb[p.cliente]=0;if(!cFat[p.cliente])cFat[p.cliente]=0;
+    if(dif>0.01){iAb[p.industria]+=dif;cAb[p.cliente]+=dif;}
+    if(p.nf){iFat[p.industria]+=p.nf.valorNF;cFat[p.cliente]+=p.nf.valorNF;}
+  });
+  const srt=obj=>Object.entries(obj).map(([k,v])=>({k,val:v})).sort((a,b)=>b.val-a.val);
+  const iAbS=srt(iAb).filter(x=>x.val>0.01).map(x=>({...x,ind:x.k}));
+  const iFatS=srt(iFat).map(x=>({...x,ind:x.k}));
+  const cAbS=srt(cAb).filter(x=>x.val>0.01).map(x=>({...x,cli:x.k}));
+  const cFatS=srt(cFat).map(x=>({...x,cli:x.k}));
+  if(el('saldo-rank-ind-aberto'))el('saldo-rank-ind-aberto').innerHTML=iAbS.length?_rHTML(iAbS,'ind',true):'<div style="text-align:center;color:var(--verde);padding:16px;font-weight:600">✅ Nenhuma indústria com saldo em aberto!</div>';
+  if(el('saldo-rank-cli-aberto'))el('saldo-rank-cli-aberto').innerHTML=cAbS.length?_rHTML(cAbS,'cli',false):'<div style="text-align:center;color:var(--verde);padding:16px;font-weight:600">✅ Nenhum cliente com saldo em aberto!</div>';
+  if(el('saldo-rank-ind-fat'))el('saldo-rank-ind-fat').innerHTML=_rHTML(iFatS,'ind',true);
+  if(el('saldo-rank-cli-fat'))el('saldo-rank-cli-fat').innerHTML=_rHTML(cFatS,'cli',false);
+}
+function exportarSaldoAnalise(){
+  const wb=XLSX.utils.book_new();
+  const peds=_getSaldoDadosFiltrados();
+  const iM={},cM={};
+  peds.forEach(p=>{
+    if(!iM[p.industria])iM[p.industria]={clis:new Set(),qtd:0,totPed:0,totNF:0,totLiq:0};
+    iM[p.industria].clis.add(p.cliente);iM[p.industria].qtd++;iM[p.industria].totPed+=p.total;
+    if(p.nf){iM[p.industria].totNF+=p.nf.valorNF;iM[p.industria].totLiq+=p.nf.liquida;}
+    if(!cM[p.cliente])cM[p.cliente]={inds:new Set(),qtd:0,totPed:0,totNF:0,totLiq:0};
+    cM[p.cliente].inds.add(p.industria);cM[p.cliente].qtd++;cM[p.cliente].totPed+=p.total;
+    if(p.nf){cM[p.cliente].totNF+=p.nf.valorNF;cM[p.cliente].totLiq+=p.nf.liquida;}
+  });
+  const r1=[['Industria','Qtd Clientes','Qtd Pedidos','Total Pedidos','Total NF','NF Liquida','Saldo Aberto','NF>Pedido','% Cobertura','Status']];
+  Object.entries(iM).sort((a,b)=>b[1].totPed-a[1].totPed).forEach(([ind,d])=>{const dif=parseFloat((d.totPed-d.totNF).toFixed(2));r1.push([ind,d.clis.size,d.qtd,d.totPed,d.totNF,d.totLiq,dif>0.01?dif:0,dif<-0.01?Math.abs(dif):0,d.totPed>0?parseFloat((d.totNF/d.totPed*100).toFixed(2)):0,Math.abs(dif)<0.01?'Zerado':dif>0?'Saldo Aberto':'NF Maior']);});
+  const ws1=XLSX.utils.aoa_to_sheet(r1);ws1['!cols']=[{wch:22},{wch:14},{wch:12},{wch:18},{wch:16},{wch:16},{wch:18},{wch:16},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Por Industria');
+  const r2=[['Cliente','Industrias','Qtd Pedidos','Total Pedidos','Total NF','NF Liquida','Saldo Aberto','NF>Pedido','% Cobertura','Status']];
+  Object.entries(cM).sort((a,b)=>b[1].totPed-a[1].totPed).forEach(([cli,d])=>{const dif=parseFloat((d.totPed-d.totNF).toFixed(2));r2.push([cli,[...d.inds].join(', '),d.qtd,d.totPed,d.totNF,d.totLiq,dif>0.01?dif:0,dif<-0.01?Math.abs(dif):0,d.totPed>0?parseFloat((d.totNF/d.totPed*100).toFixed(2)):0,Math.abs(dif)<0.01?'Zerado':dif>0?'Saldo Aberto':'NF Maior']);});
+  const ws2=XLSX.utils.aoa_to_sheet(r2);ws2['!cols']=[{wch:32},{wch:24},{wch:12},{wch:18},{wch:16},{wch:16},{wch:18},{wch:16},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Por Cliente');
+  const ciM={};
+  peds.forEach(p=>{const k=p.cliente+'|||'+p.industria;if(!ciM[k])ciM[k]={cli:p.cliente,ind:p.industria,qtd:0,totPed:0,totNF:0,totLiq:0};ciM[k].qtd++;ciM[k].totPed+=p.total;if(p.nf){ciM[k].totNF+=p.nf.valorNF;ciM[k].totLiq+=p.nf.liquida;}});
+  const r3=[['Cliente','Industria','Qtd Pedidos','Total Pedidos','Total NF','NF Liquida','Diferenca','% Cobertura','Status']];
+  Object.values(ciM).sort((a,b)=>b.totPed-a.totPed).forEach(d=>{const dif=parseFloat((d.totPed-d.totNF).toFixed(2));r3.push([d.cli,d.ind,d.qtd,d.totPed,d.totNF,d.totLiq,dif,d.totPed>0?parseFloat((d.totNF/d.totPed*100).toFixed(2)):0,Math.abs(dif)<0.01?'Zerado':dif>0?'Saldo Aberto':'NF Maior']);});
+  const ws3=XLSX.utils.aoa_to_sheet(r3);ws3['!cols']=[{wch:32},{wch:20},{wch:12},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Cruzado Cli x Ind');
+  const tP=peds.reduce((s,p)=>s+p.total,0),tN=peds.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF,0),tL=peds.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida,0);
+  const tAb=Object.values(iM).reduce((s,d)=>{const dif=parseFloat((d.totPed-d.totNF).toFixed(2));return s+(dif>0.01?dif:0);},0);
+  const tNM=Object.values(iM).reduce((s,d)=>{const dif=parseFloat((d.totPed-d.totNF).toFixed(2));return s+(dif<-0.01?Math.abs(dif):0);},0);
+  const filtros=[(el('saldo-cli')||{}).value,(el('saldo-ind')||{}).value,(el('saldo-mes')||{}).value].filter(Boolean).join(' | ')||'Nenhum (todos os dados)';
+  const ws4=XLSX.utils.aoa_to_sheet([['ANALISE DE SALDOS — GESTCOM TRES VALES'],[''],['Filtros:',filtros],['Gerado em:',new Date().toLocaleString('pt-BR')],[''],['Indicador','Valor'],['Total Pedidos',tP],['Total NF',tN],['NF Liquida',tL],['Saldo Aberto',tAb],['NF Maior que Pedido',tNM],['Cobertura NF (%)',tP>0?parseFloat((tN/tP*100).toFixed(2)):0],[''],['Qtd Clientes c/ Saldo Aberto',Object.values(cM).filter(d=>parseFloat((d.totPed-d.totNF).toFixed(2))>0.01).length],['Qtd Industrias c/ Saldo Aberto',Object.values(iM).filter(d=>parseFloat((d.totPed-d.totNF).toFixed(2))>0.01).length],['Total Pedidos (qtd)',peds.length],['Total Clientes',Object.keys(cM).length],['Total Industrias',Object.keys(iM).length]]);
+  ws4['!cols']=[{wch:38},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Resumo');
+  XLSX.writeFile(wb,'AnaliseSaldos_TresVales_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel exportado com 4 abas: Por Industria, Por Cliente, Cruzado e Resumo!');
+}
+
+
+/* ══════════════════════════
    SALDO CLI × INDUSTRIA
 ══════════════════════════ */
 function renderSaldo() {
   const div=el('saldo-content');if(!div)return;
   const filtCli=(el('saldo-cli')||{}).value||'';
   const filtInd=(el('saldo-ind')||{}).value||'';
+  const filtMes=(el('saldo-mes')||{}).value||''; // ← CORRIGIDO: lê o filtro de mês
+
+  // Converte "Fev/26" → prefixo "2026-02" para comparar com datas dos pedidos/NFs
+  function _mesPrefixo(mesLabel) {
+    if (!mesLabel) return '';
+    const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const parts = mesLabel.split('/');
+    if (parts.length !== 2) return '';
+    const mIdx = mesesAbrev.findIndex(m => m === parts[0]);
+    if (mIdx === -1) return '';
+    const ano = 2000 + parseInt(parts[1], 10);
+    return `${ano}-${String(mIdx+1).padStart(2,'0')}`;
+  }
+
+  // Filtra pedidos pelo mês (usa data da NF se faturado, senão data do pedido)
+  function _pedNoMes(p) {
+    if (!filtMes) return true;
+    const prefixo = _mesPrefixo(filtMes);
+    if (!prefixo) return true;
+    const dataRef = (p.nf && p.nf.data) ? p.nf.data : p.data;
+    return dataRef && dataRef.startsWith(prefixo);
+  }
 
   const nomesClientes = [...new Set([
     ...clientes.map(c=>c.nome),
@@ -5126,41 +6173,96 @@ function renderSaldo() {
     return;
   }
 
-  div.innerHTML = nomesClientes.map(cli=>{
-    const pedsCli = pedidos.filter(p=>p.cliente===cli && !p.excluido);
+  // Exibe o mês filtrado como contexto visual
+  const mesContexto = filtMes
+    ? `<div class="alert alert-info" style="margin-bottom:14px">📅 Exibindo saldos do mês: <strong>${filtMes}</strong> · Referência: data da NF (se faturado) ou data do pedido</div>`
+    : '';
+
+  div.innerHTML = mesContexto + (nomesClientes.map(cli=>{
+    // Aplica filtro de mês nos pedidos do cliente
+    const pedsCli = pedidos.filter(p=>p.cliente===cli && !p.excluido && _pedNoMes(p));
     if(pedsCli.length===0) return '';
-    // Pedidos de venda E bonificação entram no saldo (bonificação não gera comissão mas gera saldo)
-    const pedsVenda = pedsCli; // todos os pedidos não excluídos do cliente
+
+    const pedsVenda = pedsCli;
     if(pedsVenda.length===0) return '';
 
-    // Usa pedsVenda para listar indústrias
+    // Filtra indústrias que têm pedidos neste cliente (com filtro de mês aplicado)
     const indsDoCliente = nomesIndustrias.filter(ind=>pedsVenda.some(p=>p.industria===ind));
+    if(indsDoCliente.length===0) return '';
+
     const av = cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
-    // SALDO = diferença entre valor do PEDIDO (venda) e valor da NF faturada
-    const totalPedido = pedsVenda.reduce((s,p)=>s+p.total, 0);
-    const totalNF     = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
-    const totalLiq    = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
-    const totalSaldo  = totalPedido - totalNF; // diferença pedido × NF
+    const totalPedido  = pedsVenda.reduce((s,p)=>s+p.total, 0);
+    const totalNF      = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
+    const totalLiq     = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
+    const totalSaldo   = parseFloat((totalPedido - totalNF).toFixed(2));
+    const totZero      = Math.abs(totalSaldo) < 0.01;
+    const totPos       = totalSaldo >= 0.01;
+    const totNeg       = totalSaldo <= -0.01;
+
+    // Monta linhas de cada indústria
+    const linhasIndustria = indsDoCliente.map(ind=>{
+      const pedsInd = pedsCli.filter(p=>p.industria===ind && !p.excluido);
+      if(pedsInd.length===0) return '';
+      const pTot  = pedsInd.reduce((s,p)=>s+p.total, 0);
+      const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
+      const liq   = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
+      const dif   = parseFloat((pTot - nfTot).toFixed(2)); // arredonda para evitar -0.000001
+      const semNF = pedsInd.filter(p=>!p.nf).length;
+      const qtdPeds = pedsInd.length;
+      // tolerância de R$ 0,01 para diferenças de arredondamento
+      const difZero = Math.abs(dif) < 0.01;
+      const difPos  = dif >= 0.01;   // pedido > NF → saldo a faturar
+      const difNeg  = dif <= -0.01;  // NF > pedido
+      const status = semNF>0 ? `<span class="badge badge-amarelo">⚠️ ${semNF} sem NF</span>` :
+                     difZero ? `<span class="badge badge-verde">✅ Ok</span>` :
+                     difPos  ? `<span class="badge badge-amarelo">Saldo aberto</span>` :
+                                `<span class="badge badge-vermelho">NF maior que pedido</span>`;
+      const difCorClass = difZero ? 'verde' : difPos ? 'amarelo' : 'vermelho';
+      const difTexto = difZero ? '—' : (difPos ? '+' : '') + fmt(dif);
+      return `<tr>
+        <td>
+          <span class="tag">${esc(ind)}</span>
+          <div style="font-size:10px;color:#aaa;margin-top:3px">${qtdPeds} pedido${qtdPeds!==1?'s':''}</div>
+        </td>
+        <td class="bold">${fmt(pTot)}</td>
+        <td>${nfTot>0?fmt(nfTot):'<span style="color:#aaa">Não faturado</span>'}</td>
+        <td class="verde">${liq>0?fmt(liq):'—'}</td>
+        <td class="bold ${difCorClass}">${difTexto}</td>
+        <td>${status}</td>
+        <td>
+          ${!difZero
+            ? `<button class="btn btn-outline btn-xs" onclick="zerarSaldoClienteInd('${esc(cli)}','${esc(ind)}')" title="Registrar ajuste para zerar a diferença">🔄 Zerar</button>`
+            : '<span style="color:#aaa;font-size:11px">—</span>'
+          }
+        </td>
+      </tr>`;
+    }).filter(Boolean).join('');
+
+    if (!linhasIndustria) return '';
 
     return `
       <div style="margin-bottom:20px">
         <div class="saldo-header">
           <div class="saldo-avatar">${av}</div>
-          <div>
-            <div class="saldo-nome">${esc(cli)}</div>
-            <div class="saldo-sub">${pedsCli.length} pedido(s) · ${pedsVenda.filter(p=>p.nf).length} faturado(s)</div>
+          <div style="flex:1;min-width:0">
+            <div class="saldo-nome" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cli)}</div>
+            <div class="saldo-sub">
+              ${pedsCli.length} pedido(s) · ${pedsVenda.filter(p=>p.nf).length} faturado(s)
+              ${filtMes ? `· <strong style="color:var(--amarelo)">${filtMes}</strong>` : ''}
+              ${filtInd ? `· <span class="tag" style="font-size:9px">${esc(filtInd)}</span>` : ''}
+            </div>
           </div>
           <div class="saldo-stats">
             <div style="text-align:right"><div class="saldo-stat-val">${fmt(totalPedido)}</div><div class="saldo-stat-lbl">Total Pedidos</div></div>
             <div style="text-align:right"><div class="saldo-stat-val">${fmt(totalNF)}</div><div class="saldo-stat-lbl">Total Faturado NF</div></div>
             <div style="text-align:right">
-              <div class="saldo-stat-val" style="color:${totalSaldo>0?'var(--amarelo)':totalSaldo<0?'#ff6b6b':'#4caf50'}">${fmt(Math.abs(totalSaldo))}</div>
-              <div class="saldo-stat-lbl">${totalSaldo>0?'Saldo a Faturar':totalSaldo<0?'Faturado a Mais':'✅ Zerado'}</div>
+              <div class="saldo-stat-val" style="color:${totPos?'var(--amarelo)':totNeg?'#ff6b6b':'#4caf50'}">${fmt(Math.abs(totalSaldo))}</div>
+              <div class="saldo-stat-lbl">${totPos?'Saldo a Faturar':totNeg?'Faturado a Mais':'✅ Zerado'}</div>
             </div>
           </div>
-          ${totalSaldo!==0
-            ? `<button class="btn btn-danger btn-sm" onclick="zerarSaldoCliente('${esc(cli)}')" style="flex-shrink:0;margin-left:8px" title="Zerar todas as diferenças deste cliente">🔄 Zerar</button>`
+          ${!totZero
+            ? `<button class="btn btn-danger btn-sm" onclick="zerarSaldoCliente('${esc(cli)}')" style="flex-shrink:0;margin-left:8px">🔄 Zerar</button>`
             : `<span style="flex-shrink:0;margin-left:8px;font-size:11px;color:#4caf50;font-weight:600">✅ Zerado</span>`
           }
         </div>
@@ -5176,42 +6278,14 @@ function renderSaldo() {
               <th>Ação</th>
             </tr></thead>
             <tbody>
-              ${indsDoCliente.map(ind=>{
-                const pedsInd      = pedsCli.filter(p=>p.industria===ind && !p.excluido);
-                if(pedsInd.length===0) return '';
-                const pTot  = pedsInd.reduce((s,p)=>s+p.total, 0);
-                const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
-                const liq   = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
-                const dif   = pTot - nfTot;
-                const semNF = pedsInd.filter(p=>!p.nf).length;
-                const status = semNF>0 ? `<span class="badge badge-amarelo">${semNF} sem NF</span>` :
-                               dif===0  ? `<span class="badge badge-verde">✅ Ok</span>` :
-                               dif>0    ? `<span class="badge badge-amarelo">Saldo aberto</span>` :
-                                          `<span class="badge badge-vermelho">NF maior que pedido</span>`;
-                return `<tr>
-                  <td><span class="tag">${esc(ind)}</span></td>
-                  <td class="bold">${fmt(pTot)}</td>
-                  <td>${nfTot>0?fmt(nfTot):'<span style="color:#aaa">Não faturado</span>'}</td>
-                  <td class="verde">${liq>0?fmt(liq):'—'}</td>
-                  <td class="bold ${dif>0?'amarelo':dif<0?'vermelho':'verde'}">
-                    ${dif===0?'—':(dif>0?'+':'')+fmt(dif)}
-                  </td>
-                  <td>${status}</td>
-                  <td>
-                    ${Math.abs(dif)>0
-                      ? `<button class="btn btn-outline btn-xs" onclick="zerarSaldoClienteInd('${esc(cli)}','${esc(ind)}')" title="Registrar ajuste para zerar a diferença">🔄 Zerar</button>`
-                      : '<span style="color:#aaa;font-size:11px">—</span>'
-                    }
-                  </td>
-                </tr>`;
-              }).join('')}
+              ${linhasIndustria}
               <tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)">
-                <td>TOTAL</td>
+                <td style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px">TOTAL</td>
                 <td>${fmt(totalPedido)}</td>
                 <td>${fmt(totalNF)}</td>
                 <td class="verde">${fmt(totalLiq)}</td>
-                <td class="bold ${totalSaldo>0?'amarelo':totalSaldo<0?'vermelho':'verde'}">
-                  ${totalSaldo===0?'✅ Zerado':(totalSaldo>0?'+':'')+fmt(totalSaldo)}
+                <td class="bold ${totPos?'amarelo':totNeg?'vermelho':'verde'}">
+                  ${totZero?'✅ Zerado':(totPos?'+':'')+fmt(totalSaldo)}
                 </td>
                 <td colspan="2"></td>
               </tr>
@@ -5220,7 +6294,11 @@ function renderSaldo() {
         </div>
       </div>`;
   }).filter(Boolean).join('') ||
-  `<div style="text-align:center;padding:40px;color:#aaa;font-size:12px">Nenhum pedido encontrado para os filtros selecionados</div>`;
+  `<div style="text-align:center;padding:40px;color:#aaa;font-size:12px">
+    <div style="font-size:24px;margin-bottom:8px">🔍</div>
+    Nenhum pedido encontrado para os filtros selecionados
+    ${filtMes?`<div style="margin-top:8px">Mês: <strong>${filtMes}</strong> — tente selecionar outro mês ou "Todos os meses"</div>`:''}
+  </div>`);
 }
 
 /* ══════════════════════════
@@ -8145,8 +9223,23 @@ function popularSelectsDinamicos() {
   }
 
   // selects de filtro (search bars) — exceto sio-filtro-cli que já foi tratado acima
-  const filtroCli = ['fat-filtro-cli','saldo-cli','bonif-filtro-cli'];
-  const filtroInd = ['orc-filtro-ind','ped-filtro-ind','fat-filtro-ind','saldo-ind',
+  // Para saldo-cli e saldo-ind: inclui TODOS que aparecem em pedidos, não só cadastrados
+  const todosClisPedidos = [...new Set([
+    ...clientes.filter(c=>c.status==='Ativo').map(c=>c.nome),
+    ...pedidos.filter(p=>!p.excluido).map(p=>p.cliente)
+  ])].sort();
+  const todasIndsPedidos = [...new Set([
+    ...todasInds,
+    ...pedidos.filter(p=>!p.excluido).map(p=>p.industria)
+  ])].filter(Boolean).sort();
+
+  const saldoCliSel = el('saldo-cli');
+  if(saldoCliSel){ const cur=saldoCliSel.value; saldoCliSel.innerHTML='<option value="">Todos os clientes</option>'+todosClisPedidos.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(cur) saldoCliSel.value=cur; }
+  const saldoIndSel = el('saldo-ind');
+  if(saldoIndSel){ const cur=saldoIndSel.value; saldoIndSel.innerHTML='<option value="">Todas as indústrias</option>'+todasIndsPedidos.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(cur) saldoIndSel.value=cur; }
+
+  const filtroCli = ['fat-filtro-cli','bonif-filtro-cli'];
+  const filtroInd = ['orc-filtro-ind','ped-filtro-ind','fat-filtro-ind',
     'com-filtro-ind','log-filtro-ind','sio-filtro-ind','fm-ind','filtro-industria-mix','prod-ind-filtro','bonif-filtro-ind'];
 
   filtroCli.forEach(id=>{
@@ -8173,6 +9266,9 @@ function popularSelectsDinamicos() {
     snf.innerHTML='<option value="">Selecione o pedido...</option>'+optsPeds;
     if(cur) snf.value=cur;
   }
+
+  // Atualiza meses do saldo dinamicamente
+  try { popularSaldoMeses(); } catch(e) {}
 }
 
 /* ══════════════════════════
@@ -9144,15 +10240,20 @@ function renderLogistica() {
   let list = pedElegiveis.map(p => {
     const l = logisticaData.find(x => x.pedId === p.id) || {};
     return {
-      pedId:          p.id,
-      cliente:        p.cliente,
-      industria:      p.industria,
-      data:           p.data,
-      transportadora: l.transportadora || '',
-      previsao:       l.previsao       || '',
-      dataEntrega:    l.dataEntrega    || '',
-      statusLog:      l.statusLog      || 'Pedido Digitado',
-      obs:            l.obs            || ''
+      pedId:             p.id,
+      numPedidoCliente:  p.numPedidoCliente || '',
+      nfNumero:          p.nf?.numero || '',
+      nfData:            p.nf?.data   || '',
+      nfValor:           p.nf?.valorNF || 0,
+      temNF:             !!p.nf,
+      cliente:           p.cliente,
+      industria:         p.industria,
+      data:              p.data,
+      transportadora:    l.transportadora || '',
+      previsao:          l.previsao       || '',
+      dataEntrega:       l.dataEntrega    || '',
+      statusLog:         l.statusLog      || 'Pedido Digitado',
+      obs:               l.obs            || ''
     };
   });
 
@@ -9180,8 +10281,11 @@ function renderLogistica() {
       el('log-alerta-count').textContent = atrasados.length + ' pedido(s)';
       el('log-alerta-lista').innerHTML = atrasados.slice(0,5).map(l => {
         const diasAtraso = Math.floor((hoje - new Date(l.previsao+'T00:00:00')) / 86400000);
+        const ped = pedidos.find(p=>p.id===l.pedId);
+        const nfNum = ped?.nf?.numero || '';
         return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed #fecaca">
           <span style="font-weight:700">${l.pedId}</span>
+          ${nfNum?`<span class="mono" style="font-size:11px;color:var(--vermelho)">NF ${nfNum}</span>`:''}
           <span>${esc(l.cliente)}</span>
           <span class="tag">${esc(l.industria)}</span>
           <span style="margin-left:auto;background:#c0392b;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">${diasAtraso} dia(s) de atraso</span>
@@ -9215,7 +10319,13 @@ function renderLogistica() {
   }
 
   // Aplica filtros
-  if(busca)    list = list.filter(l => l.pedId.toLowerCase().includes(busca) || l.cliente.toLowerCase().includes(busca) || l.industria.toLowerCase().includes(busca));
+  if(busca)    list = list.filter(l =>
+    l.pedId.toLowerCase().includes(busca) ||
+    l.cliente.toLowerCase().includes(busca) ||
+    l.industria.toLowerCase().includes(busca) ||
+    (l.nfNumero && l.nfNumero.toLowerCase().includes(busca)) ||
+    (l.numPedidoCliente && l.numPedidoCliente.toLowerCase().includes(busca))
+  );
   if(filtSt)   list = list.filter(l => l.statusLog === filtSt);
   if(filtInd)  list = list.filter(l => l.industria === filtInd);
   if(filtMes)  list = list.filter(l => {
@@ -9230,7 +10340,7 @@ function renderLogistica() {
   if(filtAlerta === 'hoje')         list = list.filter(l => _logIsHoje(l));
 
   if(list.length===0){
-    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">
+    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;color:#aaa;padding:24px">
       Nenhum pedido encontrado.<br><span style="font-size:11px">Crie um pedido para que apareça aqui automaticamente.</span>
     </td></tr>`;
     return;
@@ -9268,6 +10378,18 @@ function renderLogistica() {
 
     return `<tr style="${rowStyle}">
       <td class="mono bold">${l.pedId}</td>
+      <td style="white-space:nowrap">
+        ${l.numPedidoCliente
+          ? `<span class="mono" style="font-weight:700;color:var(--azul);font-size:12px">${esc(l.numPedidoCliente)}</span>`
+          : `<span style="color:#ccc;font-size:11px">—</span>`}
+      </td>
+      <td style="white-space:nowrap">
+        ${l.temNF
+          ? `<div><span class="mono bold" style="color:var(--verde);font-size:12px">🧾 ${esc(l.nfNumero)}</span>
+             ${l.nfData ? `<div style="font-size:10px;color:#aaa">${l.nfData}</div>` : ''}
+             ${l.nfValor ? `<div style="font-size:10px;color:var(--verde);font-weight:600">${fmt(l.nfValor)}</div>` : ''}</div>`
+          : `<span class="badge badge-cinza" style="font-size:10px">Sem NF</span>`}
+      </td>
       <td><strong>${esc(l.cliente)}</strong></td>
       <td><span class="tag">${esc(l.industria)}</span></td>
       <td>${l.data}</td>
@@ -9377,12 +10499,26 @@ function confirmarStatusLogistica() {
 }
 
 function exportarLogistica() {
-  const wb=XLSX.utils.book_new();
-  const rows=[['Pedido','Cliente','Indústria','Data','Transportadora','Previsão','Data Entrega','Status','Observação']];
-  logisticaData.forEach(l=>rows.push([l.pedId,l.cliente,l.industria,l.data,l.transportadora||'',l.previsao||'',l.dataEntrega||'',l.statusLog,l.obs||'']));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Logistica');
-  XLSX.writeFile(wb,'Logistica_TresVales.xlsx');
-  toast('Excel exportado!');
+  const wb = XLSX.utils.book_new();
+  const rows = [['Pedido','Nº Ped. Cliente','Nº NF','Val. NF','Data NF','Cliente','Indústria','Data Pedido','Transportadora','Previsão Entrega','Data Entregue','Status','Observação']];
+  pedidos.filter(p=>!p.excluido).forEach(p => {
+    const l = logisticaData.find(x=>x.pedId===p.id) || {};
+    rows.push([
+      p.id,
+      p.numPedidoCliente || '',
+      p.nf?.numero || '',
+      p.nf?.valorNF || '',
+      p.nf?.data    || '',
+      p.cliente, p.industria, p.data,
+      l.transportadora||'', l.previsao||'', l.dataEntrega||'',
+      l.statusLog||'', l.obs||''
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:18},{wch:12},{wch:14},{wch:12},{wch:28},{wch:16},{wch:12},{wch:18},{wch:14},{wch:14},{wch:18},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Logistica');
+  XLSX.writeFile(wb, 'Logistica_TresVales.xlsx');
+  toast('Excel exportado com NF e Nº Pedido Cliente!');
 }
 
 /* ══════════════════════════
@@ -11123,6 +12259,7 @@ async function tentarReconexaoAuto(){if(configSync.dbUrl&&!configSync.conectado)
 pedidos.filter(p=>!p.excluido).forEach(p=>{if(!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''}); });
 try{const ts=document.getElementById('sync-ts');if(ts)ts.textContent='Sistema ativo · '+new Date().toLocaleString('pt-BR');}catch(e){}
 try{atualizarBadgeTratativas();}catch(e){}
+try{_atualizarBadgeCtrlSaldo();}catch(e){}
 try{renderDashboard();}catch(e){}
 try{renderLogistica();}catch(e){}
 try{renderSaldo();}catch(e){}
@@ -11195,51 +12332,713 @@ if (!window.saldoUsosData) window.saldoUsosData = [];
    1) VERIFICAÇÃO DE SALDO APÓS REGISTRO DE NF
    Chamada automaticamente em salvarNF() e salvarNFSemPedido()
 ───────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   ENGINE DE SALDO — v25.2
+   Regra: o numPedidoCliente é a chave mestre.
+   Um mesmo número de pedido pode ter múltiplos faturamentos (NFs
+   diferentes). O saldo é calculado sobre o GRUPO:
+     saldo = Σ(valor dos pedidos do grupo) – Σ(valor das NFs do grupo)
+   Cada novo faturamento recalcula o saldo do grupo inteiro.
+   Se saldo > 0 → a faturar (crédito do cliente)
+   Se saldo < 0 → NF maior que pedido (débito / excesso)
+═══════════════════════════════════════════════════════════════ */
+
 function verificarEGerarSaldo(pedido, nfObj) {
   if (!pedido || !nfObj) return null;
-  const valorPedido = pedido.total || 0;
-  const valorNF = nfObj.valorNF || 0;
-  const diferenca = valorPedido - valorNF;
-  if (diferenca > 0.01) {
-    // Gera registro de saldo automaticamente
-    _registrarSaldoGerado(pedido, nfObj, diferenca);
-    return diferenca;
-  }
-  return null;
+  // Só processa pedidos com numPedidoCliente definido
+  // Sem número do cliente, usa o ID interno como chave
+  _recalcularSaldoGrupo(pedido, nfObj);
+  // Retorna a diferença simples para exibir no toast
+  const dif = parseFloat(((pedido.total||0) - (nfObj.valorNF||0)).toFixed(2));
+  return dif > 0.01 ? dif : null;
 }
 
-function _registrarSaldoGerado(pedido, nfObj, valorSaldo) {
-  if (!window.saldoUsosData) window.saldoUsosData = [];
-  const id = 'SALDO-' + String(window.saldoUsosData.length + 1).padStart(4, '0');
+/* ── Gera/atualiza o registro de saldo do GRUPO (numPedidoCliente + cliente + indústria) ── */
+function _recalcularSaldoGrupo(pedido, nfObj) {
+  const numCli = pedido.numPedidoCliente || pedido.id;
+  const cli    = pedido.cliente;
+  const ind    = pedido.industria;
+
+  // Todos os pedidos do mesmo grupo (mesmo numPedidoCliente + cliente + indústria)
+  const pedidosDoGrupo = pedidos.filter(p =>
+    !p.excluido &&
+    (p.numPedidoCliente || p.id) === numCli &&
+    p.cliente   === cli &&
+    p.industria === ind
+  );
+
+  // Soma total dos pedidos do grupo
+  const totalPedidos = parseFloat(pedidosDoGrupo.reduce((s,p) => s + (p.total||0), 0).toFixed(2));
+
+  // Soma total das NFs do grupo (todos os pedidos que já têm NF)
+  const totalNFs = parseFloat(pedidosDoGrupo.filter(p=>p.nf).reduce((s,p) => s + (p.nf.valorNF||0), 0).toFixed(2));
+
+  // Saldo do grupo = pedidos - NFs
+  const saldoGrupo = parseFloat((totalPedidos - totalNFs).toFixed(2));
+
+  // Lista de NFs do grupo para exibição
+  const nfsDoGrupo = pedidosDoGrupo.filter(p=>p.nf).map(p=>p.nf.numero).join(', ');
+  const pedidosIds = pedidosDoGrupo.map(p=>p.id).join(', ');
+
+  // Migração de dados legados (compatibilidade)
+  if (window.saldoUsosData && window.saldoUsosData.length && !window._saldoMigrado) {
+    window._saldoMigrado = true;
+    window.saldoUsosData.filter(s=>s.tipo==='gerado').forEach(s=>{
+      if (!ctrlSaldosData.find(x => x.numPedidoCliente === (s.numPedidoCliente||s.pedidoOrigem) && x.cliente===s.cliente && x.industria===s.industria)) {
+        ctrlSaldosData.push({
+          id: _gerarIdCtrlSaldo(),
+          numPedidoCliente: s.numPedidoCliente || s.pedidoOrigem || '',
+          cliente: s.cliente, industria: s.industria,
+          pedidosIds: s.pedidoOrigem,
+          nfsIds: s.nfOrigem,
+          totalPedidos: s.valorOriginal + (s.valorUsado||0),
+          totalNFs: s.valorOriginal + (s.valorUsado||0) - s.valorOriginal,
+          valorSaldo: s.valorOriginal,
+          valorUtilizado: s.valorUsado||0,
+          valorRestante: s.valorDisponivel||0,
+          ultimaAtualizacao: s.dataGeracao,
+          status: s.valorDisponivel<=0.01 ? 'Utilizado Totalmente' : (s.valorUsado>0 ? 'Utilizado Parcialmente' : 'Disponível'),
+          usuario: 'sistema', obs: s.obs||''
+        });
+      }
+    });
+  }
+
+  // Busca registro existente do grupo
+  const existente = ctrlSaldosData.find(s =>
+    s.numPedidoCliente === numCli &&
+    s.cliente          === cli &&
+    s.industria        === ind
+  );
+
+  if (existente) {
+    // Recalcula o saldo disponível preservando o que já foi utilizado manualmente
+    const saldoDispAnterior = existente.valorRestante;
+    const saldoGrupoAnterior = existente.valorSaldo;
+    const delta = saldoGrupo - saldoGrupoAnterior; // variação do saldo do grupo
+
+    existente.totalPedidos       = totalPedidos;
+    existente.totalNFs           = totalNFs;
+    existente.valorSaldo         = saldoGrupo;
+    existente.pedidosIds         = pedidosIds;
+    existente.nfsIds             = nfsDoGrupo;
+    existente.ultimaAtualizacao  = nfObj.data || today();
+
+    // Atualiza o saldo restante proporcional à variação
+    const novoRestante = parseFloat(Math.max(0, (existente.valorRestante || 0) + delta).toFixed(2));
+    existente.valorRestante = novoRestante;
+
+    // Recalcula status
+    if (saldoGrupo <= 0.01)                                      existente.status = saldoGrupo < -0.01 ? 'NF Maior que Pedido' : 'Utilizado Totalmente';
+    else if (existente.valorRestante <= 0.01)                    existente.status = 'Utilizado Totalmente';
+    else if (existente.valorUtilizado > 0.01)                    existente.status = 'Utilizado Parcialmente';
+    else                                                          existente.status = 'Disponível';
+
+    const descricao = delta > 0.01
+      ? `Novo faturamento — saldo do grupo ${numCli} aumentou ${fmt(delta)} (total grupo: pedidos ${fmt(totalPedidos)} × NFs ${fmt(totalNFs)})`
+      : delta < -0.01
+      ? `Novo faturamento — saldo do grupo ${numCli} reduziu ${fmt(Math.abs(delta))} (total grupo: pedidos ${fmt(totalPedidos)} × NFs ${fmt(totalNFs)})`
+      : `Faturamento registrado — saldo do grupo ${numCli} inalterado`;
+
+    _addCtrlSaldoHistorico('geracao', existente, descricao,
+      { pedidoDestino: pedido.id, nfDestino: nfObj.numero, valor: Math.abs(delta) });
+
+    addAudit(usuarioLogado?.login||'sistema',
+      `Saldo grupo ${numCli} atualizado: ${fmt(saldoGrupo)} (${fmt(totalPedidos)} ped − ${fmt(totalNFs)} NF) — ${cli}/${ind}`, '📊');
+
+    _atualizarBadgeCtrlSaldo();
+    return existente;
+  }
+
+  // Cria novo registro de saldo para o grupo
+  if (Math.abs(saldoGrupo) < 0.01 && totalNFs === 0) return null; // nada a registrar
+
+  const id  = _gerarIdCtrlSaldo();
   const reg = {
     id,
-    tipo: 'gerado',
-    cliente: pedido.cliente,
-    industria: pedido.industria,
-    pedidoOrigem: pedido.id,
-    nfOrigem: nfObj.numero,
-    valorOriginal: valorSaldo,
-    valorUsado: 0,
-    valorDisponivel: valorSaldo,
-    dataGeracao: nfObj.data || today(),
-    dataUtilizacao: '',
-    pedidoUso: '',
-    nfUso: '',
-    tipoOperacaoUso: '',
-    geraComissao: false,
-    obs: 'Gerado automaticamente: pedido ' + pedido.id + ' × NF ' + nfObj.numero
+    numPedidoCliente:  numCli,
+    cliente:           cli,
+    industria:         ind,
+    pedidosIds:        pedidosIds,
+    nfsIds:            nfsDoGrupo,
+    totalPedidos:      totalPedidos,
+    totalNFs:          totalNFs,
+    valorSaldo:        saldoGrupo,            // saldo bruto do grupo
+    valorUtilizado:    0,                      // quanto foi usado manualmente
+    valorRestante:     Math.max(0, saldoGrupo),// disponível para uso
+    ultimaAtualizacao: nfObj.data || today(),
+    status: saldoGrupo <= 0.01 ? (saldoGrupo < -0.01 ? 'NF Maior que Pedido' : 'Utilizado Totalmente') : 'Disponível',
+    usuario: usuarioLogado?.login || 'sistema',
+    obs: `Grupo: pedidos [${pedidosIds}] × NFs [${nfsDoGrupo}]`
   };
-  window.saldoUsosData.push(reg);
-  addAudit(usuarioLogado?.login || 'sistema',
-    `Saldo gerado: ${fmt(valorSaldo)} — ${pedido.cliente} / ${pedido.industria} (pedido ${pedido.id} × NF ${nfObj.numero})`, '📊');
+  ctrlSaldosData.push(reg);
+
+  const descricaoCriacao = saldoGrupo > 0.01
+    ? `Saldo criado: ${fmt(saldoGrupo)} (pedidos ${fmt(totalPedidos)} − NFs ${fmt(totalNFs)})`
+    : saldoGrupo < -0.01
+    ? `NF maior que pedido: ${fmt(Math.abs(saldoGrupo))} em excesso (pedidos ${fmt(totalPedidos)} − NFs ${fmt(totalNFs)})`
+    : `Pedido e NF com valores iguais — saldo zerado`;
+
+  _addCtrlSaldoHistorico('geracao', reg, descricaoCriacao,
+    { pedidoDestino: pedido.id, nfDestino: nfObj.numero, valor: Math.abs(saldoGrupo) });
+
+  addAudit(usuarioLogado?.login||'sistema',
+    `Saldo grupo ${numCli}: ${fmt(saldoGrupo)} (${fmt(totalPedidos)} ped − ${fmt(totalNFs)} NF) — ${cli}/${ind}`, '📊');
+  _atualizarBadgeCtrlSaldo();
   return reg;
 }
 
+function _gerarIdCtrlSaldo() {
+  let n = ctrlSaldosData.length + 1, id;
+  do { id = 'CSALDO-' + String(n).padStart(5,'0'); n++; } while(ctrlSaldosData.some(x=>x.id===id));
+  return id;
+}
+function _gerarIdCtrlSaldoHist() {
+  let n = ctrlSaldosHistorico.length + 1, id;
+  do { id = 'CSHIST-' + String(n).padStart(5,'0'); n++; } while(ctrlSaldosHistorico.some(x=>x.id===id));
+  return id;
+}
+
+// Mantido para compatibilidade — o recalculate substitui a lógica de geração
+function _registrarSaldoGerado(pedido, nfObj, valorSaldo) {
+  return _recalcularSaldoGrupo(pedido, nfObj);
+}
+
+function _addCtrlSaldoHistorico(tipo, saldoReg, descricao, extra) {
+  ctrlSaldosHistorico.push({
+    id: _gerarIdCtrlSaldoHist(),
+    tipo,
+    saldoId:           saldoReg.id,
+    numPedidoCliente:  saldoReg.numPedidoCliente || '',
+    cliente:           saldoReg.cliente,
+    industria:         saldoReg.industria,
+    pedidoOrigem:      saldoReg.pedidosIds || saldoReg.pedidoOrigem || '',
+    nfOrigem:          saldoReg.nfsIds     || saldoReg.nfOrigem     || '',
+    pedidoDestino:     extra?.pedidoDestino || '',
+    nfDestino:         extra?.nfDestino    || '',
+    valorEnvolvido:    extra?.valor != null ? extra.valor : (saldoReg.valorSaldo || 0),
+    valorRestante:     saldoReg.valorRestante || 0,
+    comissaoGerada:    extra?.comissaoGerada || false,
+    usuario:           usuarioLogado?.login || 'sistema',
+    dataHora:          new Date().toLocaleString('pt-BR'),
+    descricao
+  });
+}
+
+/* ── Abatimento automático: quando nova NF chega para um grupo com saldo ── */
+function _abaterSaldoAutomatico(pedido, nfObj) {
+  if (!pedido) return 0;
+  const numCli = pedido.numPedidoCliente || pedido.id;
+  // O próprio _recalcularSaldoGrupo já cuida do abatimento —
+  // este wrapper retorna quanto o saldo mudou para exibir no toast
+  const antes = ctrlSaldosData.find(s =>
+    s.numPedidoCliente === numCli && s.cliente === pedido.cliente && s.industria === pedido.industria
+  );
+  const saldoAntes = antes ? (antes.valorRestante || 0) : 0;
+  _recalcularSaldoGrupo(pedido, nfObj);
+  const depois = ctrlSaldosData.find(s =>
+    s.numPedidoCliente === numCli && s.cliente === pedido.cliente && s.industria === pedido.industria
+  );
+  const saldoDepois = depois ? (depois.valorRestante || 0) : 0;
+  return parseFloat((saldoAntes - saldoDepois).toFixed(2));
+}
+
 function getSaldoDisponivel(cliente, industria) {
-  if (!window.saldoUsosData) return 0;
-  return window.saldoUsosData
-    .filter(s => s.cliente === cliente && s.industria === industria && s.tipo === 'gerado')
-    .reduce((acc, s) => acc + (s.valorDisponivel || 0), 0);
+  const legado = window.saldoUsosData
+    ? window.saldoUsosData.filter(s=>s.cliente===cliente&&s.industria===industria&&s.tipo==='gerado').reduce((a,s)=>a+(s.valorDisponivel||0),0)
+    : 0;
+  const novo = ctrlSaldosData.filter(s=>s.cliente===cliente&&s.industria===industria&&s.valorRestante>0.01).reduce((a,s)=>a+s.valorRestante,0);
+  return legado + novo;
+}
+
+function _atualizarBadgeCtrlSaldo() {
+  const disp = ctrlSaldosData.filter(s=>s.status==='Disponível'||s.status==='Utilizado Parcialmente').length;
+  const b = el('badge-ctrlsaldo');
+  if (b) { b.textContent = disp; b.style.display = disp > 0 ? '' : 'none'; }
+}
+
+/* ── Verificação automática de saldo ao registrar novo pedido ── */
+function _verificarSaldoAutoParaPedido(ped) {
+  if (!ped || !ped.numPedidoCliente) return null;
+  const numCli = ped.numPedidoCliente;
+  const saldosDisponiveis = ctrlSaldosData.filter(s =>
+    s.cliente === ped.cliente &&
+    s.industria === ped.industria &&
+    (s.status === 'Disponível' || s.status === 'Utilizado Parcialmente') &&
+    s.valorRestante > 0.01
+  );
+  if (saldosDisponiveis.length === 0) return null;
+  const totalDisp = saldosDisponiveis.reduce((a,s) => a + s.valorRestante, 0);
+  return { saldos: saldosDisponiveis, totalDisponivel: totalDisp };
+}
+
+/* ── Abater saldo automaticamente ao registrar NF de novo faturamento ── */
+function _abaterSaldoAutomatico(pedido, nfObj) {
+  if (!pedido) return 0;
+  const numCli = pedido.numPedidoCliente || '';
+  if (!numCli) return 0;
+  const saldosDisponiveis = ctrlSaldosData.filter(s =>
+    s.numPedidoCliente === numCli &&
+    s.cliente === pedido.cliente &&
+    s.industria === pedido.industria &&
+    s.status !== 'Utilizado Totalmente' &&
+    s.valorRestante > 0.01
+  ).sort((a,b) => a.dataGeracao.localeCompare(b.dataGeracao));
+  if (saldosDisponiveis.length === 0) return 0;
+
+  let valorParaAplicar = nfObj.valorNF || 0;
+  let totalAbatido = 0;
+  saldosDisponiveis.forEach(s => {
+    if (valorParaAplicar <= 0) return;
+    const abater = Math.min(s.valorRestante, valorParaAplicar);
+    s.valorUtilizado += abater;
+    s.valorRestante -= abater;
+    valorParaAplicar -= abater;
+    totalAbatido += abater;
+    s.status = s.valorRestante <= 0.01 ? 'Utilizado Totalmente' : 'Utilizado Parcialmente';
+    _addCtrlSaldoHistorico('utilizacao', s,
+      `Abatido automaticamente por novo faturamento: pedido ${pedido.id}, NF ${nfObj.numero}`,
+      { pedidoDestino: pedido.id, nfDestino: nfObj.numero, valor: abater, comissaoGerada: true }
+    );
+  });
+  if (totalAbatido > 0) {
+    addAudit(usuarioLogado?.login||'sistema',
+      `Saldo abatido automaticamente: ${fmt(totalAbatido)} — ${pedido.cliente}/${pedido.industria} — Pedido ${pedido.id} / NF ${nfObj.numero}`, '💳');
+  }
+  return totalAbatido;
+}
+
+function getSaldoDisponivel(cliente, industria) {
+  // Compatibilidade legada
+  const legado = window.saldoUsosData
+    ? window.saldoUsosData.filter(s=>s.cliente===cliente&&s.industria===industria&&s.tipo==='gerado').reduce((a,s)=>a+(s.valorDisponivel||0),0)
+    : 0;
+  const novo = ctrlSaldosData.filter(s=>s.cliente===cliente&&s.industria===industria&&s.valorRestante>0.01).reduce((a,s)=>a+s.valorRestante,0);
+  return legado + novo;
+}
+
+function _atualizarBadgeCtrlSaldo() {
+  const disp = ctrlSaldosData.filter(s=>s.status!=='Utilizado Totalmente').length;
+  const b = el('badge-ctrlsaldo');
+  if (b) { b.textContent = disp; b.style.display = disp > 0 ? '' : 'none'; }
+}
+
+/* ════════════════════════════════════════════
+   RENDER DO MÓDULO CONTROLE DE SALDOS
+════════════════════════════════════════════ */
+function showCtrlSaldoTab(tab, btn) {
+  ['saldos','utilizacoes','historico','dashboard'].forEach(t => {
+    const d = el('ctrlsaldo-tab-'+t); if (d) d.style.display = t===tab ? '' : 'none';
+    const tb = el('tab-cs-'+t.substring(0,4)); if (tb) tb.classList.toggle('active', t===tab);
+  });
+  // Fix tab IDs
+  const tabMap = {saldos:'tab-cs-saldos', utilizacoes:'tab-cs-util', historico:'tab-cs-hist', dashboard:'tab-cs-dash'};
+  document.querySelectorAll('#ctrlsaldo-tabs .tab').forEach(t=>t.classList.remove('active'));
+  const activeTab = el(tabMap[tab]);
+  if (activeTab) activeTab.classList.add('active');
+
+  if (tab==='saldos') renderCtrlSaldos();
+  else if (tab==='utilizacoes') renderCtrlUtilizacoes();
+  else if (tab==='historico') renderCtrlHistorico();
+  else if (tab==='dashboard') renderCtrlSaldoDashboard();
+}
+
+function renderCtrlSaldoKPIs() {
+  const dispArr = ctrlSaldosData.filter(s=>s.status==='Disponível');
+  const parcArr = ctrlSaldosData.filter(s=>s.status==='Utilizado Parcialmente');
+  const nfMaiorArr = ctrlSaldosData.filter(s=>s.status==='NF Maior que Pedido');
+  // totalDisp = soma dos saldos disponíveis (valorSaldo bruto - utilizado manual)
+  const totalDisp = [...dispArr,...parcArr].reduce((a,s)=>a+s.valorRestante,0);
+  const totalUtil = ctrlSaldosData.reduce((a,s)=>a+(s.valorUtilizado||0),0);
+  const totalParc = parcArr.reduce((a,s)=>a+s.valorRestante,0);
+  const totalSaldo = ctrlSaldosData.reduce((a,s)=>a+(s.valorSaldo||s.valorSaldoGerado||0),0);
+  if (el('cs-kpi-disp')) { el('cs-kpi-disp').textContent=fmt(totalDisp); el('cs-kpi-disp-sub').textContent=`${dispArr.length+parcArr.length} grupo(s) com saldo`; }
+  if (el('cs-kpi-util')) { el('cs-kpi-util').textContent=fmt(totalUtil); el('cs-kpi-util-sub').textContent=`${ctrlSaldosHistorico.filter(h=>h.tipo==='utilizacao').length} utilizações`; }
+  if (el('cs-kpi-parc')) el('cs-kpi-parc').textContent=fmt(totalParc);
+  if (el('cs-kpi-total')) el('cs-kpi-total').textContent=fmt(Math.abs(totalSaldo));
+}
+
+function renderCtrlSaldos() {
+  renderCtrlSaldoKPIs();
+  const tbody = el('cs-saldos-tbody'); if (!tbody) return;
+  const busca = (el('cs-busca')||{}).value?.toLowerCase()||'';
+  const fCli  = (el('cs-filtro-cli')||{}).value||'';
+  const fInd  = (el('cs-filtro-ind')||{}).value||'';
+  const fSt   = (el('cs-filtro-status')||{}).value||'';
+  let list = ctrlSaldosData.filter(s => {
+    if (fCli && s.cliente!==fCli) return false;
+    if (fInd && s.industria!==fInd) return false;
+    if (fSt  && s.status!==fSt) return false;
+    if (busca) {
+      const t = (s.numPedidoCliente+s.cliente+s.industria+(s.pedidosIds||'')+(s.nfsIds||'')).toLowerCase();
+      if (!t.includes(busca)) return false;
+    }
+    return true;
+  }).sort((a,b) => (b.ultimaAtualizacao||b.dataGeracao||'').localeCompare(a.ultimaAtualizacao||a.dataGeracao||''));
+
+  if (list.length===0) {
+    tbody.innerHTML='<tr><td colspan="13" style="text-align:center;color:#aaa;padding:24px">Nenhum saldo encontrado. Saldos são calculados automaticamente pelo grupo de pedidos com o mesmo Nº do Pedido do Cliente.</td></tr>';
+    return;
+  }
+
+  const stMap = {
+    'Disponível':            'badge-verde',
+    'Utilizado Parcialmente':'badge-amarelo',
+    'Utilizado Totalmente':  'badge-cinza',
+    'NF Maior que Pedido':   'badge-vermelho'
+  };
+
+  tbody.innerHTML = list.map(s => {
+    // Compatibilidade com registros antigos
+    const totPed  = s.totalPedidos      ?? s.valorOriginalPedido ?? 0;
+    const totNF   = s.totalNFs          ?? s.valorFaturado       ?? 0;
+    const saldo   = s.valorSaldo        ?? s.valorSaldoGerado    ?? 0;
+    const ultima  = s.ultimaAtualizacao ?? s.dataGeracao         ?? '—';
+    const pedIds  = s.pedidosIds        ?? s.pedidoOrigem        ?? '—';
+    const nfIds   = s.nfsIds            ?? s.nfOrigem            ?? '—';
+
+    const saldoPos = saldo >= 0.01;   // pedidos > NFs → a faturar
+    const saldoNeg = saldo <= -0.01;  // NFs > pedidos → excesso
+    const saldoZer = Math.abs(saldo) < 0.01;
+
+    const saldoCor = saldoPos ? 'var(--verde)' : saldoNeg ? 'var(--vermelho)' : 'var(--cinza-escuro)';
+    const saldoTxt = saldoZer ? '✅ Zerado' : (saldoPos ? '+' : '') + fmt(saldo);
+
+    const pct = Math.abs(saldo) > 0.01 && s.valorUtilizado > 0
+      ? Math.min(100, Math.round(s.valorUtilizado / Math.abs(saldo) * 100))
+      : 0;
+
+    return `<tr>
+      <td class="mono" style="font-size:11px">${s.id}</td>
+      <td>
+        <span class="mono bold" style="color:var(--azul);font-size:13px">${esc(s.numPedidoCliente||'—')}</span>
+      </td>
+      <td><strong>${esc(s.cliente)}</strong></td>
+      <td><span class="tag">${esc(s.industria)}</span></td>
+      <td class="bold">${fmt(totPed)}</td>
+      <td>${fmt(totNF)}</td>
+      <td class="bold" style="color:${saldoCor}">${saldoTxt}</td>
+      <td class="bold vermelho">${s.valorUtilizado>0.01?fmt(s.valorUtilizado):'<span style="color:#aaa">—</span>'}</td>
+      <td class="bold verde">${fmt(s.valorRestante)}</td>
+      <td style="font-size:11px;color:#888;white-space:nowrap">${ultima}</td>
+      <td style="font-size:10px;color:#888;max-width:160px">
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="Pedidos: ${esc(pedIds)}">📋 ${esc(pedIds)}</div>
+        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px" title="NFs: ${esc(nfIds)}">🧾 ${esc(nfIds)}</div>
+      </td>
+      <td>
+        <span class="badge ${stMap[s.status]||'badge-cinza'}">${s.status}</span>
+        ${pct>0?`<div style="margin-top:4px;height:4px;border-radius:99px;background:var(--cinza-medio);overflow:hidden"><div style="height:4px;background:var(--amarelo);width:${pct}%"></div></div>`:''}
+      </td>
+      <td>
+        <div style="display:flex;gap:4px">
+          ${s.status!=='Utilizado Totalmente'&&s.status!=='NF Maior que Pedido'&&s.valorRestante>0.01
+            ? `<button class="btn btn-success btn-xs" onclick="abrirUtilizarSaldoManual('${s.id}')" title="Registrar utilização manual">💳 Usar</button>`
+            : ''}
+          <button class="btn btn-info btn-xs" onclick="verHistoricoSaldo('${s.id}')" title="Ver histórico">📜</button>
+          ${(s.status==='Disponível'||s.status==='Utilizado Parcialmente')&&(usuarioLogado?.perfil==='admin'||usuarioLogado?.perfil==='diretoria')
+            ? `<button class="btn btn-danger btn-xs" onclick="estornarSaldo('${s.id}')" title="Estornar">↩</button>`
+            : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCtrlUtilizacoes() {
+  const tbody = el('cs-util-tbody'); if (!tbody) return;
+  const busca = (el('cs-util-busca')||{}).value?.toLowerCase()||'';
+  const fCli  = (el('cs-util-filtro-cli')||{}).value||'';
+  const fInd  = (el('cs-util-filtro-ind')||{}).value||'';
+  let list = ctrlSaldosHistorico.filter(h => {
+    if (h.tipo!=='utilizacao') return false;
+    if (fCli && h.cliente!==fCli) return false;
+    if (fInd && h.industria!==fInd) return false;
+    if (busca) {
+      const t = (h.numPedidoCliente+h.cliente+h.industria+h.pedidoOrigem+h.pedidoDestino).toLowerCase();
+      if (!t.includes(busca)) return false;
+    }
+    return true;
+  }).sort((a,b)=>b.dataHora.localeCompare(a.dataHora));
+  if (list.length===0) { tbody.innerHTML='<tr><td colspan="12" style="text-align:center;color:#aaa;padding:24px">Nenhuma utilização registrada ainda.</td></tr>'; return; }
+  tbody.innerHTML = list.map(h => {
+    const saldo = ctrlSaldosData.find(s=>s.id===h.saldoId);
+    return `<tr>
+      <td class="mono" style="font-size:10px">${h.id}</td>
+      <td style="font-size:11px">${h.dataHora}</td>
+      <td class="mono bold" style="color:var(--azul)">${esc(h.numPedidoCliente||'—')}</td>
+      <td><strong>${esc(h.cliente)}</strong></td>
+      <td><span class="tag">${esc(h.industria)}</span></td>
+      <td class="mono" style="font-size:11px">${esc(h.saldoId)}</td>
+      <td class="bold" style="color:var(--vermelho)">${fmt(h.valorEnvolvido)}</td>
+      <td class="bold verde">${fmt(h.valorRestante)}</td>
+      <td class="mono" style="font-size:11px">${esc(h.pedidoDestino||'—')}</td>
+      <td class="mono" style="font-size:11px">${esc(h.nfDestino||'—')}</td>
+      <td>${h.comissaoGerada ? '<span class="badge badge-verde">✅ Sim</span>' : '<span class="badge badge-cinza">Não</span>'}</td>
+      <td style="font-size:11px;color:#888">${esc(h.usuario)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCtrlHistorico() {
+  const div = el('cs-historico-list'); if (!div) return;
+  const busca = (el('cs-hist-busca')||{}).value?.toLowerCase()||'';
+  const fTipo = (el('cs-hist-tipo')||{}).value||'';
+  let list = ctrlSaldosHistorico.filter(h => {
+    if (fTipo && h.tipo!==fTipo) return false;
+    if (busca) {
+      const t = (h.numPedidoCliente+h.cliente+h.industria+h.descricao+h.pedidoOrigem+h.pedidoDestino).toLowerCase();
+      if (!t.includes(busca)) return false;
+    }
+    return true;
+  }).sort((a,b)=>b.dataHora.localeCompare(a.dataHora));
+  if (list.length===0) { div.innerHTML='<div class="card" style="text-align:center;color:#aaa;padding:30px">Nenhum histórico encontrado.</div>'; return; }
+  const iconMap = { geracao:'📊', utilizacao:'💳', estorno:'↩️' };
+  const corMap  = { geracao:'var(--verde)', utilizacao:'var(--azul)', estorno:'var(--vermelho)' };
+  div.innerHTML = list.map(h=>`
+    <div class="audit-row" style="align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--cinza)">
+      <div class="audit-icon" style="background:${corMap[h.tipo]||'var(--cinza)'};color:#fff;width:32px;height:32px;font-size:14px">${iconMap[h.tipo]||'•'}</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <span style="font-weight:700;font-size:13px">${esc(h.cliente)}</span>
+            <span class="tag" style="margin-left:6px;font-size:9px">${esc(h.industria)}</span>
+            ${h.numPedidoCliente?`<span class="mono" style="margin-left:6px;font-size:11px;color:var(--azul)">#${esc(h.numPedidoCliente)}</span>`:''}
+          </div>
+          <div style="text-align:right">
+            <div class="audit-time">${h.dataHora}</div>
+            <div style="font-size:11px;color:#888">${esc(h.usuario)}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#555;margin-top:4px">${esc(h.descricao)}</div>
+        <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:11px;color:#888">Valor: <strong>${fmt(h.valorEnvolvido)}</strong></span>
+          ${h.pedidoOrigem?`<span style="font-size:11px;color:#888">Pedido Origem: <span class="mono">${esc(h.pedidoOrigem)}</span></span>`:''}
+          ${h.nfOrigem?`<span style="font-size:11px;color:#888">NF Origem: <span class="mono">${esc(h.nfOrigem)}</span></span>`:''}
+          ${h.pedidoDestino?`<span style="font-size:11px;color:#888">Pedido Destino: <span class="mono">${esc(h.pedidoDestino)}</span></span>`:''}
+          ${h.nfDestino?`<span style="font-size:11px;color:#888">NF Destino: <span class="mono">${esc(h.nfDestino)}</span></span>`:''}
+          ${h.comissaoGerada?`<span class="badge badge-verde" style="font-size:9px">Comissão gerada</span>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCtrlSaldoDashboard() {
+  renderCtrlSaldoKPIs();
+  // Top 10 clientes
+  const cliMap = {};
+  ctrlSaldosData.filter(s=>s.status!=='Utilizado Totalmente').forEach(s=>{
+    cliMap[s.cliente] = (cliMap[s.cliente]||0) + s.valorRestante;
+  });
+  const cliRank = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxCli = cliRank[0]?.[1]||1;
+  const dashCli = el('cs-dash-top-clientes');
+  if (dashCli) dashCli.innerHTML = cliRank.length===0
+    ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem saldos disponíveis</div>'
+    : cliRank.map(([nome,val],i)=>`<div class="rank-row">
+        <div class="rank-num">${i+1}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:12.5px">${esc(nome)}</div>
+        <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${(val/maxCli*100).toFixed(0)}%"></div></div></div>
+        <div class="bold" style="font-size:12px">${fmt(val)}</div></div>`).join('');
+  // Top 10 indústrias
+  const indMap = {};
+  ctrlSaldosData.filter(s=>s.status!=='Utilizado Totalmente').forEach(s=>{
+    indMap[s.industria] = (indMap[s.industria]||0) + s.valorRestante;
+  });
+  const indRank = Object.entries(indMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxInd = indRank[0]?.[1]||1;
+  const dashInd = el('cs-dash-top-industrias');
+  if (dashInd) dashInd.innerHTML = indRank.length===0
+    ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem saldos disponíveis</div>'
+    : indRank.map(([nome,val],i)=>`<div class="rank-row">
+        <div class="rank-num">${i+1}</div>
+        <div style="flex:1"><div><span class="tag">${esc(nome)}</span></div>
+        <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${(val/maxInd*100).toFixed(0)}%"></div></div></div>
+        <div class="bold" style="font-size:12px">${fmt(val)}</div></div>`).join('');
+  // Saldo por cliente (tabela)
+  const dashPorCli = el('cs-dash-por-cliente');
+  if (dashPorCli) dashPorCli.innerHTML = cliRank.length===0
+    ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados</div>'
+    : '<table style="width:100%;font-size:12px;border-collapse:collapse">' +
+      '<thead><tr><th style="padding:6px;text-align:left;border-bottom:1px solid var(--line)">Cliente</th><th style="padding:6px;text-align:right;border-bottom:1px solid var(--line)">Saldo Disp.</th><th style="padding:6px;text-align:right;border-bottom:1px solid var(--line)">Utilizado</th></tr></thead><tbody>' +
+      Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).map(([n,v])=>{
+        const util = ctrlSaldosData.filter(s=>s.cliente===n).reduce((a,s)=>a+s.valorUtilizado,0);
+        return `<tr><td style="padding:6px">${esc(n)}</td><td style="padding:6px;text-align:right;font-weight:700;color:var(--verde)">${fmt(v)}</td><td style="padding:6px;text-align:right;color:var(--vermelho)">${fmt(util)}</td></tr>`;
+      }).join('') + '</tbody></table>';
+  // Saldo por indústria (tabela)
+  const dashPorInd = el('cs-dash-por-industria');
+  if (dashPorInd) dashPorInd.innerHTML = indRank.length===0
+    ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados</div>'
+    : '<table style="width:100%;font-size:12px;border-collapse:collapse">' +
+      '<thead><tr><th style="padding:6px;text-align:left;border-bottom:1px solid var(--line)">Indústria</th><th style="padding:6px;text-align:right;border-bottom:1px solid var(--line)">Saldo Disp.</th><th style="padding:6px;text-align:right;border-bottom:1px solid var(--line)">Utilizado</th></tr></thead><tbody>' +
+      Object.entries(indMap).sort((a,b)=>b[1]-a[1]).map(([n,v])=>{
+        const util = ctrlSaldosData.filter(s=>s.industria===n).reduce((a,s)=>a+s.valorUtilizado,0);
+        return `<tr><td style="padding:6px"><span class="tag" style="font-size:10px">${esc(n)}</span></td><td style="padding:6px;text-align:right;font-weight:700;color:var(--verde)">${fmt(v)}</td><td style="padding:6px;text-align:right;color:var(--vermelho)">${fmt(util)}</td></tr>`;
+      }).join('') + '</tbody></table>';
+}
+
+/* ── Utilização manual de saldo ── */
+let _csEditSaldoId = null;
+function abrirUtilizarSaldoManual(saldoId) {
+  const s = ctrlSaldosData.find(x=>x.id===saldoId); if (!s) return;
+  _csEditSaldoId = saldoId;
+  el('cs-modal-titulo').textContent = 'Utilizar Saldo — ' + s.numPedidoCliente;
+  el('cs-uso-info').innerHTML = `
+    <div class="alert alert-info" style="margin-bottom:12px">
+      <strong>${esc(s.cliente)}</strong> / <span class="tag" style="font-size:10px">${esc(s.industria)}</span>
+      · Nº Pedido Cliente: <strong class="mono">${esc(s.numPedidoCliente)}</strong>
+      · Saldo Restante: <strong class="verde">${fmt(s.valorRestante)}</strong>
+    </div>`;
+  if (el('cs-uso-valor')) { el('cs-uso-valor').value = ''; el('cs-uso-valor').max = s.valorRestante; }
+  if (el('cs-uso-pedido-dest')) {
+    const opcs = pedidos.filter(p=>p.cliente===s.cliente&&p.industria===s.industria&&!p.excluido)
+      .map(p=>`<option value="${p.id}">${p.id}${p.numPedidoCliente?' ('+p.numPedidoCliente+')':''} — ${fmt(p.total)}</option>`).join('');
+    el('cs-uso-pedido-dest').innerHTML = '<option value="">— Selecione o pedido destino (opcional) —</option>' + opcs;
+  }
+  if (el('cs-uso-nf-dest')) el('cs-uso-nf-dest').value = '';
+  if (el('cs-uso-obs')) el('cs-uso-obs').value = '';
+  if (el('cs-uso-tipo')) el('cs-uso-tipo').value = 'venda';
+  el('cs-uso-saldo-disp').textContent = fmt(s.valorRestante);
+  openModal('modal-ctrlsaldo-uso');
+}
+
+function confirmarUsarSaldoCtrl() {
+  const s = ctrlSaldosData.find(x=>x.id===_csEditSaldoId); if (!s) return;
+  const valor = parseFloat(el('cs-uso-valor').value)||0;
+  if (!valor || valor<=0) { alert('Informe um valor maior que zero.'); return; }
+  if (valor > s.valorRestante + 0.01) { alert(`Valor (${fmt(valor)}) supera o saldo restante (${fmt(s.valorRestante)})`); return; }
+  const tipo = el('cs-uso-tipo').value || 'venda';
+  const pedDest = el('cs-uso-pedido-dest').value || '';
+  const nfDest  = el('cs-uso-nf-dest').value.trim() || '';
+  const obs     = el('cs-uso-obs').value.trim() || '';
+
+  s.valorUtilizado += valor;
+  s.valorRestante  = Math.max(0, s.valorRestante - valor);
+  s.status = s.valorRestante <= 0.01 ? 'Utilizado Totalmente' : 'Utilizado Parcialmente';
+
+  _addCtrlSaldoHistorico('utilizacao', s,
+    `Utilização manual: ${fmt(valor)} — tipo: ${tipo}${obs?' — '+obs:''}`,
+    { pedidoDestino: pedDest, nfDestino: nfDest, valor, comissaoGerada: tipo==='venda' }
+  );
+
+  // Gera comissão se for venda
+  if (tipo === 'venda') {
+    const pedRef = pedDest ? pedidos.find(p=>p.id===pedDest) : null;
+    const pedFake = pedRef || { id: _csEditSaldoId, cliente: s.cliente, industria: s.industria, data: today(), cond: '', nf: { data: today() } };
+    gerarComissaoAuto(pedFake, valor);
+    addAudit(usuarioLogado?.login||'admin', `Comissão gerada sobre saldo utilizado: ${fmt(valor)} — ${s.cliente}/${s.industria}`, '💰');
+  }
+
+  addAudit(usuarioLogado?.login||'admin',
+    `Saldo utilizado manualmente: ${fmt(valor)} — ${s.cliente}/${s.industria} — ${tipo==='venda'?'Venda (comissão gerada)':'Sem comissão'}`, '💳');
+  closeModal('modal-ctrlsaldo-uso');
+  renderCtrlSaldos();
+  renderCtrlSaldoKPIs();
+  renderComissoes();
+  syncAutoSaveHook();
+  _atualizarBadgeCtrlSaldo();
+  toast(`✅ Saldo de ${fmt(valor)} utilizado!${tipo==='venda'?' Comissão gerada automaticamente.':' Sem comissão (bonificação).'}`);
+}
+
+function verHistoricoSaldo(saldoId) {
+  const hist = ctrlSaldosHistorico.filter(h=>h.saldoId===saldoId);
+  const s = ctrlSaldosData.find(x=>x.id===saldoId);
+  if (!s) return;
+  const totPed = s.totalPedidos   ?? s.valorOriginalPedido ?? 0;
+  const totNF  = s.totalNFs       ?? s.valorFaturado       ?? 0;
+  const saldo  = s.valorSaldo     ?? s.valorSaldoGerado    ?? 0;
+  const iconMap = { geracao:'📊', utilizacao:'💳', estorno:'↩️' };
+  alert(`Histórico do Grupo — Nº Pedido Cliente: ${s.numPedidoCliente}\n` +
+    `Cliente: ${s.cliente} / Indústria: ${s.industria}\n` +
+    `Pedidos: ${s.pedidosIds||s.pedidoOrigem||'—'}\n` +
+    `NFs: ${s.nfsIds||s.nfOrigem||'—'}\n\n` +
+    `Total Pedidos: ${fmt(totPed)}\n` +
+    `Total NFs: ${fmt(totNF)}\n` +
+    `Saldo do Grupo: ${fmt(saldo)}\n` +
+    `Utilizado: ${fmt(s.valorUtilizado||0)} · Disponível: ${fmt(s.valorRestante||0)}\n\n` +
+    `─── Histórico ───\n` +
+    (hist.length ? hist.map(h=>`${iconMap[h.tipo]||'•'} ${h.dataHora}\n  ${h.descricao}\n  Valor: ${fmt(h.valorEnvolvido)} · Restante: ${fmt(h.valorRestante)} · por ${h.usuario}`).join('\n\n') : '(Sem eventos registrados)')
+  );
+}
+
+function estornarSaldo(saldoId) {
+  const s = ctrlSaldosData.find(x=>x.id===saldoId); if (!s) return;
+  if (!confirm(`Estornar o saldo ${saldoId}?\n\nSaldo: ${fmt(s.valorSaldoGerado)} (restante: ${fmt(s.valorRestante)})\nCliente: ${s.cliente} / ${s.industria}\n\nEsta ação cria um registro de estorno no histórico.`)) return;
+  const valorEstorno = s.valorRestante;
+  s.valorRestante = 0;
+  s.status = 'Utilizado Totalmente';
+  _addCtrlSaldoHistorico('estorno', s,
+    `Estorno manual pelo usuário ${usuarioLogado?.login||'admin'}: ${fmt(valorEstorno)} devolvido`,
+    { valor: valorEstorno }
+  );
+  addAudit(usuarioLogado?.login||'admin', `Saldo estornado: ${saldoId} — ${fmt(valorEstorno)} — ${s.cliente}/${s.industria}`, '↩️');
+  renderCtrlSaldos();
+  syncAutoSaveHook();
+  toast('↩️ Saldo estornado e histórico registrado.');
+}
+
+function exportarCtrlSaldo() {
+  const wb = XLSX.utils.book_new();
+  // Aba 1: Saldos
+  const rows1 = [['ID','Nº Pedido Cliente','Cliente','Indústria','Pedido Origem','NF Origem','Val.Pedido','Val.Faturado','Saldo Gerado','Utilizado','Restante','Data Geração','Status','Usuário']];
+  ctrlSaldosData.forEach(s=>rows1.push([s.id,s.numPedidoCliente||'',s.cliente,s.industria,s.pedidoOrigem,s.nfOrigem,s.valorOriginalPedido,s.valorFaturado,s.valorSaldoGerado,s.valorUtilizado,s.valorRestante,s.dataGeracao,s.status,s.usuario||'']));
+  const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+  ws1['!cols']=[{wch:14},{wch:18},{wch:22},{wch:14},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14},{wch:12},{wch:12},{wch:12},{wch:22},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Saldos');
+  // Aba 2: Histórico
+  const rows2 = [['ID','Tipo','Saldo ID','Nº Pedido Cliente','Cliente','Indústria','Pedido Origem','NF Origem','Pedido Destino','NF Destino','Valor','Restante','Comissão','Usuário','Data/Hora','Descrição']];
+  ctrlSaldosHistorico.forEach(h=>rows2.push([h.id,h.tipo,h.saldoId,h.numPedidoCliente||'',h.cliente,h.industria,h.pedidoOrigem||'',h.nfOrigem||'',h.pedidoDestino||'',h.nfDestino||'',h.valorEnvolvido,h.valorRestante,h.comissaoGerada?'Sim':'Não',h.usuario,h.dataHora,h.descricao]));
+  const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Histórico Auditoria');
+  // Aba 3: Resumo por cliente
+  const cliMap = {}; ctrlSaldosData.forEach(s=>{ if(!cliMap[s.cliente]) cliMap[s.cliente]={gerado:0,utilizado:0,restante:0}; cliMap[s.cliente].gerado+=s.valorSaldoGerado; cliMap[s.cliente].utilizado+=s.valorUtilizado; cliMap[s.cliente].restante+=s.valorRestante; });
+  const rows3 = [['Cliente','Saldo Gerado','Utilizado','Disponível']]; Object.entries(cliMap).forEach(([n,v])=>rows3.push([n,v.gerado,v.utilizado,v.restante]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows3), 'Por Cliente');
+  // Aba 4: Resumo por indústria
+  const indMap = {}; ctrlSaldosData.forEach(s=>{ if(!indMap[s.industria]) indMap[s.industria]={gerado:0,utilizado:0,restante:0}; indMap[s.industria].gerado+=s.valorSaldoGerado; indMap[s.industria].utilizado+=s.valorUtilizado; indMap[s.industria].restante+=s.valorRestante; });
+  const rows4 = [['Indústria','Saldo Gerado','Utilizado','Disponível']]; Object.entries(indMap).forEach(([n,v])=>rows4.push([n,v.gerado,v.utilizado,v.restante]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows4), 'Por Indústria');
+  const dataStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `ControleSaldos_TresVales_${dataStr}.xlsx`);
+  toast('✅ Excel exportado com 4 abas: Saldos, Histórico, Por Cliente e Por Indústria!');
+}
+
+function popularCtrlSaldoSelects() {
+  const clis = [...new Set([...clientes.map(c=>c.nome),...ctrlSaldosData.map(s=>s.cliente)])].sort();
+  const inds = [...new Set([...industrias.map(i=>i.nome),...ctrlSaldosData.map(s=>s.industria)])].sort();
+  const setSelOpts = (id, arr) => {
+    const s = el(id); if (!s) return;
+    const cur = s.value;
+    s.innerHTML = '<option value="">Todos</option>' + arr.map(n=>`<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('');
+  };
+  setSelOpts('cs-filtro-cli', clis);
+  setSelOpts('cs-filtro-ind', inds);
+  setSelOpts('cs-util-filtro-cli', clis);
+  setSelOpts('cs-util-filtro-ind', inds);
+}
+
+function verificarNumPedidoClienteDup(valor) {
+  const v = valor.trim();
+  const status = el('ped-num-cliente-status'); if (!status) return;
+  if (!v) { status.textContent = 'Informe o número do pedido fornecido pelo cliente — será a chave principal'; status.style.color = '#888'; if(el('ped-num-cliente')) el('ped-num-cliente').style.borderColor=''; return; }
+  // Número do pedido PODE repetir — é a chave do grupo de saldo.
+  // Mostra informação útil (sem bloquear): se já existe, indica que entra no mesmo grupo.
+  const cli = el('ped-cli')?.value || '';
+  const ind = el('ped-ind')?.value || '';
+  const saldoDisp = cli && ind ? ctrlSaldosData.filter(s=>s.numPedidoCliente===v&&s.cliente===cli&&s.industria===ind&&s.status!=='Utilizado Totalmente').reduce((a,s)=>a+s.valorRestante,0) : 0;
+  const dup = pedidos.find(p => p.numPedidoCliente === v && p.id !== pedEditId && !p.excluido);
+  if (el('ped-num-cliente')) el('ped-num-cliente').style.borderColor = '';
+  if (dup) {
+    status.textContent = saldoDisp > 0.01
+      ? `ℹ️ Já existe o pedido ${dup.id} com este número — entra no mesmo grupo · 💰 Saldo p/ abatimento: ${fmt(saldoDisp)}`
+      : `ℹ️ Já existe o pedido ${dup.id} com este número — entra no mesmo grupo (diferenciado pela NF)`;
+    status.style.color = 'var(--azul)';
+  } else if (saldoDisp > 0.01) {
+    status.textContent = `✅ Número válido · 💰 Saldo disponível: ${fmt(saldoDisp)} para abatimento automático`;
+    status.style.color = 'var(--verde)';
+  } else {
+    status.textContent = '✅ Número disponível';
+    status.style.color = 'var(--verde)';
+  }
 }
 
 /* ─────────────────────────────────────────────────────
@@ -12553,6 +14352,421 @@ console.info('[GestCom v6.4] ✅ Auto-save para TODOS os usuários · polling 30
     </div>
   </div>
 </div>
+
+
+<!-- ===== GESTCOM MOBILE ===== -->
+<script>
+/*
+ * ============================================================
+ *  GestCom — Mobile Navigation JS
+ *  Arquivo: gestcom_mobile.js
+ *
+ *  COMO USAR:
+ *  1. Adicione no final do <body>, após todos os scripts:
+ *     <script src="gestcom_mobile.js"></script>
+ *
+ *  OU cole o conteúdo direto no final do seu <script> existente.
+ * ============================================================
+ */
+
+/* ─── Detecta se é mobile ─── */
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
+/* ─── Módulos da bottom nav (os mais usados) ─── */
+const GC_NAV_TABS = [
+  { panel: 'dashboard',  icon: '◈',  label: 'Início' },
+  { panel: 'pedidos',    icon: '📋', label: 'Pedidos' },
+  { panel: 'metas',      icon: '🎯', label: 'Metas'   },
+  { panel: 'comissoes',  icon: '💰', label: 'Comissões'},
+];
+
+/* ─── Módulos do FAB (criar novo) ─── */
+const GC_FAB_ACTIONS = [
+  { panel: 'orcamentos', icon: '📝', label: 'Novo Orçamento',  fn: 'novoOrcamento'  },
+  { panel: 'pedidos',    icon: '📋', label: 'Novo Pedido',     fn: 'novoPedido'     },
+  { panel: 'faturamento',icon: '🧾', label: 'Registrar NF',    fn: "openModal('modal-nf')" },
+  { panel: 'tratativas', icon: '🔁', label: 'Nova Tratativa',  fn: "openModal('modal-tratativa')" },
+  { panel: 'clientes',   icon: '👥', label: 'Novo Cliente',    fn: 'novoCliente'    },
+  { panel: 'metas',      icon: '🎯', label: 'Nova Meta',       fn: "openModal('modal-meta')" },
+];
+
+/* ─── Inicializa a navegação mobile ─── */
+function initMobileNav() {
+  if (!isMobile()) return;
+
+  buildBottomNav();
+  buildFAB();
+  buildFabSheet();
+}
+
+/* ─── BOTTOM NAV ─── */
+function buildBottomNav() {
+  // Remove se já existir (ex: resize)
+  const existing = document.getElementById('gc-bottomnav');
+  if (existing) existing.remove();
+
+  const nav = document.createElement('div');
+  nav.id = 'gc-bottomnav';
+
+  GC_NAV_TABS.forEach(tab => {
+    // Só mostra tabs que o usuário tem acesso
+    if (typeof hasAccess === 'function' && !hasAccess(tab.panel)) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'gc-nav-btn';
+    btn.dataset.panel = tab.panel;
+
+    // Badge de tratativas
+    const badgeId = tab.panel === 'pedidos' ? 'badge-tratativas' : null;
+    const badgeHtml = badgeId
+      ? `<span class="gc-nav-badge" id="gc-badge-${tab.panel}"></span>`
+      : '';
+
+    btn.innerHTML = `
+      ${badgeHtml}
+      <span class="gc-nav-icon">${tab.icon}</span>
+      <span>${tab.label}</span>
+    `;
+
+    btn.addEventListener('click', () => {
+      gcShowPanel(tab.panel);
+    });
+
+    nav.appendChild(btn);
+  });
+
+  // Botão "Menu" fixo no final
+  const menuBtn = document.createElement('button');
+  menuBtn.className = 'gc-nav-btn';
+  menuBtn.dataset.panel = '__menu__';
+  menuBtn.innerHTML = `<span class="gc-nav-icon">☰</span><span>Menu</span>`;
+  menuBtn.addEventListener('click', gcOpenMenuSheet);
+  nav.appendChild(menuBtn);
+
+  document.body.appendChild(nav);
+  gcSyncNavActive();
+}
+
+/* ─── FAB ─── */
+function buildFAB() {
+  const existing = document.getElementById('gc-fab');
+  if (existing) existing.remove();
+
+  // Só mostra se o perfil tiver pelo menos uma ação de edição
+  const hasAnyEdit = GC_FAB_ACTIONS.some(a =>
+    typeof hasEditAccess === 'function' ? hasEditAccess(a.panel) : true
+  );
+  if (!hasAnyEdit) return;
+
+  const fab = document.createElement('button');
+  fab.id = 'gc-fab';
+  fab.setAttribute('aria-label', 'Criar novo');
+  fab.textContent = '+';
+  fab.addEventListener('click', gcOpenFabSheet);
+  document.body.appendChild(fab);
+}
+
+/* ─── FAB SHEET ─── */
+function buildFabSheet() {
+  const existing = document.getElementById('gc-fab-sheet');
+  if (existing) existing.remove();
+
+  const sheet = document.createElement('div');
+  sheet.id = 'gc-fab-sheet';
+  sheet.addEventListener('click', e => {
+    if (e.target === sheet) gcCloseFabSheet();
+  });
+
+  const inner = document.createElement('div');
+  inner.id = 'gc-fab-sheet-inner';
+
+  const handle = document.createElement('div');
+  handle.id = 'gc-fab-sheet-handle';
+
+  const title = document.createElement('div');
+  title.id = 'gc-fab-sheet-title';
+  title.textContent = 'Criar novo';
+
+  const grid = document.createElement('div');
+  grid.id = 'gc-fab-sheet-grid';
+
+  GC_FAB_ACTIONS.forEach(action => {
+    // Só mostra ações que o usuário pode editar
+    if (typeof hasEditAccess === 'function' && !hasEditAccess(action.panel)) return;
+
+    const item = document.createElement('div');
+    item.className = 'gc-fab-item';
+    item.innerHTML = `
+      <span class="gc-fab-item-icon">${action.icon}</span>
+      <span class="gc-fab-item-label">${action.label}</span>
+    `;
+    item.addEventListener('click', () => {
+      gcCloseFabSheet();
+      // Navega para o painel e executa a função de criação
+      gcShowPanel(action.panel);
+      setTimeout(() => {
+        try {
+          if (action.fn.includes('(')) {
+            eval(action.fn); // para chamadas como openModal('modal-nf')
+          } else if (typeof window[action.fn] === 'function') {
+            window[action.fn]();
+          }
+        } catch(e) {
+          console.warn('[GestCom Mobile] Ação não encontrada:', action.fn);
+        }
+      }, 120);
+    });
+    grid.appendChild(item);
+  });
+
+  inner.appendChild(handle);
+  inner.appendChild(title);
+  inner.appendChild(grid);
+  sheet.appendChild(inner);
+  document.body.appendChild(sheet);
+}
+
+/* ─── MENU SHEET (todos os módulos acessíveis) ─── */
+function gcOpenMenuSheet() {
+  // Reusa o sheet do FAB como menu completo
+  const existing = document.getElementById('gc-menu-sheet');
+  if (existing) existing.remove();
+
+  const sheet = document.createElement('div');
+  sheet.id = 'gc-menu-sheet';
+  sheet.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.5);
+    z-index:160;display:flex;align-items:flex-end;
+  `;
+  sheet.addEventListener('click', e => { if (e.target === sheet) sheet.remove(); });
+
+  const MODULOS = [
+    { group:'Comercial',   items:[
+      {panel:'orcamentos',  icon:'📝', label:'Orçamentos'},
+      {panel:'pedidos',     icon:'📋', label:'Pedidos'},
+      {panel:'faturamento', icon:'🧾', label:'Faturamento / NF'},
+      {panel:'nfcompare',   icon:'⚖️', label:'Pedido × NF'},
+      {panel:'logistica',   icon:'🚚', label:'Logística'},
+      {panel:'tratativas',  icon:'🔁', label:'Tratativas'},
+      {panel:'bonificacoes',icon:'🎁', label:'Bonificações'},
+    ]},
+    { group:'Financeiro',  items:[
+      {panel:'saldo',       icon:'📊', label:'Saldo Cli × Indústria'},
+      {panel:'comissoes',   icon:'💰', label:'Comissões'},
+      {panel:'fatmensal',   icon:'📅', label:'Fat. Mensal por Indústria'},
+      {panel:'sellinout',   icon:'↕️', label:'Sell In / Sell Out'},
+      {panel:'metas',       icon:'🎯', label:'Metas'},
+    ]},
+    { group:'Cadastros',   items:[
+      {panel:'mix',         icon:'🧩', label:'Mix de Produtos'},
+      {panel:'redes',       icon:'🔗', label:'Redes / Grupos'},
+      {panel:'clientes',    icon:'👥', label:'Clientes / Filiais'},
+      {panel:'industrias',  icon:'🏭', label:'Indústrias'},
+      {panel:'produtos',    icon:'📦', label:'Produtos'},
+    ]},
+    { group:'Análises',    items:[
+      {panel:'relatorios',  icon:'📈', label:'Relatórios / KPIs'},
+      {panel:'importexport',icon:'🗂️', label:'Import / Export'},
+    ]},
+    { group:'Sistema',     items:[
+      {panel:'sync',        icon:'☁️', label:'Sincronização'},
+      {panel:'configuracoes',icon:'🔧',label:'Configurações'},
+      {panel:'usuarios',    icon:'🔐', label:'Usuários'},
+    ]},
+  ];
+
+  let html = `
+    <div style="background:#fff;width:100%;border-radius:20px 20px 0 0;
+      max-height:85vh;overflow-y:auto;padding:16px 16px 32px;
+      -webkit-overflow-scrolling:touch">
+      <div style="width:36px;height:4px;background:var(--cinza-medio);
+        border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+        margin-bottom:14px;color:var(--preto)">Menu</div>
+  `;
+
+  MODULOS.forEach(group => {
+    const acessiveis = group.items.filter(it =>
+      typeof hasAccess === 'function' ? hasAccess(it.panel) : true
+    );
+    if (acessiveis.length === 0) return;
+
+    html += `<div style="font-size:9px;font-weight:700;color:#888;
+      text-transform:uppercase;letter-spacing:1px;margin:14px 0 7px">${group.group}</div>`;
+
+    html += `<div style="background:#fff;border:1px solid var(--cinza-medio);
+      border-radius:10px;overflow:hidden">`;
+
+    acessiveis.forEach((it, idx) => {
+      const editLevel = typeof nivelAcesso === 'function' ? nivelAcesso(it.panel) : 'editar';
+      const badge = editLevel === 'ver'
+        ? `<span style="font-size:9px;background:#e3f2fd;color:#1a5fa8;
+            padding:1px 6px;border-radius:10px;font-weight:700;margin-right:4px">Ver</span>`
+        : '';
+      const border = idx > 0 ? 'border-top:1px solid var(--cinza);' : '';
+
+      html += `
+        <div onclick="gcShowPanelAndCloseMenu('${it.panel}')"
+          style="${border}display:flex;align-items:center;gap:10px;
+          padding:12px 13px;cursor:pointer;-webkit-tap-highlight-color:transparent"
+          ontouchstart="this.style.background='var(--cinza)'"
+          ontouchend="this.style.background=''">
+          <span style="font-size:17px;width:24px;text-align:center">${it.icon}</span>
+          <span style="font-size:13px;font-weight:500;flex:1;color:var(--preto)">${it.label}</span>
+          ${badge}
+          <span style="color:#ccc;font-size:12px">›</span>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  sheet.innerHTML = html;
+  document.body.appendChild(sheet);
+
+  // Função global temporária para o onclick inline
+  window.gcShowPanelAndCloseMenu = function(panel) {
+    sheet.remove();
+    gcShowPanel(panel);
+  };
+}
+
+/* ─── ABRIR / FECHAR FAB SHEET ─── */
+function gcOpenFabSheet() {
+  const sheet = document.getElementById('gc-fab-sheet');
+  if (sheet) sheet.classList.add('open');
+}
+function gcCloseFabSheet() {
+  const sheet = document.getElementById('gc-fab-sheet');
+  if (sheet) sheet.classList.remove('open');
+}
+
+/* ─── WRAPPER DE showPanel() PARA MOBILE ─── */
+function gcShowPanel(panel) {
+  // Chama o showPanel original do GestCom
+  if (typeof showPanel === 'function') {
+    const navEl = document.querySelector(`.nav-item[onclick*="'${panel}'"]`);
+    showPanel(panel, navEl);
+  }
+  gcSyncNavActive();
+  // Scroll para o topo
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ─── SINCRONIZA O ESTADO ATIVO DA NAV ─── */
+function gcSyncNavActive() {
+  if (!isMobile()) return;
+  const activePanel = document.querySelector('.panel.active');
+  if (!activePanel) return;
+  const panelId = activePanel.id.replace('panel-', '');
+
+  document.querySelectorAll('.gc-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.panel === panelId);
+  });
+}
+
+/* ─── SINCRONIZA BADGE DE TRATATIVAS ─── */
+function gcSyncBadges() {
+  if (!isMobile()) return;
+  const srcBadge = document.getElementById('badge-tratativas');
+  const destBadge = document.getElementById('gc-badge-pedidos');
+  if (srcBadge && destBadge) {
+    const val = srcBadge.textContent.trim();
+    destBadge.textContent = val;
+    destBadge.style.display = val && val !== '0' ? '' : 'none';
+  }
+}
+
+/* ─── RESIZE: reconstrói a nav ao girar o celular ─── */
+window.addEventListener('resize', () => {
+  clearTimeout(window._gcResizeTimer);
+  window._gcResizeTimer = setTimeout(() => {
+    if (isMobile()) {
+      buildBottomNav();
+      buildFAB();
+      buildFabSheet();
+    } else {
+      // Em desktop remove os elementos mobile
+      ['gc-bottomnav','gc-fab','gc-fab-sheet','gc-menu-sheet'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+    }
+  }, 200);
+});
+
+/* ─── OBSERVER: sincroniza badges quando o DOM mudar ─── */
+const _gcBadgeObserver = new MutationObserver(gcSyncBadges);
+const _gcBadgeTarget = document.getElementById('badge-tratativas');
+if (_gcBadgeTarget) {
+  _gcBadgeObserver.observe(_gcBadgeTarget, { childList: true, characterData: true, subtree: true });
+}
+
+/* ─── OBSERVER: sincroniza active state quando o painel mudar ─── */
+const _gcPanelObserver = new MutationObserver(gcSyncNavActive);
+document.querySelectorAll('.panel').forEach(p => {
+  _gcPanelObserver.observe(p, { attributes: true, attributeFilter: ['class'] });
+});
+
+/* ─── INICIA ─── */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMobileNav);
+} else {
+  initMobileNav();
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(reg){ console.log('[GestCom] PWA pronto:', reg.scope); })
+      .catch(function(err){ console.warn('[GestCom] SW erro:', err); });
+  });
+}
+</script>
+
+<!-- Banner instalar app (Android Chrome) -->
+<div id="gc-install-banner" style="
+  display:none;position:fixed;bottom:70px;left:12px;right:12px;
+  background:#1a1a1a;color:#fff;border-radius:12px;padding:14px 16px;
+  z-index:200;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.35)
+">
+  <span style="font-size:22px">📲</span>
+  <div style="flex:1">
+    <div style="font-size:13px;font-weight:700">Instalar GestCom</div>
+    <div style="font-size:11px;color:#aaa;margin-top:2px">Adicione à tela inicial para acesso rápido</div>
+  </div>
+  <button onclick="gcInstallApp()" style="background:#F5C500;color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Instalar</button>
+  <button onclick="document.getElementById('gc-install-banner').style.display='none'" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
+</div>
+<script>
+var _gcInstallPrompt;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _gcInstallPrompt = e;
+  if (window.innerWidth <= 768) {
+    var b = document.getElementById('gc-install-banner');
+    if (b) { b.style.display = 'flex'; }
+  }
+});
+function gcInstallApp() {
+  if (!_gcInstallPrompt) return;
+  _gcInstallPrompt.prompt();
+  _gcInstallPrompt.userChoice.then(function() {
+    _gcInstallPrompt = null;
+    var b = document.getElementById('gc-install-banner');
+    if (b) b.style.display = 'none';
+  });
+}
+window.addEventListener('appinstalled', function() {
+  var b = document.getElementById('gc-install-banner');
+  if (b) b.style.display = 'none';
+});
+</script>
 
 </body>
 </html>
