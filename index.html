@@ -4068,28 +4068,28 @@ function gerarOrcPDF(o) {
   function fc(r,g,b){doc.setFillColor(r,g,b);}
   function tc(r,g,b){doc.setTextColor(r,g,b);}
   function dc(r,g,b){doc.setDrawColor(r,g,b);}
+  function money(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-  // ── Header ──
-  fc(245,197,0); doc.rect(0,0,pw,24,'F');
-  fc(22,22,22);  doc.rect(0,24,pw,8,'F');
-  tc(22,22,22);
+  // Header (faixa preta + linha amarela)
+  fc(26,26,26); doc.rect(0,0,pw,24,'F');
+  fc(245,197,0); doc.rect(0,24,pw,1.4,'F');
+  tc(154,154,150); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+  doc.text('COMERCIAL',ml,9.5);
   doc.setFontSize(15); doc.setFont('helvetica','bold');
-  doc.text('COMERCIAL TRES VALES',ml,16);
-  tc(160,158,152);
-  doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-  doc.text('Gestao Comercial Profissional',ml,29.5);
-  doc.text('Emitido em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),pw-mr,29.5,{align:'right'});
+  tc(255,255,255); doc.text('Tres',ml,17.5);
+  var _lw=doc.getTextWidth('Tres');
+  tc(245,197,0); doc.text('Vales',ml+_lw,17.5);
+  tc(189,189,184); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Gestao Comercial',pw-mr,9.5,{align:'right'});
+  doc.text('Emitido em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),pw-mr,16,{align:'right'});
 
-  // ── Titulo ──
-  let y=46;
-  tc(22,22,22);
-  doc.setFontSize(22); doc.setFont('helvetica','bold');
+  // Titulo + badge status
+  let y=40;
+  tc(26,26,26); doc.setFontSize(22); doc.setFont('helvetica','bold');
   doc.text('ORCAMENTO',ml,y);
   const nw=doc.getTextWidth('ORCAMENTO ');
-  tc(245,197,0);
-  doc.text(String(o.id),ml+nw,y);
+  tc(245,197,0); doc.text(String(o.id),ml+nw,y);
 
-  // badge status
   const SM={
     rascunho: {bg:[208,206,202],fg:[88,86,82], tx:'RASCUNHO'},
     analise:  {bg:[255,242,196],fg:[122,82,0],  tx:'EM ANALISE'},
@@ -4102,136 +4102,92 @@ function gerarOrcPDF(o) {
   const sk=String(o.status||'rascunho').toLowerCase().replace(/\s/g,'');
   const sm=SM[sk]||SM['rascunho'];
   fc(sm.bg[0],sm.bg[1],sm.bg[2]);
-  doc.roundedRect(pw-mr-30,y-10,30,9,2,2,'F');
+  doc.roundedRect(pw-mr-32,y-6,32,8,1.5,1.5,'F');
   doc.setFontSize(6.5); doc.setFont('helvetica','bold');
   tc(sm.fg[0],sm.fg[1],sm.fg[2]);
-  doc.text(sm.tx,pw-mr-15,y-4.8,{align:'center'});
+  doc.text(sm.tx,pw-mr-16,y-0.8,{align:'center'});
 
-  y+=7;
-  fc(245,197,0); doc.rect(ml,y,usable,1.2,'F');
-  y+=10;
+  y+=6; fc(245,197,0); doc.rect(ml,y,usable,1.6,'F'); y+=8;
 
-  // ── Cards de dados ──
-  const colW=(usable-6)/2;
-  const dataH=44;
-
-  function dataBox(x,cy,label,value,acento){
-    fc(250,249,246); doc.rect(x,cy,colW,dataH,'F');
+  // Cards de dados
+  function cardC(x,cy,w,label,value,acento){
+    var h=18;
+    fc(250,249,246); doc.rect(x,cy,w,h,'F');
     if(acento){fc(245,197,0);}else{fc(215,213,208);}
-    doc.rect(x,cy,colW,1,'F');
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
-    doc.text(String(label).toUpperCase(),x+5,cy+9);
-    doc.setFontSize(10.5); doc.setFont('helvetica','bold'); tc(22,22,22);
-    const lines=doc.splitTextToSize(String(value||'-'),colW-10);
-    doc.text(lines[0],x+5,cy+20);
-    if(lines[1]){doc.setFontSize(9);doc.text(lines[1],x+5,cy+28);}
+    doc.rect(x,cy,w,1.1,'F');
+    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); tc(154,154,150);
+    doc.text(String(label).toUpperCase(),x+4,cy+6.5);
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); tc(26,26,26);
+    var ln=doc.splitTextToSize(String(value||'-'),w-7);
+    doc.text(ln[0],x+4,cy+13.5);
   }
+  var halfW=(usable-4)/2;
+  cardC(ml,             y, halfW, 'Cliente',   o.cliente,        true);
+  cardC(ml+halfW+4,     y, halfW, 'Industria', o.industria||'-', false);
+  y+=22;
+  var triW=(usable-9)/3;
+  cardC(ml,                 y, triW, 'Emissao',  o.data||'-',     false);
+  cardC(ml+triW+4.5,        y, triW, 'Validade', o.validade||'-', false);
+  cardC(ml+(triW+4.5)*2,    y, triW, 'Condicao', o.cond||'-',     false);
+  y+=26;
 
-  dataBox(ml,        y,'Cliente',         o.cliente,          true);
-  dataBox(ml+colW+6, y,'Industria',       o.industria||'-',   false);
-  y+=dataH+5;
-  dataBox(ml,        y,'Data de Emissao', o.data||'-',        false);
-  dataBox(ml+colW+6, y,'Validade',        o.validade||'-',    false);
-  y+=dataH+5;
-
-  // condicao linha inteira
-  fc(250,249,246); doc.rect(ml,y,usable,32,'F');
-  fc(215,213,208); doc.rect(ml,y,usable,1,'F');
-  doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
-  doc.text('CONDICAO DE PAGAMENTO',ml+5,y+9);
-  doc.setFontSize(10.5); doc.setFont('helvetica','bold'); tc(22,22,22);
-  doc.text(String(o.cond||'-'),ml+5,y+20);
-  y+=38;
-
-  // ── Tabela ──
+  // Tabela (sem coluna de desconto)
   const C={
-    cod: {label:'COD.',    x:ml,      w:20, al:'left'},
-    desc:{label:'DESCRICAO',x:ml+22,  w:76, al:'left'},
-    ind: {label:'INDUSTRIA',x:ml+100, w:26, al:'left'},
-    qtd: {label:'QTD',     x:ml+128,  w:12, al:'right'},
-    dsc: {label:'DESCONTO',x:ml+142,  w:16, al:'right'},
-    unit:{label:'UNIT.',   x:ml+160,  w:18, al:'right'},
-    tot: {label:'TOTAL',   x:ml+180,  w:12, al:'right'},
+    cod: {label:'COD.',     x:ml+2,      al:'left'},
+    desc:{label:'DESCRICAO',x:ml+16,     al:'left'},
+    qtd: {label:'QTD',      x:ml+112,    al:'right'},
+    unit:{label:'UNIT.',    x:ml+142,    al:'right'},
+    tot: {label:'TOTAL',    x:ml+usable, al:'right'},
   };
-  const rowH=12, thH=10;
-
+  const rowH=11, thH=9;
   function drawTh(yy){
-    fc(22,22,22); doc.rect(ml,yy,usable,thH,'F');
+    fc(26,26,26); doc.rect(ml,yy,usable,thH,'F');
     doc.setFontSize(7.5); doc.setFont('helvetica','bold'); tc(245,197,0);
-    Object.values(C).forEach(function(c){
-      var tx=c.al==='right'?c.x+c.w:c.x+2;
-      doc.text(c.label,tx,yy+6.8,{align:c.al});
-    });
+    Object.values(C).forEach(function(c){ doc.text(c.label,c.x,yy+6,{align:c.al}); });
   }
   drawTh(y); y+=thH;
 
-  var subtotal=(o.itens||[]).reduce(function(s,i){return s+((i.precoTab||i.precoUnit||0)*(i.qtd||1));},0);
-  var descTotal=subtotal-(o.itens||[]).reduce(function(s,i){return s+i.total;},0);
-
   (o.itens||[]).forEach(function(it,i){
-    if(y+rowH>ph-26){
-      _orcPDFRodape(doc,pw,ph,ml,mr,o.id);
-      doc.addPage(); y=20; drawTh(y); y+=thH;
-    }
+    if(y+rowH>ph-26){ _orcPDFRodape(doc,pw,ph,ml,mr,o.id); doc.addPage(); y=20; drawTh(y); y+=thH; }
     if(i%2===0){fc(250,249,246);}else{fc(255,255,255);}
     doc.rect(ml,y,usable,rowH,'F');
-    dc(215,213,208); doc.line(ml,y+rowH,ml+usable,y+rowH);
-    var cy=y+8;
+    var cy=y+7.3;
     doc.setFontSize(9);
-    doc.setFont('helvetica','bold'); tc(22,22,22);
-    doc.text(String(it.cod||''),C.cod.x+2,cy);
-    doc.setFont('helvetica','normal');
-    doc.text(doc.splitTextToSize(String(it.desc||''),C.desc.w)[0],C.desc.x+2,cy);
-    tc(155,152,146);
-    doc.text(String(it.ind||'').substring(0,13),C.ind.x+2,cy);
-    tc(22,22,22);
-    doc.text(String(it.qtd||''),C.qtd.x+C.qtd.w,cy,{align:'right'});
-    var dp=it.descPct||0;
-    if(dp>0){tc(22,118,48);}else{tc(200,198,193);}
-    doc.text(dp+'%',C.dsc.x+C.dsc.w,cy,{align:'right'});
-    tc(155,152,146);
-    doc.text('R$ '+fmtN(it.precoUnit),C.unit.x+C.unit.w,cy,{align:'right'});
-    doc.setFont('helvetica','bold'); tc(22,22,22);
-    doc.text('R$ '+fmtN(it.total),C.tot.x+C.tot.w,cy,{align:'right'});
+    doc.setFont('helvetica','bold'); tc(26,26,26);
+    doc.text(String(it.cod||''),C.cod.x,cy);
+    doc.setFont('helvetica','normal'); tc(58,58,56);
+    doc.text(doc.splitTextToSize(String(it.desc||''),86)[0],C.desc.x,cy);
+    tc(26,26,26);
+    doc.text(String(it.qtd||0),C.qtd.x,cy,{align:'right'});
+    tc(106,106,102);
+    doc.text(money(it.precoUnit),C.unit.x,cy,{align:'right'});
+    doc.setFont('helvetica','bold'); tc(26,26,26);
+    doc.text(money(it.total),C.tot.x,cy,{align:'right'});
     y+=rowH;
   });
 
-  // ── Totais ──
+  // Total (sem subtotal/desconto)
   y+=8;
-  if(y+40>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,o.id);doc.addPage();y=20;}
-  var tx2=ml+96, tw2=usable-96;
+  if(y+22>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,o.id);doc.addPage();y=20;}
+  var tx2=ml+88, tw2=usable-88;
+  fc(245,197,0); doc.rect(tx2,y,tw2,15,'F');
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); tc(26,26,26);
+  doc.text('TOTAL DO ORCAMENTO',tx2+4,y+6);
+  doc.setFontSize(15);
+  doc.text(money(o.total),ml+usable,y+11.5,{align:'right'});
+  y+=22;
 
-  if(descTotal>0.005){
-    fc(250,249,246); doc.rect(tx2,y,tw2,11,'F');
-    doc.setFontSize(8.5); doc.setFont('helvetica','normal'); tc(155,152,146);
-    doc.text('Subtotal',tx2+4,y+7.5);
-    doc.text('R$ '+fmtN(subtotal),ml+usable,y+7.5,{align:'right'});
-    y+=11;
-    fc(230,248,234); doc.rect(tx2,y,tw2,11,'F');
-    tc(22,118,48);
-    doc.text('Desconto',tx2+4,y+7.5);
-    doc.text('- R$ '+fmtN(descTotal),ml+usable,y+7.5,{align:'right'});
-    y+=12;
-  }
-
-  fc(245,197,0); doc.rect(tx2,y,tw2,16,'F');
-  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); tc(22,22,22);
-  doc.text('TOTAL DO ORCAMENTO',tx2+5,y+7);
-  doc.setFontSize(15); tc(22,22,22);
-  doc.text('R$ '+fmtN(o.total),ml+usable,y+12.5,{align:'right'});
-  y+=20;
-
-  // ── Obs ──
+  // Observacoes
   if(o.obs){
     if(y+22>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,o.id);doc.addPage();y=20;}
     var obsLines=doc.splitTextToSize(o.obs,usable-12);
-    var obsH=obsLines.length*6+16;
+    var obsH=obsLines.length*5.5+13;
     fc(250,249,246); doc.rect(ml,y,usable,obsH,'F');
     fc(245,197,0);   doc.rect(ml,y,3,obsH,'F');
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
-    doc.text('OBSERVACOES',ml+7,y+8);
-    doc.setFontSize(9); doc.setFont('helvetica','normal'); tc(22,22,22);
-    doc.text(obsLines,ml+7,y+15);
+    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); tc(154,154,150);
+    doc.text('OBSERVACOES',ml+7,y+7);
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); tc(58,58,56);
+    doc.text(obsLines,ml+7,y+13);
   }
 
   _orcPDFRodape(doc,pw,ph,ml,mr,o.id);
@@ -5076,83 +5032,76 @@ function gerarPedPDF(p) {
   function fc(r,g,b){doc.setFillColor(r,g,b);}
   function tc(r,g,b){doc.setTextColor(r,g,b);}
   function dc(r,g,b){doc.setDrawColor(r,g,b);}
+  function money(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
-  // Header
-  fc(245,197,0); doc.rect(0,0,pw,24,'F');
-  fc(22,22,22);  doc.rect(0,24,pw,8,'F');
-  tc(22,22,22);  doc.setFontSize(15); doc.setFont('helvetica','bold');
-  doc.text('COMERCIAL TRES VALES',ml,16);
-  tc(160,158,152); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-  doc.text('Gestao Comercial Profissional',ml,29.5);
-  doc.text('Emitido em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),pw-mr,29.5,{align:'right'});
+  // Header (faixa preta + linha amarela)
+  fc(26,26,26); doc.rect(0,0,pw,24,'F');
+  fc(245,197,0); doc.rect(0,24,pw,1.4,'F');
+  tc(154,154,150); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+  doc.text('COMERCIAL',ml,9.5);
+  doc.setFontSize(15); doc.setFont('helvetica','bold');
+  tc(255,255,255); doc.text('Tres',ml,17.5);
+  var _lw=doc.getTextWidth('Tres');
+  tc(245,197,0); doc.text('Vales',ml+_lw,17.5);
+  tc(189,189,184); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text('Gestao Comercial',pw-mr,9.5,{align:'right'});
+  doc.text('Emitido em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),pw-mr,16,{align:'right'});
 
-  // Titulo
-  let y=46;
+  // Titulo + badge
+  let y=40;
   var docLabel=isBonif?'BONIFICACAO':'PEDIDO';
-  tc(22,22,22); doc.setFontSize(22); doc.setFont('helvetica','bold');
+  tc(26,26,26); doc.setFontSize(22); doc.setFont('helvetica','bold');
   doc.text(docLabel,ml,y);
   var nw=doc.getTextWidth(docLabel+' ');
   tc(245,197,0); doc.text(String(p.id),ml+nw,y);
 
   var badgeBg=isBonif?[255,241,194]:[202,220,255];
   var badgeFg=isBonif?[120,80,0]:[12,60,160];
-  var badgeTx=isBonif?'BONIFICACAO':(p.status||'PEDIDO').toUpperCase().substring(0,12);
+  var badgeTx=isBonif?'BONIFICACAO':String(p.status||'PEDIDO').toUpperCase().substring(0,12);
   fc(badgeBg[0],badgeBg[1],badgeBg[2]);
-  doc.roundedRect(pw-mr-30,y-10,30,9,2,2,'F');
+  doc.roundedRect(pw-mr-34,y-6,34,8,1.5,1.5,'F');
   doc.setFontSize(6.5); doc.setFont('helvetica','bold');
   tc(badgeFg[0],badgeFg[1],badgeFg[2]);
-  doc.text(badgeTx,pw-mr-15,y-4.8,{align:'center'});
+  doc.text(badgeTx,pw-mr-17,y-0.8,{align:'center'});
 
-  y+=7; fc(245,197,0); doc.rect(ml,y,usable,1.2,'F'); y+=10;
+  y+=6; fc(245,197,0); doc.rect(ml,y,usable,1.6,'F'); y+=8;
 
-  // Cards
-  var colW=(usable-6)/2, dataH=44;
-  function dataBox(x,cy,label,value,acento){
-    fc(250,249,246); doc.rect(x,cy,colW,dataH,'F');
+  // Cards de dados
+  function cardC(x,cy,w,label,value,acento){
+    var h=18;
+    fc(250,249,246); doc.rect(x,cy,w,h,'F');
     if(acento){fc(245,197,0);}else{fc(215,213,208);}
-    doc.rect(x,cy,colW,1,'F');
-    doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
-    doc.text(String(label).toUpperCase(),x+5,cy+9);
-    doc.setFontSize(10.5); doc.setFont('helvetica','bold'); tc(22,22,22);
-    var lines=doc.splitTextToSize(String(value||'-'),colW-10);
-    doc.text(lines[0],x+5,cy+20);
-    if(lines[1]){doc.setFontSize(9);doc.text(lines[1],x+5,cy+28);}
+    doc.rect(x,cy,w,1.1,'F');
+    doc.setFontSize(6.5); doc.setFont('helvetica','bold'); tc(154,154,150);
+    doc.text(String(label).toUpperCase(),x+4,cy+6.5);
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); tc(26,26,26);
+    var ln=doc.splitTextToSize(String(value||'-'),w-7);
+    doc.text(ln[0],x+4,cy+13.5);
   }
+  var halfW=(usable-4)/2;
+  cardC(ml,         y, halfW,'Cliente',   p.cliente,        true);
+  cardC(ml+halfW+4, y, halfW,'Industria', p.industria||'-', false);
+  y+=22;
+  var triW=(usable-9)/3;
+  var statusVal=(p.status||'-')+(isBonif?' (Bonif.)':'');
+  cardC(ml,              y, triW,'Data',     p.data||'-', false);
+  cardC(ml+triW+4.5,     y, triW,'Condicao', p.cond||'-', false);
+  cardC(ml+(triW+4.5)*2, y, triW,'Status',   statusVal,   false);
+  y+=26;
 
-  dataBox(ml,        y,'Cliente',   p.cliente,         true);
-  dataBox(ml+colW+6, y,'Industria', p.industria||'-',  false);
-  y+=dataH+5;
-  dataBox(ml,        y,'Data',      p.data||'-',       false);
-  dataBox(ml+colW+6, y,'Condicao',  p.cond||'-',       false);
-  y+=dataH+5;
-
-  fc(250,249,246); doc.rect(ml,y,usable,32,'F');
-  fc(215,213,208); doc.rect(ml,y,usable,1,'F');
-  doc.setFontSize(7); doc.setFont('helvetica','bold'); tc(155,152,146);
-  doc.text('STATUS / TIPO',ml+5,y+9);
-  doc.setFontSize(10.5); doc.setFont('helvetica','bold');
-  if(isBonif){tc(172,92,0);}else{tc(22,22,22);}
-  doc.text((p.status||'-')+(isBonif?' - Bonificacao':''),ml+5,y+20);
-  y+=38;
-
-  // Tabela
+  // Tabela (sem coluna de desconto)
   var C={
-    cod:{label:'COD.',    x:ml,      w:20, al:'left'},
-    desc:{label:'DESCRICAO',x:ml+22, w:76, al:'left'},
-    ind:{label:'INDUSTRIA',x:ml+100, w:26, al:'left'},
-    qtd:{label:'QTD',     x:ml+128,  w:12, al:'right'},
-    dsc:{label:'DESCONTO',x:ml+142,  w:16, al:'right'},
-    unit:{label:'UNIT.',  x:ml+160,  w:18, al:'right'},
-    tot:{label:'TOTAL',   x:ml+180,  w:12, al:'right'},
+    cod: {label:'COD.',     x:ml+2,      al:'left'},
+    desc:{label:'DESCRICAO',x:ml+16,     al:'left'},
+    qtd: {label:'QTD',      x:ml+112,    al:'right'},
+    unit:{label:'UNIT.',    x:ml+142,    al:'right'},
+    tot: {label:'TOTAL',    x:ml+usable, al:'right'},
   };
-  var rowH=12, thH=10;
+  var rowH=11, thH=9;
   function drawTh(yy){
-    fc(22,22,22); doc.rect(ml,yy,usable,thH,'F');
+    fc(26,26,26); doc.rect(ml,yy,usable,thH,'F');
     doc.setFontSize(7.5); doc.setFont('helvetica','bold'); tc(245,197,0);
-    Object.values(C).forEach(function(c){
-      var tx=c.al==='right'?c.x+c.w:c.x+2;
-      doc.text(c.label,tx,yy+6.8,{align:c.al});
-    });
+    Object.values(C).forEach(function(c){ doc.text(c.label,c.x,yy+6,{align:c.al}); });
   }
   drawTh(y); y+=thH;
 
@@ -5160,36 +5109,30 @@ function gerarPedPDF(p) {
     if(y+rowH>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,p.id);doc.addPage();y=20;drawTh(y);y+=thH;}
     if(i%2===0){fc(250,249,246);}else{fc(255,255,255);}
     doc.rect(ml,y,usable,rowH,'F');
-    dc(215,213,208); doc.line(ml,y+rowH,ml+usable,y+rowH);
-    var cy=y+8;
+    var cy=y+7.3;
     doc.setFontSize(9);
-    doc.setFont('helvetica','bold'); tc(22,22,22);
-    doc.text(String(it.cod||''),C.cod.x+2,cy);
-    doc.setFont('helvetica','normal');
-    doc.text(doc.splitTextToSize(String(it.desc||''),C.desc.w)[0],C.desc.x+2,cy);
-    tc(155,152,146);
-    doc.text(String(it.ind||'').substring(0,13),C.ind.x+2,cy);
-    tc(22,22,22);
-    doc.text(String(it.qtd||0),C.qtd.x+C.qtd.w,cy,{align:'right'});
-    var dp=it.descPct||0;
-    if(dp>0){tc(22,118,48);}else{tc(200,198,193);}
-    doc.text(dp+'%',C.dsc.x+C.dsc.w,cy,{align:'right'});
-    tc(155,152,146);
-    doc.text('R$ '+fmtN(it.precoUnit||0),C.unit.x+C.unit.w,cy,{align:'right'});
-    doc.setFont('helvetica','bold'); tc(22,22,22);
-    doc.text('R$ '+fmtN(it.total||0),C.tot.x+C.tot.w,cy,{align:'right'});
+    doc.setFont('helvetica','bold'); tc(26,26,26);
+    doc.text(String(it.cod||''),C.cod.x,cy);
+    doc.setFont('helvetica','normal'); tc(58,58,56);
+    doc.text(doc.splitTextToSize(String(it.desc||''),86)[0],C.desc.x,cy);
+    tc(26,26,26);
+    doc.text(String(it.qtd||0),C.qtd.x,cy,{align:'right'});
+    tc(106,106,102);
+    doc.text(money(it.precoUnit||0),C.unit.x,cy,{align:'right'});
+    doc.setFont('helvetica','bold'); tc(26,26,26);
+    doc.text(money(it.total||0),C.tot.x,cy,{align:'right'});
     y+=rowH;
   });
 
   // Total
   y+=8;
   if(y+20>ph-26){_orcPDFRodape(doc,pw,ph,ml,mr,p.id);doc.addPage();y=20;}
-  var tx2=ml+96, tw2=usable-96;
-  fc(245,197,0); doc.rect(tx2,y,tw2,16,'F');
-  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); tc(22,22,22);
-  doc.text(isBonif?'TOTAL DA BONIFICACAO':'TOTAL DO PEDIDO',tx2+5,y+7);
-  doc.setFontSize(15); tc(22,22,22);
-  doc.text('R$ '+fmtN(p.total),ml+usable,y+12.5,{align:'right'});
+  var tx2=ml+88, tw2=usable-88;
+  fc(245,197,0); doc.rect(tx2,y,tw2,15,'F');
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); tc(26,26,26);
+  doc.text(isBonif?'TOTAL DA BONIFICACAO':'TOTAL DO PEDIDO',tx2+4,y+6);
+  doc.setFontSize(15);
+  doc.text(money(p.total),ml+usable,y+11.5,{align:'right'});
 
   _orcPDFRodape(doc,pw,ph,ml,mr,p.id);
   doc.save('Pedido_'+p.id+'_'+(p.cliente||'').replace(/\s+/g,'_')+'.pdf');
