@@ -73,6 +73,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--cinza);color:var(--preto)
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+/* Ajuste de layout quando a Comissão fica oculta (sem acesso) — só no desktop, mobile mantém as media queries */
+@media (min-width: 769px){
+  .kpi-grid.sem-comissao{grid-template-columns:repeat(3,1fr);}
+  .grid-2.sem-comissao{grid-template-columns:1fr;}
+}
+
+/* ── MODO DISCRETO (olhinho): borra valores para apresentações ── */
+.btn-olho{background:transparent;border:1px solid var(--cinza-medio);border-radius:8px;width:34px;height:34px;min-width:34px;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;padding:0;}
+.btn-olho:hover{background:var(--cinza);}
+.btn-olho.ativo{background:var(--amarelo);border-color:var(--amarelo);}
+body.gc-discreto .kpi-value,
+body.gc-discreto .gc-val{
+  filter:blur(8px);-webkit-filter:blur(8px);
+  user-select:none;-webkit-user-select:none;
+  transition:filter .12s ease;
+}
 
 /* TABLE */
 .table-wrap{overflow-x:auto;}
@@ -918,6 +934,7 @@ tr:last-child td{border-bottom:none;}
     <div class="topbar-actions">
       <span id="sync-ts" style="font-size:11px;color:#aaa"></span>
       <span id="sync-saving-indicator-topbar" style="display:none;font-size:11px;font-weight:700;color:var(--verde);animation:syncPulse 1s infinite alternate">● Salvando...</span>
+      <button id="btn-modo-discreto" class="btn-olho" onclick="toggleModoDiscreto()" title="Modo discreto — ocultar valores (para apresentações)" aria-label="Modo discreto">👁️</button>
       <div style="position:relative">
         <div class="topbar-user" onclick="toggleUserMenu()">
           <div class="user-avatar" id="topbar-avatar">AD</div>
@@ -941,19 +958,19 @@ tr:last-child td{border-bottom:none;}
     <div class="panel active" id="panel-dashboard">
       <div class="section-title">Dashboard Comercial</div>
       <div class="section-sub">Visão geral · <span id="dash-periodo"></span></div>
-      <div class="kpi-grid">
+      <div class="kpi-grid" id="dash-kpi-grid">
         <div class="kpi-card kpi-amarelo"><div class="kpi-label">Pedidos no Mês</div><div class="kpi-value" id="kpi-pedidos">0</div><div class="kpi-sub" id="kpi-pedidos-sub">Nenhum pedido ainda</div></div>
         <div class="kpi-card kpi-verde"><div class="kpi-label">Faturamento Líquido</div><div class="kpi-value" id="kpi-faturamento">R$ 0</div><div class="kpi-sub" id="kpi-fat-sub">NFs registradas</div></div>
-        <div class="kpi-card kpi-azul"><div class="kpi-label">Comissão Prevista</div><div class="kpi-value" id="kpi-comissao">R$ 0</div><div class="kpi-sub" id="kpi-com-sub">A receber</div></div>
+        <div class="kpi-card kpi-azul" id="kpi-card-comissao"><div class="kpi-label">Comissão Prevista</div><div class="kpi-value" id="kpi-comissao">R$ 0</div><div class="kpi-sub" id="kpi-com-sub">A receber</div></div>
         <div class="kpi-card kpi-roxo"><div class="kpi-label">Orçamentos Abertos</div><div class="kpi-value" id="kpi-orc">0</div><div class="kpi-sub" id="kpi-orc-sub">Aguardando resposta</div></div>
       </div>
-      <div class="grid-2" style="margin-bottom:14px">
+      <div class="grid-2" id="dash-grid-pedcom" style="margin-bottom:14px">
         <div class="card">
           <div class="card-header"><div class="card-title">Pedidos Recentes</div><button class="btn btn-outline btn-sm" onclick="showPanel('pedidos',null)">Ver todos →</button></div>
           <table><thead><tr><th>#</th><th>Cliente</th><th>Indústria</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="dash-pedidos-tbody"></tbody></table>
         </div>
-        <div class="card">
+        <div class="card" id="dash-card-comissoes">
           <div class="card-header"><div class="card-title">Comissões Pendentes</div><button class="btn btn-outline btn-sm" onclick="showPanel('comissoes',null)">Ver todas →</button></div>
           <table><thead><tr><th>Indústria</th><th>Cliente</th><th>Valor</th><th>Status</th></tr></thead>
           <tbody id="dash-com-tbody"></tbody></table>
@@ -2122,9 +2139,9 @@ tr:last-child td{border-bottom:none;}
       </div>
 
       <!-- KPIs principais -->
-      <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi-grid" id="relatorios-kpi-grid" style="margin-bottom:20px">
         <div class="kpi-card kpi-verde"><div class="kpi-label">Faturamento Total</div><div class="kpi-value" id="rel-kpi-fat">R$ 0</div><div class="kpi-sub" id="rel-kpi-fat-sub">NFs registradas</div></div>
-        <div class="kpi-card kpi-amarelo"><div class="kpi-label">Comissão Prevista</div><div class="kpi-value" id="rel-kpi-com">R$ 0</div><div class="kpi-sub" id="rel-kpi-com-sub">A receber</div></div>
+        <div class="kpi-card kpi-amarelo" id="rel-kpi-card-com"><div class="kpi-label">Comissão Prevista</div><div class="kpi-value" id="rel-kpi-com">R$ 0</div><div class="kpi-sub" id="rel-kpi-com-sub">A receber</div></div>
         <div class="kpi-card kpi-azul"><div class="kpi-label">Ticket Médio</div><div class="kpi-value" id="rel-kpi-ticket">R$ 0</div><div class="kpi-sub">Por pedido faturado</div></div>
         <div class="kpi-card kpi-roxo"><div class="kpi-label">Bonificações</div><div class="kpi-value" id="rel-kpi-bon">R$ 0</div><div class="kpi-sub">Não geram comissão</div></div>
       </div>
@@ -2147,9 +2164,9 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
 
-      <div class="grid-2">
+      <div class="grid-2" id="rel-grid-comsaldo">
         <!-- Comissão Prevista x Recebida -->
-        <div class="card">
+        <div class="card" id="rel-card-comissao">
           <div class="card-header"><div class="card-title">💰 Comissão Prevista × Recebida</div></div>
           <div id="rel-comissao-table"></div>
         </div>
@@ -9901,7 +9918,7 @@ function renderDashboard() {
     const vencendo = orcamentos.filter(o=>o.validade && normDate(o.validade) <= today() && !['Cancelado','Convertido em pedido'].includes(o.status));
     if(vencendo.length>0) alertas.push(`<div class="alert alert-warning" style="margin-bottom:6px">⚠️ ${vencendo.length} orçamento${vencendo.length!==1?'s':''} com validade vencida</div>`);
     const atrasadas = comissoes_data.filter(c=>!c.excluido&&c.status==='Atrasada');
-    if(atrasadas.length>0) alertas.push(`<div class="alert alert-danger" style="margin-bottom:6px">💰 ${atrasadas.length} comissão${atrasadas.length!==1?'ões':''} em atraso</div>`);
+    if(atrasadas.length>0 && (typeof hasAccess!=='function' || hasAccess('comissoes'))) alertas.push(`<div class="alert alert-danger" style="margin-bottom:6px">💰 ${atrasadas.length} comissão${atrasadas.length!==1?'ões':''} em atraso</div>`);
     const excluidos = pedidos.filter(p=>p.excluido).length;
     if(excluidos>0) alertas.push(`<div class="alert alert-info" style="margin-bottom:6px">🚫 ${excluidos} pedido${excluidos!==1?'s':''} marcado${excluidos!==1?'s':''} como excluído${excluidos!==1?'s':''} — <a onclick="showPanel('pedidos',document.querySelector('[onclick*=pedidos]'))" style="cursor:pointer;text-decoration:underline;color:inherit">ver em Pedidos</a></div>`);
     if(Object.keys(PRODUTOS_CAT).length===0) alertas.push(`<div class="alert alert-info" style="margin-bottom:6px">📦 Nenhum produto cadastrado ainda</div>`);
@@ -9910,6 +9927,9 @@ function renderDashboard() {
       ? `<div style="text-align:center;color:var(--verde);padding:16px;font-size:12px">✅ Nenhum alerta no momento</div>`
       : alertas.join('');
   }
+
+  // Oculta comissão para quem não tem acesso
+  try { aplicarVisibilidadeComissao(); } catch(e) {}
 }
 
 // ── Corrige orçamentos e pedidos importados onde desc ficou igual ao cod ──
@@ -10002,6 +10022,7 @@ function fazerLogin() {
       // ── Corrige descrições de orçamentos/pedidos importados com desc=cod ──
       try { _corrigirDescricoesSalvas(); } catch(e) { console.warn('Correção desc:', e); }
       try { aplicarVisibilidadeSidebar(); } catch(e) { console.warn('Sidebar:', e); }
+      try { aplicarVisibilidadeComissao(); } catch(e) { console.warn('VisibComissao:', e); }
       try { toast('Bem-vindo, '+usr.nome.split(' ')[0]+'!'); } catch(e) {}
 
       const renders = [
@@ -10107,6 +10128,81 @@ function aplicarVisibilidadeSidebar() {
     }
   });
 }
+
+/* ══════════════════════════
+   VISIBILIDADE DA COMISSÃO
+   Oculta cards/KPIs de comissão no Dashboard e nos Relatórios
+   para usuários SEM acesso ao módulo de Comissões.
+══════════════════════════ */
+function aplicarVisibilidadeComissao() {
+  // Se não há login ainda, não faz nada
+  if(!usuarioLogado) return;
+  const podeVerComissao = (typeof hasAccess === 'function') ? hasAccess('comissoes') : true;
+
+  const mostrar = (id, exibir) => {
+    const elem = document.getElementById(id);
+    if(elem) elem.style.display = exibir ? '' : 'none';
+  };
+  const ajustarGrid = (id, ocultando) => {
+    const elem = document.getElementById(id);
+    if(elem) elem.classList.toggle('sem-comissao', ocultando);
+  };
+
+  // ── Dashboard ──
+  mostrar('kpi-card-comissao',  podeVerComissao); // KPI "Comissão Prevista"
+  mostrar('dash-card-comissoes', podeVerComissao); // Card "Comissões Pendentes"
+  ajustarGrid('dash-kpi-grid',   !podeVerComissao);
+  ajustarGrid('dash-grid-pedcom', !podeVerComissao);
+
+  // ── Relatórios / KPIs ──
+  mostrar('rel-kpi-card-com',  podeVerComissao); // KPI "Comissão Prevista"
+  mostrar('rel-card-comissao', podeVerComissao); // Card "Comissão Prevista × Recebida"
+  ajustarGrid('relatorios-kpi-grid', !podeVerComissao);
+  ajustarGrid('rel-grid-comsaldo',   !podeVerComissao);
+}
+
+/* ══════════════════════════
+   MODO DISCRETO (olhinho)
+   Borra os valores monetários da tela com um clique, para quando
+   o sistema é apresentado a outras pessoas — sem vazar dados.
+   É 100% visual (CSS): NÃO altera os dados nem as exportações.
+══════════════════════════ */
+let modoDiscreto = false;
+
+function toggleModoDiscreto() {
+  modoDiscreto = !modoDiscreto;
+  document.body.classList.toggle('gc-discreto', modoDiscreto);
+  const btn = document.getElementById('btn-modo-discreto');
+  if(btn) {
+    btn.textContent = modoDiscreto ? '🙈' : '👁️';
+    btn.classList.toggle('ativo', modoDiscreto);
+    btn.title = modoDiscreto
+      ? 'Modo discreto ATIVO — clique para mostrar os valores'
+      : 'Modo discreto — ocultar valores (para apresentações)';
+  }
+  if(modoDiscreto) marcarValoresSensiveis();
+  try { toast(modoDiscreto ? '🙈 Modo discreto ativado — valores ocultos' : '👁️ Valores visíveis novamente'); } catch(e){}
+}
+
+// Marca elementos que exibem valores em R$ para receberem o blur (os KPIs já são borrados direto pelo CSS)
+function marcarValoresSensiveis() {
+  document.querySelectorAll('td, .mini-row span, .rank-row .bold').forEach(elem => {
+    if(/R\$/.test(elem.textContent || '')) elem.classList.add('gc-val');
+  });
+}
+
+// Enquanto o modo discreto estiver ativo, mantém ocultos os valores que forem renderizados depois.
+// Fica inerte (custo zero) quando o modo está desligado, que é o padrão.
+(function(){
+  let agendado = false;
+  try {
+    new MutationObserver(() => {
+      if(!modoDiscreto || agendado) return;
+      agendado = true;
+      requestAnimationFrame(() => { agendado = false; marcarValoresSensiveis(); });
+    }).observe(document.body, {childList:true, subtree:true});
+  } catch(e){}
+})();
 
 function toggleUserMenu() {
   el('user-menu').classList.toggle('open');
@@ -10780,6 +10876,9 @@ function renderRelatorios() {
   if(el('rel-kpi-bon')) el('rel-kpi-bon').textContent = fmt(totBonif);
   if(el('rel-kpi-fat-sub')) el('rel-kpi-fat-sub').textContent = `${pedsVenda.length} NF${pedsVenda.length!==1?'s':''} (somente vendas)`;
   if(el('rel-kpi-com-sub')) el('rel-kpi-com-sub').textContent = mesFiltro==='todos'?'Geral':'Mês: '+mesFiltro;
+
+  // Oculta comissão para quem não tem acesso
+  try { aplicarVisibilidadeComissao(); } catch(e) {}
 }
 
 /* ══════════════════════════
