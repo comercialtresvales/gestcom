@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1471,7 +1472,8 @@ tr:last-child td{border-bottom:none;}
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
           <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão de todas as comissões conforme Regras Comerciais e cadastro de indústrias">🔄 Recalcular % + Tipo</button>
-          <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
+          <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme as Regras Comerciais e cadastro de indústrias (ignora Recebidas)">🔄 Recalcular Tipo</button>
+          <button class="btn btn-danger btn-sm" onclick="corrigirTipoInclRecebidas()" title="Corrige o tipo inclusive em comissões já Recebidas — uso excepcional para corrigir histórico">⚠️ Corrigir Tipo (incl. Recebidas)</button>
           <button class="btn btn-success btn-sm" onclick="recalcularMesPrevisaoTodasComissoes()" title="Recalcula apenas o mês de previsão — corrige DPC, DDL e outros prazos que não eram reconhecidos como número">📅 Corrigir Mês (DPC/DDL)</button>
           <button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Exportar Excel</button>
         </div>
@@ -2817,7 +2819,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-group"><label>Produto</label><input id="so-produto" placeholder="Descrição ou código do produto"></div>
       <div class="form-group"><label>Mês de Referência *</label>
-        <select id="so-mes"><option>Jan/26</option><option>Fev/26</option><option>Mar/26</option><option selected>Abr/26</option><option>Mai/26</option><option>Jun/26</option><option>Jul/26</option><option>Ago/26</option><option>Set/26</option><option>Out/26</option><option>Nov/26</option><option>Dez/26</option><option>Jan/25</option><option>Fev/25</option><option>Mar/25</option><option>Abr/25</option><option>Mai/25</option><option>Jun/25</option><option>Jul/25</option><option>Ago/25</option><option>Set/25</option><option>Out/25</option><option>Nov/25</option><option>Dez/25</option></select>
+        <select id="so-mes"><option>Jan/26</option><option>Fev/26</option><option selected>Mar/26</option><option>Abr/26</option></select>
       </div>
       <div class="form-group"><label>Quantidade Vendida</label><input type="number" id="so-qtd" placeholder="0" min="0"></div>
       <div class="form-group"><label>Valor Total (R$) *</label><input type="number" id="so-valor" placeholder="0,00" min="0" step="0.01"></div>
@@ -3871,10 +3873,43 @@ function _buscarProdutoPorEAN(ean) {
   return null;
 }
 
+function _buscarProdutoPorCod(cod) {
+  if(!cod) return null;
+  const codUp = cod.trim().toUpperCase();
+  if(!codUp) return null;
+  // 1) Match direto pela chave do catálogo
+  if(PRODUTOS_CAT[codUp]) return { cod: codUp, ...PRODUTOS_CAT[codUp] };
+  // 2) Match ignorando zeros à esquerda
+  const semZeros = codUp.replace(/^0+/,'');
+  if(semZeros && PRODUTOS_CAT[semZeros]) return { cod: semZeros, ...PRODUTOS_CAT[semZeros] };
+  // 3) Match por código específico de UF (codigosUF)
+  for(const [c, p] of Object.entries(PRODUTOS_CAT)) {
+    if(p.codigosUF) {
+      for(const ufCod of Object.values(p.codigosUF)) {
+        const u = (ufCod||'').toString().trim().toUpperCase();
+        if(u && (u === codUp || u.replace(/^0+/,'') === semZeros)) {
+          return { cod: c, ...p };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function orcAutoFill(cod, prefix) {
   const codUp = cod.toUpperCase();
-  let p = PRODUTOS_CAT[codUp];
   let resolvedCod = codUp;
+
+  // Resolve o código (base, sem zeros à esquerda ou específico de UF)
+  let byCod = _buscarProdutoPorCod(cod);
+  let p = byCod ? PRODUTOS_CAT[byCod.cod] : null;
+  if(byCod) {
+    resolvedCod = byCod.cod;
+    if(resolvedCod !== codUp) {
+      const codEl = el(prefix+'-add-cod');
+      if(codEl) codEl.value = resolvedCod;
+    }
+  }
 
   // Se não achou pelo código, tenta buscar pelo EAN
   if(!p && /^\d{8,14}$/.test(cod)) {
@@ -6522,27 +6557,41 @@ function recalcularPctComissoes() {
 }
 
 function recalcularTipoTodasComissoes() {
-  if(!confirm('Recalcular o Tipo (Faturamento / Liquidez) de TODAS as comissões conforme o cadastro atual das indústrias?\n\nIsso corrigirá comissões que ainda estão como "Faturamento" mas a indústria foi alterada para "Liquidez" (ou vice-versa), e recalculará o mês de previsão.\n\nComissões já "Recebida" não serão alteradas.')) return;
+  if(!confirm('Recalcular o Tipo (Faturamento / Liquidez) de TODAS as comissões conforme as Regras Comerciais e o cadastro de indústrias?\n\nPrioridade: Regra específica do cliente > Regra de rede > Regra global > Cadastro da indústria.\n\nComissões já "Recebida" não serão alteradas.')) return;
   let verificadas = 0, alteradas = 0, semCadastro = 0;
   comissoes_data = comissoes_data.map(c => {
     if(c.excluido || c.status === 'Recebida') return c;
     verificadas++;
-    // Busca indústria com comparação case-insensitive e trim para evitar falhas por espaços/maiúsculas
     const nomeInd = (c.industria || '').trim().toLowerCase();
     const indCad = industrias.find(i =>
       (i.nome || '').trim().toLowerCase() === nomeInd ||
       (i.id   || '').trim().toLowerCase() === nomeInd
     );
-    if(!indCad) {
-      semCadastro++;
-      return c; // indústria não encontrada no cadastro, mantém como está
-    }
-    const novoTipo = indCad.tipoCom || 'Faturamento';
-    if(novoTipo === c.tipo) return c; // já está correto, nada a fazer
-    // Recalcula mês de previsão com o novo tipo
-    const ped = pedidos.find(p => p.id === c.pedido);
     const cliCad = clientes.find(cl => cl.nome === c.cliente || cl.id === c.cliente);
-    const prazo = ped?.cond || cliCad?.prazo || '';
+    const redeObj = cliCad?.rede || '';
+    // Prioridade: regra específica do cliente > regra de rede > regra global
+    const regra = regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      r.cliente === c.cliente
+    ) || (redeObj && regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      r.rede === redeObj
+    )) || regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      (r.cliente==='Todos'||!r.cliente) && !r.rede
+    );
+    let novoTipo;
+    if(regra?.tipo) {
+      novoTipo = regra.tipo;
+    } else if(indCad) {
+      novoTipo = indCad.tipoCom || 'Faturamento';
+    } else {
+      semCadastro++;
+      return c;
+    }
+    if(novoTipo === c.tipo) return c;
+    const ped = pedidos.find(p => p.id === c.pedido);
+    const prazo = regra?.prazo || ped?.cond || cliCad?.prazo || '';
     const dataNF = ped?.nf?.data || ped?.data || c.dataNF || new Date();
     const novoMes = _calcMesPrevisaoComissao(dataNF, novoTipo, prazo);
     alteradas++;
@@ -6550,12 +6599,43 @@ function recalcularTipoTodasComissoes() {
   });
   renderComissoes();
   syncAutoSaveHook();
-  const avisoSemCad = semCadastro > 0 ? ` · ⚠️ ${semCadastro} sem cadastro de indústria` : '';
+  const avisoSemCad = semCadastro > 0 ? ` · ⚠️ ${semCadastro} sem regra/cadastro` : '';
   toast(`✅ ${verificadas} comissão(ões) verificadas · ${alteradas} tipo(s) corrigido(s)${avisoSemCad}.`);
 }
 
-// ─── Recalcula APENAS o mês de previsão de todas as comissões (sem alterar % nem tipo) ─
-// Útil quando o prazo estava como "DPC", "DDL" ou outro termo textual e era ignorado.
+// ─── Corrige tipo INCLUSIVE nas comissões Recebidas (uso excepcional) ────────────────
+function corrigirTipoInclRecebidas() {
+  if(!confirm('⚠️ ATENÇÃO\n\nCorrigir o Tipo (Faturamento/Liquidez) INCLUSIVE em comissões já "Recebida"?\n\nUse apenas para corrigir registros históricos incorretos.\n\nPrioridade: Regra específica do cliente > Regra de rede > Regra global > Cadastro da indústria.')) return;
+  let total = 0, alteradas = 0;
+  comissoes_data = comissoes_data.map(c => {
+    if(c.excluido) return c;
+    total++;
+    const cliCad = clientes.find(cl => cl.nome === c.cliente || cl.id === c.cliente);
+    const redeObj = cliCad?.rede || '';
+    const indCad = industrias.find(i =>
+      (i.nome||'').trim().toLowerCase() === (c.industria||'').trim().toLowerCase() ||
+      (i.id||'').trim().toLowerCase()   === (c.industria||'').trim().toLowerCase()
+    );
+    const regra = regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      r.cliente === c.cliente
+    ) || (redeObj && regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      r.rede === redeObj
+    )) || regrasComerciais.find(r => r.ativo &&
+      (r.industria==='Todas' || r.industria===c.industria) &&
+      (r.cliente==='Todos'||!r.cliente) && !r.rede
+    );
+    const novoTipo = regra?.tipo || indCad?.tipoCom || c.tipo;
+    if(novoTipo === c.tipo) return c;
+    alteradas++;
+    return {...c, tipo: novoTipo};
+  });
+  renderComissoes();
+  syncAutoSaveHook();
+  toast(`✅ ${total} comissões verificadas (inclusive Recebidas) · ${alteradas} tipo(s) corrigido(s).`);
+}
+
 function recalcularMesPrevisaoTodasComissoes() {
   if(!confirm(
     'Recalcular o MÊS DE PREVISÃO de TODAS as comissões pendentes?\n\n' +
