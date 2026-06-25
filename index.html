@@ -891,7 +891,7 @@ tr:last-child td{border-bottom:none;}
   <div class="sidebar-section">
     <div class="sidebar-label">Financeiro</div>
     <div class="nav-item" onclick="showPanel('saldo',this)"><span class="nav-icon">📊</span> Saldo Cli. × Indústria</div>
-    <div class="nav-item" onclick="showPanel('ctrlsaldo',this)"><span class="nav-icon">🏦</span> Controle de Saldos <span class="nav-badge" id="badge-ctrlsaldo" style="display:none">!</span></div>
+    <div class="nav-item" style="display:none" onclick="showPanel('ctrlsaldo',this)"><span class="nav-icon">🏦</span> Controle de Saldos <span class="nav-badge" id="badge-ctrlsaldo" style="display:none">!</span></div>
     <div class="nav-item" onclick="showPanel('comissoes',this)"><span class="nav-icon">💰</span> Comissões</div>
     <div class="nav-item" onclick="showPanel('fatmensal',this)"><span class="nav-icon">📅</span> Fat. Mensal por Indústria</div>
     <div class="nav-item" onclick="showPanel('sellinout',this)"><span class="nav-icon">↕️</span> Sell In / Sell Out</div>
@@ -1243,6 +1243,9 @@ tr:last-child td{border-bottom:none;}
         <select id="saldo-mes" onchange="renderSaldoAtivo()">
           <option value="">📅 Todos os meses</option>
         </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;cursor:pointer;white-space:nowrap" title="Por padrão, clientes/indústrias com saldo zerado (pedido = NF) ficam ocultos. Marque para exibi-los.">
+          <input type="checkbox" id="saldo-show-zerados" onchange="renderSaldoAtivo()" style="cursor:pointer"> Mostrar zerados
+        </label>
         <button class="btn btn-outline btn-sm" onclick="limparFiltrosSaldo()" title="Limpar todos os filtros">✕ Limpar</button>
       </div>
 
@@ -1543,6 +1546,9 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="fm-ind" onchange="renderFatMensal()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
           <option value="">Todas as indústrias</option>
+        </select>
+        <select id="fm-cli" onchange="renderFatMensal()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+          <option value="">Todos os clientes / grupos</option>
         </select>
         <div style="display:flex;gap:4px">
           <button class="btn btn-outline btn-sm" id="fm-view-tabela" onclick="setFmView('tabela',this)" style="background:var(--preto);color:var(--amarelo)">📋 Tabela</button>
@@ -2182,6 +2188,27 @@ tr:last-child td{border-bottom:none;}
           <div class="card-header"><div class="card-title">⚖️ Saldo Pendente por Cliente × Indústria</div></div>
           <div id="rel-saldo-pendente"></div>
         </div>
+      </div>
+
+      <!-- ===== FATURAMENTO & BONIFICAÇÕES MÊS A MÊS POR CLIENTE × INDÚSTRIA ===== -->
+      <div class="card" style="margin-top:16px" id="rel-fatbonif-card">
+        <div class="card-header" style="flex-wrap:wrap;gap:10px;align-items:center">
+          <div class="card-title">📅 Faturamento &amp; Bonificações — Mês a Mês por Cliente × Indústria</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto">
+            <select id="relfb-ano" onchange="renderRelFatBonif()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+              <option value="2026">2026</option><option value="2025">2025</option>
+            </select>
+            <select id="relfb-cli" onchange="renderRelFatBonif()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+              <option value="">Todos os clientes / grupos</option>
+            </select>
+            <select id="relfb-ind" onchange="renderRelFatBonif()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+              <option value="">Todas as indústrias</option>
+            </select>
+            <button class="btn btn-info btn-sm" onclick="exportarRelFatBonif()">📤 Excel</button>
+          </div>
+        </div>
+        <div class="kpi-grid" id="relfb-kpis" style="grid-template-columns:repeat(3,1fr);margin:12px 0 4px"></div>
+        <div id="relfb-content"></div>
       </div>
     </div>
 
@@ -5988,6 +6015,9 @@ function renderSaldoAtivo() {
   else if(_saldoTabAtiva==='cliente')   renderSaldoAnaliseCliente();
   else if(_saldoTabAtiva==='ranking')   renderSaldoRanking();
 }
+function _saldoMostraZerados() {
+  return !!((el('saldo-show-zerados')||{}).checked);
+}
 function _getSaldoDadosFiltrados() {
   const filtCli=(el('saldo-cli')||{}).value||'';
   const filtInd=(el('saldo-ind')||{}).value||'';
@@ -6013,22 +6043,25 @@ function renderSaldoAnaliseIndustria(){
     iM[p.industria].totPed+=p.total;
     if(p.nf){iM[p.industria].totNF+=p.nf.valorNF;iM[p.industria].totLiq+=p.nf.liquida;}
   });
-  const inds=Object.entries(iM).map(([ind,d])=>{
+  let inds=Object.entries(iM).map(([ind,d])=>{
     const dif=parseFloat((d.totPed-d.totNF).toFixed(2));
     return{ind,clientes:d.clis.size,qtdPeds:d.qtd,totPed:d.totPed,totNF:d.totNF,totLiq:d.totLiq,dif,cobertura:d.totPed>0?d.totNF/d.totPed*100:0};
   }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  const _mzI = _saldoMostraZerados();
+  if(!_mzI) inds = inds.filter(x=>Math.abs(x.dif)>=0.01);
+  const pedsViewI = _mzI ? peds : peds.filter(p=>inds.some(x=>x.ind===p.industria));
   const tP=inds.reduce((s,x)=>s+x.totPed,0),tN=inds.reduce((s,x)=>s+x.totNF,0);
   const tAb=inds.filter(x=>x.dif>0.01).reduce((s,x)=>s+x.dif,0);
   const tNM=inds.filter(x=>x.dif<-0.01).reduce((s,x)=>s+Math.abs(x.dif),0);
   const ke=el('saldo-ind-kpis');
   if(ke)ke.innerHTML=`<div class="kpi-card kpi-amarelo"><div class="kpi-label">Total Pedidos</div><div class="kpi-value">${fmt(tP)}</div><div class="kpi-sub">${inds.length} indústria(s)</div></div><div class="kpi-card kpi-verde"><div class="kpi-label">Total Faturado NF</div><div class="kpi-value">${fmt(tN)}</div><div class="kpi-sub">${tP>0?(tN/tP*100).toFixed(1):'0'}% cobertura</div></div><div class="kpi-card kpi-azul"><div class="kpi-label">Saldo em Aberto</div><div class="kpi-value">${fmt(tAb)}</div><div class="kpi-sub">${inds.filter(x=>x.dif>0.01).length} indústria(s)</div></div><div class="kpi-card kpi-vermelho"><div class="kpi-label">NF Maior que Pedido</div><div class="kpi-value">${fmt(tNM)}</div><div class="kpi-sub">${inds.filter(x=>x.dif<-0.01).length} indústria(s)</div></div>`;
-  if(!inds.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">Nenhum dado para os filtros selecionados</td></tr>';if(el('saldo-ind-bars'))el('saldo-ind-bars').innerHTML='';return;}
+  if(!inds.length){tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">${_mzI?'Nenhum dado para os filtros selecionados':'✅ Nenhuma indústria com saldo em aberto (zerados ocultos — marque “Mostrar zerados” para vê-los)'}</td></tr>`;if(el('saldo-ind-bars'))el('saldo-ind-bars').innerHTML='';return;}
   tbody.innerHTML=inds.map(x=>{
     const dz=Math.abs(x.dif)<0.01,dp=x.dif>=0.01,dn=x.dif<=-0.01;
     const cc=x.cobertura>=100?'verde':x.cobertura>=80?'amarelo':'vermelho';
     const st=dz?'<span class="badge badge-verde">✅ Zerado</span>':dp?'<span class="badge badge-amarelo">Saldo aberto</span>':'<span class="badge badge-vermelho">NF maior</span>';
     return`<tr><td><span class="tag">${esc(x.ind)}</span></td><td style="text-align:right">${x.clientes}</td><td style="text-align:right">${x.qtdPeds}</td><td style="text-align:right" class="bold">${fmt(x.totPed)}</td><td style="text-align:right">${x.totNF>0?fmt(x.totNF):'<span style="color:#aaa">—</span>'}</td><td style="text-align:right" class="verde">${x.totLiq>0?fmt(x.totLiq):'—'}</td><td style="text-align:right" class="bold ${dp?'amarelo':dn?'vermelho':'verde'}">${dz?'—':(dp?'+':'')+fmt(x.dif)}</td><td style="text-align:right" class="${dn?'vermelho':''}">${dn?fmt(Math.abs(x.dif)):'—'}</td><td style="text-align:right"><span class="${cc}" style="font-weight:700">${x.cobertura.toFixed(1)}%</span><div style="margin-top:3px;height:4px;border-radius:99px;background:var(--cinza-medio);overflow:hidden;width:60px"><div style="height:4px;background:${x.cobertura>=100?'var(--verde)':x.cobertura>=80?'var(--amarelo)':'var(--vermelho)'};width:${Math.min(100,x.cobertura).toFixed(0)}%"></div></div></td><td>${st}</td></tr>`;
-  }).join('')+`<tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)"><td>TOTAL GERAL</td><td style="text-align:right">${[...new Set(peds.map(p=>p.cliente))].length}</td><td style="text-align:right">${peds.length}</td><td style="text-align:right">${fmt(tP)}</td><td style="text-align:right">${fmt(tN)}</td><td style="text-align:right" class="verde">${fmt(inds.reduce((s,x)=>s+x.totLiq,0))}</td><td style="text-align:right" class="${tAb>0.01?'amarelo':'verde'}">${tAb>0.01?'+'+fmt(tAb):'—'}</td><td style="text-align:right" class="${tNM>0.01?'vermelho':''}">${tNM>0.01?fmt(tNM):'—'}</td><td style="text-align:right">${tP>0?'<strong>'+(tN/tP*100).toFixed(1)+'%</strong>':'—'}</td><td></td></tr>`;
+  }).join('')+`<tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)"><td>TOTAL GERAL</td><td style="text-align:right">${[...new Set(pedsViewI.map(p=>p.cliente))].length}</td><td style="text-align:right">${pedsViewI.length}</td><td style="text-align:right">${fmt(tP)}</td><td style="text-align:right">${fmt(tN)}</td><td style="text-align:right" class="verde">${fmt(inds.reduce((s,x)=>s+x.totLiq,0))}</td><td style="text-align:right" class="${tAb>0.01?'amarelo':'verde'}">${tAb>0.01?'+'+fmt(tAb):'—'}</td><td style="text-align:right" class="${tNM>0.01?'vermelho':''}">${tNM>0.01?fmt(tNM):'—'}</td><td style="text-align:right">${tP>0?'<strong>'+(tN/tP*100).toFixed(1)+'%</strong>':'—'}</td><td></td></tr>`;
   const be=el('saldo-ind-bars');if(!be)return;
   const maxV=Math.max(...inds.map(x=>x.totPed),1);
   be.innerHTML=`<div class="card" style="margin-top:4px"><div class="card-header"><div class="card-title">📊 Comparativo Visual — Pedido × NF por Indústria</div></div><div style="display:flex;flex-direction:column;gap:12px;padding-top:4px">${inds.map(x=>{const pp=(x.totPed/maxV*100).toFixed(1),pn=(x.totNF/maxV*100).toFixed(1),dz=Math.abs(x.dif)<0.01,dp=x.dif>=0.01;return`<div style="display:grid;grid-template-columns:150px 1fr 120px;gap:10px;align-items:center"><div title="${esc(x.ind)}" style="overflow:hidden"><span class="tag" style="font-size:10px;max-width:140px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.ind)}</span></div><div><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:${pp}%;height:11px;background:var(--preto);border-radius:2px;min-width:2px"></div><span style="font-size:10px;color:#888;white-space:nowrap">${fmt(x.totPed)}</span></div><div style="display:flex;align-items:center;gap:6px"><div style="width:${pn}%;height:11px;background:${dp?'var(--verde)':dz?'var(--verde)':'var(--vermelho)'};border-radius:2px;min-width:${x.totNF>0?2:0}px"></div><span style="font-size:10px;color:#888;white-space:nowrap">${x.totNF>0?fmt(x.totNF):'—'}</span></div></div><div style="text-align:right"><span class="bold" style="font-size:12px;color:${dp?'var(--amarelo)':dz?'var(--verde)':'var(--vermelho)'}">${dz?'✅ Ok':(dp?'+':'')+fmt(x.dif)}</span><div style="font-size:10px;color:#aaa">${x.cobertura.toFixed(1)}% NF/Ped</div></div></div>`;}).join('')}<div style="display:flex;gap:20px;padding-top:8px;border-top:1px solid var(--cinza-medio);font-size:11px;color:#888"><span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:8px;background:var(--preto);border-radius:2px"></span>Valor Pedido</span><span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:8px;background:var(--verde);border-radius:2px"></span>Valor NF</span></div></div></div>`;
@@ -6043,23 +6076,26 @@ function renderSaldoAnaliseCliente(){
     cM[p.cliente].totPed+=p.total;
     if(p.nf){cM[p.cliente].totNF+=p.nf.valorNF;cM[p.cliente].totLiq+=p.nf.liquida;}
   });
-  const clis=Object.entries(cM).map(([cli,d])=>{
+  let clis=Object.entries(cM).map(([cli,d])=>{
     const dif=parseFloat((d.totPed-d.totNF).toFixed(2));
     return{cli,industrias:d.inds.size,qtdPeds:d.qtd,totPed:d.totPed,totNF:d.totNF,totLiq:d.totLiq,dif,cobertura:d.totPed>0?d.totNF/d.totPed*100:0,indsLista:[...d.inds].join(', ')};
   }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  const _mzC = _saldoMostraZerados();
+  if(!_mzC) clis = clis.filter(x=>Math.abs(x.dif)>=0.01);
+  const pedsViewC = _mzC ? peds : peds.filter(p=>clis.some(x=>x.cli===p.cliente));
   const tP=clis.reduce((s,x)=>s+x.totPed,0),tN=clis.reduce((s,x)=>s+x.totNF,0);
   const tAb=clis.filter(x=>x.dif>0.01).reduce((s,x)=>s+x.dif,0);
   const tNM=clis.filter(x=>x.dif<-0.01).reduce((s,x)=>s+Math.abs(x.dif),0);
   const ke=el('saldo-cli-kpis');
   if(ke)ke.innerHTML=`<div class="kpi-card kpi-amarelo"><div class="kpi-label">Total Pedidos</div><div class="kpi-value">${fmt(tP)}</div><div class="kpi-sub">${clis.length} cliente(s)</div></div><div class="kpi-card kpi-verde"><div class="kpi-label">Total Faturado NF</div><div class="kpi-value">${fmt(tN)}</div><div class="kpi-sub">${tP>0?(tN/tP*100).toFixed(1):'0'}% cobertura</div></div><div class="kpi-card kpi-azul"><div class="kpi-label">Saldo em Aberto</div><div class="kpi-value">${fmt(tAb)}</div><div class="kpi-sub">${clis.filter(x=>x.dif>0.01).length} cliente(s)</div></div><div class="kpi-card kpi-vermelho"><div class="kpi-label">NF Maior que Pedido</div><div class="kpi-value">${fmt(tNM)}</div><div class="kpi-sub">${clis.filter(x=>x.dif<-0.01).length} cliente(s)</div></div>`;
-  if(!clis.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">Nenhum dado para os filtros selecionados</td></tr>';return;}
+  if(!clis.length){tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;color:#aaa;padding:24px">${_mzC?'Nenhum dado para os filtros selecionados':'✅ Nenhum cliente com saldo em aberto (zerados ocultos — marque “Mostrar zerados” para vê-los)'}</td></tr>`;return;}
   tbody.innerHTML=clis.map(x=>{
     const dz=Math.abs(x.dif)<0.01,dp=x.dif>=0.01,dn=x.dif<=-0.01;
     const cc=x.cobertura>=100?'verde':x.cobertura>=80?'amarelo':'vermelho';
     const st=dz?'<span class="badge badge-verde">✅ Zerado</span>':dp?'<span class="badge badge-amarelo">Saldo aberto</span>':'<span class="badge badge-vermelho">NF maior</span>';
     const av=x.cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
     return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:var(--preto);color:var(--amarelo);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Syne',sans-serif">${av}</div><div><div style="font-weight:600;font-size:12.5px">${esc(x.cli)}</div><div style="font-size:10px;color:#aaa;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.indsLista)}</div></div></div></td><td style="text-align:right">${x.industrias}</td><td style="text-align:right">${x.qtdPeds}</td><td style="text-align:right" class="bold">${fmt(x.totPed)}</td><td style="text-align:right">${x.totNF>0?fmt(x.totNF):'<span style="color:#aaa">—</span>'}</td><td style="text-align:right" class="verde">${x.totLiq>0?fmt(x.totLiq):'—'}</td><td style="text-align:right" class="bold ${dp?'amarelo':dn?'vermelho':'verde'}">${dz?'—':(dp?'+':'')+fmt(x.dif)}</td><td style="text-align:right" class="${dn?'vermelho':''}">${dn?fmt(Math.abs(x.dif)):'—'}</td><td style="text-align:right"><span class="${cc}" style="font-weight:700">${x.cobertura.toFixed(1)}%</span><div style="margin-top:3px;height:4px;border-radius:99px;background:var(--cinza-medio);overflow:hidden;width:60px"><div style="height:4px;background:${x.cobertura>=100?'var(--verde)':x.cobertura>=80?'var(--amarelo)':'var(--vermelho)'};width:${Math.min(100,x.cobertura).toFixed(0)}%"></div></div></td><td>${st}</td></tr>`;
-  }).join('')+`<tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)"><td>TOTAL GERAL</td><td style="text-align:right">${[...new Set(peds.map(p=>p.industria))].length}</td><td style="text-align:right">${peds.length}</td><td style="text-align:right">${fmt(tP)}</td><td style="text-align:right">${fmt(tN)}</td><td style="text-align:right" class="verde">${fmt(clis.reduce((s,x)=>s+x.totLiq,0))}</td><td style="text-align:right" class="${tAb>0.01?'amarelo':'verde'}">${tAb>0.01?'+'+fmt(tAb):'—'}</td><td style="text-align:right" class="${tNM>0.01?'vermelho':''}">${tNM>0.01?fmt(tNM):'—'}</td><td style="text-align:right">${tP>0?'<strong>'+(tN/tP*100).toFixed(1)+'%</strong>':'—'}</td><td></td></tr>`;
+  }).join('')+`<tr style="background:#fafaf8;font-weight:700;border-top:2px solid var(--cinza-medio)"><td>TOTAL GERAL</td><td style="text-align:right">${[...new Set(pedsViewC.map(p=>p.industria))].length}</td><td style="text-align:right">${pedsViewC.length}</td><td style="text-align:right">${fmt(tP)}</td><td style="text-align:right">${fmt(tN)}</td><td style="text-align:right" class="verde">${fmt(clis.reduce((s,x)=>s+x.totLiq,0))}</td><td style="text-align:right" class="${tAb>0.01?'amarelo':'verde'}">${tAb>0.01?'+'+fmt(tAb):'—'}</td><td style="text-align:right" class="${tNM>0.01?'vermelho':''}">${tNM>0.01?fmt(tNM):'—'}</td><td style="text-align:right">${tP>0?'<strong>'+(tN/tP*100).toFixed(1)+'%</strong>':'—'}</td><td></td></tr>`;
 }
 function renderSaldoRanking(){
   const peds=_getSaldoDadosFiltrados();
@@ -6192,9 +6228,23 @@ function renderSaldo() {
 
     const av = cli.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
-    const totalPedido  = pedsVenda.reduce((s,p)=>s+p.total, 0);
-    const totalNF      = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF, 0);
-    const totalLiq     = pedsVenda.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida, 0);
+    const _mzD = _saldoMostraZerados();
+    // Calcula a diferença por indústria para saber quais aparecem e somar só elas no cabeçalho
+    const _indStats = indsDoCliente.map(ind=>{
+      const pedsInd = pedsCli.filter(p=>p.industria===ind && !p.excluido);
+      const pTot = pedsInd.reduce((s,p)=>s+p.total,0);
+      const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.valorNF,0);
+      const liq = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+p.nf.liquida,0);
+      const dif = parseFloat((pTot-nfTot).toFixed(2));
+      const semNF = pedsInd.filter(p=>!p.nf).length;
+      return {ind,pTot,nfTot,liq,dif,semNF};
+    });
+    const _indVisiveis = _mzD ? _indStats : _indStats.filter(s=>!(Math.abs(s.dif)<0.01 && s.semNF===0));
+    if(_indVisiveis.length===0) return ''; // cliente totalmente zerado → some quando zerados estão ocultos
+
+    const totalPedido  = _indVisiveis.reduce((s,x)=>s+x.pTot, 0);
+    const totalNF      = _indVisiveis.reduce((s,x)=>s+x.nfTot, 0);
+    const totalLiq     = _indVisiveis.reduce((s,x)=>s+x.liq, 0);
     const totalSaldo   = parseFloat((totalPedido - totalNF).toFixed(2));
     const totZero      = Math.abs(totalSaldo) < 0.01;
     const totPos       = totalSaldo >= 0.01;
@@ -6214,6 +6264,8 @@ function renderSaldo() {
       const difZero = Math.abs(dif) < 0.01;
       const difPos  = dif >= 0.01;   // pedido > NF → saldo a faturar
       const difNeg  = dif <= -0.01;  // NF > pedido
+      // Oculta linhas zeradas (pedido = NF) salvo se o usuário marcar "Mostrar zerados"
+      if(!_saldoMostraZerados() && difZero && semNF===0) return '';
       const status = semNF>0 ? `<span class="badge badge-amarelo">⚠️ ${semNF} sem NF</span>` :
                      difZero ? `<span class="badge badge-verde">✅ Ok</span>` :
                      difPos  ? `<span class="badge badge-amarelo">Saldo aberto</span>` :
@@ -6295,8 +6347,10 @@ function renderSaldo() {
       </div>`;
   }).filter(Boolean).join('') ||
   `<div style="text-align:center;padding:40px;color:#aaa;font-size:12px">
-    <div style="font-size:24px;margin-bottom:8px">🔍</div>
-    Nenhum pedido encontrado para os filtros selecionados
+    <div style="font-size:24px;margin-bottom:8px">${_saldoMostraZerados()?'🔍':'✅'}</div>
+    ${_saldoMostraZerados()
+      ? 'Nenhum pedido encontrado para os filtros selecionados'
+      : 'Nenhum saldo em aberto — todos os pedidos do filtro estão faturados (zerados ocultos). Marque “Mostrar zerados” para vê-los.'}
     ${filtMes?`<div style="margin-top:8px">Mês: <strong>${filtMes}</strong> — tente selecionar outro mês ou "Todos os meses"</div>`:''}
   </div>`);
 }
@@ -9221,6 +9275,13 @@ function popularSelectsDinamicos() {
     sioFiltro.innerHTML = '<option value="">Todos os clientes</option>' + optsCliGrupo;
     if(cur) sioFiltro.value = cur;
   }
+  // Filtro de cliente/grupo da tela "Fat. Mensal por Indústria" — mesma lista agrupada
+  const fmFiltroCli = el('fm-cli');
+  if(fmFiltroCli) {
+    const cur = fmFiltroCli.value;
+    fmFiltroCli.innerHTML = '<option value="">Todos os clientes / grupos</option>' + optsCliGrupo;
+    if(cur) fmFiltroCli.value = cur;
+  }
 
   // selects de filtro (search bars) — exceto sio-filtro-cli que já foi tratado acima
   // Para saldo-cli e saldo-ind: inclui TODOS que aparecem em pedidos, não só cadastrados
@@ -10919,6 +10980,170 @@ function renderRelatorios() {
 
   // Oculta comissão para quem não tem acesso
   try { aplicarVisibilidadeComissao(); } catch(e) {}
+
+  // Faturamento & Bonificações mês a mês por cliente × indústria
+  try { renderRelFatBonif(); } catch(e) {}
+}
+
+/* ──────────────────────────────────────────────
+   FATURAMENTO & BONIFICAÇÕES — MÊS A MÊS
+   por Cliente (agrupado) × Indústria
+   Mesma base dos KPIs de Relatórios:
+   · Faturamento  = NF líquida das vendas (exclui bonificação)
+   · Bonificação  = NF de pedidos tipo 'bonificacao'
+                    + parcela "Bonif. s/ Comissão" (nf.bonif) das vendas
+   Clientes com rede/grupo são somados pelo grupo.
+────────────────────────────────────────────── */
+function _relFatBonifData() {
+  const ano     = (el('relfb-ano')||{}).value||'2026';
+  const filtCli = (el('relfb-cli')||{}).value||'';
+  const filtInd = (el('relfb-ind')||{}).value||'';
+  const linhas = {};
+  const getL = (cli,ind)=>{
+    const k = cli+'||'+ind;
+    if(!linhas[k]) linhas[k] = {cli, ind, fat:Array(12).fill(0), bon:Array(12).fill(0)};
+    return linhas[k];
+  };
+  pedidos.forEach(p=>{
+    if(p.excluido || !p.nf) return;
+    const grupo = normalizarGrupoSellOut(p.cliente);
+    if(filtCli && grupo!==filtCli) return;
+    if(filtInd && p.industria!==filtInd) return;
+    if(!p.nf.data || !p.nf.data.startsWith(ano+'-')) return;
+    const mm = parseInt(p.nf.data.slice(5,7),10);
+    if(!(mm>=1 && mm<=12)) return;
+    const mi = mm-1;
+    if(p.tipo==='bonificacao'){
+      getL(grupo,p.industria).bon[mi] += (p.nf.valorNF || p.total || 0);
+    } else {
+      const L = getL(grupo,p.industria);
+      L.fat[mi] += (p.nf.liquida || 0);
+      L.bon[mi] += (p.nf.bonif  || 0);
+    }
+  });
+  const lista = Object.values(linhas);
+  const totFatMes = Array(12).fill(0), totBonMes = Array(12).fill(0);
+  lista.forEach(L=>{ for(let i=0;i<12;i++){ totFatMes[i]+=L.fat[i]; totBonMes[i]+=L.bon[i]; } });
+  lista.sort((a,b)=>{
+    const fa=a.fat.reduce((s,v)=>s+v,0), fb=b.fat.reduce((s,v)=>s+v,0);
+    if(fb!==fa) return fb-fa;
+    return b.bon.reduce((s,v)=>s+v,0)-a.bon.reduce((s,v)=>s+v,0);
+  });
+  return {ano, filtCli, filtInd, lista, totFatMes, totBonMes};
+}
+
+function renderRelFatBonif() {
+  const card = el('rel-fatbonif-card'); if(!card) return;
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Popular selects (cliente agrupado + indústrias) preservando seleção
+  const cliSel = el('relfb-cli');
+  if(cliSel){
+    const nomes = [...new Set([
+      ...clientes.filter(c=>c.status==='Ativo').map(c=>normalizarGrupoSellOut(c.nome)),
+      ...pedidos.filter(p=>!p.excluido).map(p=>normalizarGrupoSellOut(p.cliente))
+    ])].filter(Boolean).sort();
+    const cur = cliSel.value;
+    cliSel.innerHTML = '<option value="">Todos os clientes / grupos</option>' +
+      nomes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(cur) cliSel.value = cur;
+  }
+  const indSel = el('relfb-ind');
+  if(indSel){
+    const inds = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].filter(Boolean).sort();
+    const cur = indSel.value;
+    indSel.innerHTML = '<option value="">Todas as indústrias</option>' +
+      inds.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(cur) indSel.value = cur;
+  }
+
+  const {ano, lista, totFatMes, totBonMes} = _relFatBonifData();
+  const yy = ano.slice(2);
+  const totFatAno = totFatMes.reduce((s,v)=>s+v,0);
+  const totBonAno = totBonMes.reduce((s,v)=>s+v,0);
+  const pctBon = totFatAno>0 ? (totBonAno/totFatAno*100) : 0;
+
+  if(el('relfb-kpis')) el('relfb-kpis').innerHTML = `
+    <div class="kpi-card kpi-verde"><div class="kpi-label">Faturamento ${ano}</div><div class="kpi-value">${fmt(totFatAno)}</div><div class="kpi-sub">Líquido de vendas</div></div>
+    <div class="kpi-card kpi-roxo"><div class="kpi-label">Bonificações ${ano}</div><div class="kpi-value">${fmt(totBonAno)}</div><div class="kpi-sub">Não geram comissão</div></div>
+    <div class="kpi-card kpi-amarelo"><div class="kpi-label">Bonif. / Faturamento</div><div class="kpi-value">${pctBon.toFixed(1)}%</div><div class="kpi-sub">Proporção no ${ano}</div></div>`;
+
+  if(lista.length===0){
+    el('relfb-content').innerHTML = `<div style="text-align:center;color:#aaa;padding:28px;font-size:13px">Nenhum faturamento ou bonificação encontrado para os filtros selecionados em ${ano}.</div>`;
+    return;
+  }
+
+  function montarTabela(titulo, campo, corTotal, totMes){
+    const linhasComValor = lista.filter(L=>L[campo].reduce((s,v)=>s+v,0)>0.005);
+    if(linhasComValor.length===0)
+      return `<div style="font-weight:700;font-size:13px;margin:18px 0 8px">${titulo}</div>
+        <div style="color:#aaa;font-size:12px;padding:6px 0 4px">Nenhum valor registrado em ${ano} para os filtros atuais.</div>`;
+    const headers = MESES.map(m=>`<th style="text-align:right;min-width:74px">${m}/${yy}</th>`).join('');
+    const rows = linhasComValor.map(L=>{
+      const arr = L[campo];
+      const tot = arr.reduce((s,v)=>s+v,0);
+      const cells = arr.map(v=>`<td style="text-align:right;font-size:12px">${v>0.005?fmt(v):'<span style="color:#ccc">—</span>'}</td>`).join('');
+      return `<tr>
+        <td style="white-space:nowrap"><strong>${esc(L.cli)}</strong></td>
+        <td><span class="tag" style="font-size:10px">${esc(L.ind)}</span></td>
+        ${cells}
+        <td style="text-align:right;font-weight:700;border-left:2px solid var(--cinza-medio)">${fmt(tot)}</td>
+      </tr>`;
+    }).join('');
+    const totCells = totMes.map(v=>`<td style="text-align:right;font-weight:700;font-size:12px">${v>0.005?fmt(v):'—'}</td>`).join('');
+    const totGeral = totMes.reduce((s,v)=>s+v,0);
+    return `<div style="font-weight:700;font-size:13px;margin:18px 0 8px">${titulo}</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr>
+              <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--cinza-medio);background:#fafafa;min-width:150px">Cliente / Grupo</th>
+              <th style="text-align:left;background:#fafafa;min-width:90px;border-bottom:2px solid var(--cinza-medio)">Indústria</th>
+              ${headers}
+              <th style="text-align:right;border-left:2px solid var(--cinza-medio);background:#fafafa;min-width:90px;border-bottom:2px solid var(--cinza-medio)">Total ${ano}</th>
+            </tr></thead>
+            <tbody>
+              ${rows}
+              <tr style="background:#f4f3ef;font-weight:700;border-top:2px solid var(--cinza-medio)">
+                <td style="padding:8px 12px" colspan="2">TOTAL GERAL</td>
+                ${totCells}
+                <td style="text-align:right;font-size:13px;border-left:2px solid var(--cinza-medio);color:${corTotal}">${fmt(totGeral)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  el('relfb-content').innerHTML =
+    montarTabela('💰 Faturamento mês a mês', 'fat', 'var(--verde)', totFatMes) +
+    montarTabela('🎁 Bonificações mês a mês', 'bon', 'var(--roxo)', totBonMes) +
+    `<div style="margin-top:12px;font-size:11px;color:#888">ℹ️ Faturamento = NF líquida das vendas. Bonificações = NFs de pedidos do tipo bonificação + parcela "Bonif. s/ Comissão" lançada nas NFs de venda. Clientes com rede/grupo são somados pelo grupo. (Esta seção usa o seletor de ano próprio, não o filtro de mês do topo.)</div>`;
+}
+
+function exportarRelFatBonif() {
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const {ano, filtCli, lista, totFatMes, totBonMes} = _relFatBonifData();
+  const yy = ano.slice(2);
+  const wb = XLSX.utils.book_new();
+  function aba(campo, totMes){
+    const header = ['Cliente / Grupo','Indústria',...MESES.map(m=>m+'/'+yy),'TOTAL'];
+    const rows = [header];
+    lista.forEach(L=>{
+      const arr = L[campo]; const tot = arr.reduce((s,v)=>s+v,0);
+      if(tot<=0.005) return;
+      rows.push([L.cli, L.ind, ...arr, tot]);
+    });
+    rows.push(['TOTAL GERAL','',...totMes, totMes.reduce((s,v)=>s+v,0)]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:24},{wch:14},...MESES.map(()=>({wch:12})),{wch:14}];
+    return ws;
+  }
+  XLSX.utils.book_append_sheet(wb, aba('fat',totFatMes), 'Faturamento');
+  XLSX.utils.book_append_sheet(wb, aba('bon',totBonMes), 'Bonificacoes');
+  const suf = filtCli ? '_'+filtCli.replace(/[^A-Za-z0-9]+/g,'_') : '';
+  XLSX.writeFile(wb, `Fat_Bonif_${ano}${suf}_TresVales.xlsx`);
+  toast('Excel exportado: Faturamento + Bonificações!');
 }
 
 /* ══════════════════════════
@@ -11949,6 +12174,7 @@ function renderFatMensal() {
   const content = el('fm-content'); if(!content) return;
   const ano    = (el('fm-ano')||{}).value||'2026';
   const filtInd= (el('fm-ind')||{}).value||'';
+  const filtCli= (el('fm-cli')||{}).value||'';
 
   const MESES  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const INDS_ALL = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].filter(Boolean).sort();
@@ -11965,7 +12191,8 @@ function renderFatMensal() {
       const mmPadded = String(i+1).padStart(2,'0');
       const prefix   = `${ano}-${mmPadded}`;
       const val = pedidos
-        .filter(p=>p.nf && p.industria===ind && p.nf.data && p.nf.data.startsWith(prefix))
+        .filter(p=>p.nf && !p.excluido && p.industria===ind && p.nf.data && p.nf.data.startsWith(prefix)
+          && (!filtCli || normalizarGrupoSellOut(p.cliente)===filtCli))
         .reduce((s,p)=>s+p.nf.liquida, 0);
       matrix[ind][mesKey] = val;
     });
@@ -11977,7 +12204,7 @@ function renderFatMensal() {
     return INDS.reduce((s,ind)=>s+(matrix[ind][mesKey]||0),0);
   });
   const totalGeral = totPorMes.reduce((s,v)=>s+v,0);
-  if(el('fm-total-label')) el('fm-total-label').textContent = `Total ${ano}: ${fmt(totalGeral)}`;
+  if(el('fm-total-label')) el('fm-total-label').textContent = (filtCli ? filtCli+' · ' : '') + `Total ${ano}: ${fmt(totalGeral)}`;
 
   // KPIs: top 4 indústrias por total do ano
   const indTotais = INDS.map(ind=>({ind, tot:Object.values(matrix[ind]).reduce((s,v)=>s+v,0)}))
@@ -12095,8 +12322,11 @@ function renderFatMensal() {
 
 function exportarFatMensal() {
   const ano    = (el('fm-ano')||{}).value||'2026';
+  const filtInd= (el('fm-ind')||{}).value||'';
+  const filtCli= (el('fm-cli')||{}).value||'';
   const MESES  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const INDS   = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].filter(Boolean).sort();
+  const INDS_ALL = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])].filter(Boolean).sort();
+  const INDS   = filtInd ? [filtInd] : INDS_ALL;
   const wb = XLSX.utils.book_new();
   const header = ['Indústria',...MESES.map(m=>m+'/'+ano.slice(2)),'TOTAL'];
   const rows   = [header];
@@ -12105,7 +12335,8 @@ function exportarFatMensal() {
     let tot = 0;
     MESES.forEach((m,i)=>{
       const mmPadded = String(i+1).padStart(2,'0');
-      const v = pedidos.filter(p=>p.nf&&p.industria===ind&&p.nf.data&&p.nf.data.startsWith(`${ano}-${mmPadded}`)).reduce((s,p)=>s+p.nf.liquida,0);
+      const v = pedidos.filter(p=>p.nf&&!p.excluido&&p.industria===ind&&p.nf.data&&p.nf.data.startsWith(`${ano}-${mmPadded}`)
+        && (!filtCli || normalizarGrupoSellOut(p.cliente)===filtCli)).reduce((s,p)=>s+p.nf.liquida,0);
       row.push(v); tot+=v;
     });
     row.push(tot);
@@ -12114,7 +12345,8 @@ function exportarFatMensal() {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{wch:16},...MESES.map(()=>({wch:12})),{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws,'Fat_Mensal');
-  XLSX.writeFile(wb,`FatMensal_${ano}_TresVales.xlsx`);
+  const sufCli = filtCli ? '_'+filtCli.replace(/[^A-Za-z0-9]+/g,'_') : '';
+  XLSX.writeFile(wb,`FatMensal_${ano}${sufCli}_TresVales.xlsx`);
   toast('Excel exportado!');
 }
 
