@@ -1483,6 +1483,7 @@ tr:last-child td{border-bottom:none;}
           <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão de todas as comissões conforme Regras Comerciais e cadastro de indústrias">🔄 Recalcular % + Tipo</button>
           <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
           <button class="btn btn-success btn-sm" onclick="recalcularMesPrevisaoTodasComissoes()" title="Recalcula apenas o mês de previsão — corrige DPC, DDL e outros prazos que não eram reconhecidos como número">📅 Corrigir Mês (DPC/DDL)</button>
+          <button class="btn btn-danger btn-sm" onclick="repararNomesIndustria()" title="Detecta comissões e registros presos a um nome de indústria antigo (após renomear) e realinha ao cadastro atual">🩹 Reparar Nomes</button>
           <button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Exportar Excel</button>
         </div>
       </div>
@@ -1516,9 +1517,28 @@ tr:last-child td{border-bottom:none;}
         <div class="kpi-card kpi-azul"><div class="kpi-label">A Receber</div><div class="kpi-value" id="ckpi4">R$ 0</div></div>
       </div>
 
+      <!-- Barra de seleção em massa -->
+      <div id="com-bulk-bar" style="display:none;align-items:center;gap:12px;background:var(--amarelo-claro);border:1.5px solid var(--amarelo);border-radius:8px;padding:8px 14px;margin-bottom:10px">
+        <span id="com-bulk-count" style="font-weight:600;font-size:13px">0 selecionada(s)</span>
+        <select id="com-bulk-mes" style="padding:6px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+          <option value="">Mover para o mês…</option>
+          <option>Jan/26</option><option>Fev/26</option><option>Mar/26</option>
+          <option>Abr/26</option><option>Mai/26</option><option>Jun/26</option>
+          <option>Jul/26</option><option>Ago/26</option><option>Set/26</option>
+          <option>Out/26</option><option>Nov/26</option><option>Dez/26</option>
+          <option>Jan/27</option><option>Fev/27</option><option>Mar/27</option>
+          <option>Abr/27</option><option>Mai/27</option><option>Jun/27</option>
+          <option>Jul/27</option><option>Ago/27</option><option>Set/27</option>
+          <option>Out/27</option><option>Nov/27</option><option>Dez/27</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="moverComissoesSelecionadas()">📅 Mover selecionadas</button>
+        <button class="btn btn-outline btn-sm" onclick="limparSelecaoComissoes()">Limpar seleção</button>
+      </div>
+
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr>
+            <th style="width:32px;text-align:center"><input type="checkbox" id="com-check-all" onclick="toggleTodasComissoes(this)" title="Selecionar todas"></th>
             <th>#</th><th>Pedido</th><th>Nº NF</th><th>Cliente</th><th>Indústria</th><th>Tipo</th>
             <th>Base NF Líq.</th><th>%</th><th>Valor Previsto</th>
             <th>Valor Recebido</th><th>Diferença</th>
@@ -6505,7 +6525,7 @@ function renderComissoes() {
   const statusCor = {Prevista:'badge-amarelo',Parcial:'badge-azul',Recebida:'badge-verde',Atrasada:'badge-vermelho'};
 
   tbody.innerHTML = list.length===0
-    ? `<tr><td colspan="14" style="text-align:center;color:#aaa;padding:24px">Nenhuma comissão encontrada</td></tr>`
+    ? `<tr><td colspan="15" style="text-align:center;color:#aaa;padding:24px">Nenhuma comissão encontrada</td></tr>`
     : list.map(c=>{
         const recebido  = c.valorRecebido || 0;
         const diferenca = c.valor - recebido;
@@ -6544,6 +6564,7 @@ function renderComissoes() {
         const pedVinc = pedidos.find(p=>p.id===c.pedido);
         const nfNum = pedVinc?.nf?.numero || '—';
         return `<tr>
+          <td style="text-align:center"><input type="checkbox" class="com-check" value="${c.id}" ${window._comSelecionadas&&window._comSelecionadas.has(c.id)?'checked':''} onclick="onComCheck()"></td>
           <td class="mono" style="font-size:11px">${c.id}</td>
           <td class="mono" style="font-size:11px">${c.pedido}</td>
           <td class="mono" style="font-size:11px;color:var(--azul)">${nfNum}</td>
@@ -6579,6 +6600,7 @@ function renderComissoes() {
           </td>
         </tr>`;
       }).join('');
+  try { _atualizarBulkBarComissoes(); } catch(e){}
 }
 
 function recalcularPctComissoes() {
@@ -6977,6 +6999,78 @@ function editarComissao(comId) {
   renderComissoes();
   syncAutoSaveHook();
   toast('Mês de previsão atualizado.');
+}
+
+// ─── Seleção em massa de comissões ───────────────────────────────
+window._comSelecionadas = window._comSelecionadas || new Set();
+
+function onComCheck() {
+  const sel = window._comSelecionadas;
+  document.querySelectorAll('.com-check').forEach(cb=>{
+    if(cb.checked) sel.add(cb.value); else sel.delete(cb.value);
+  });
+  _atualizarBulkBarComissoes();
+}
+
+function toggleTodasComissoes(master) {
+  const sel = window._comSelecionadas;
+  document.querySelectorAll('.com-check').forEach(cb=>{
+    cb.checked = master.checked;
+    if(master.checked) sel.add(cb.value); else sel.delete(cb.value);
+  });
+  _atualizarBulkBarComissoes();
+}
+
+function limparSelecaoComissoes() {
+  window._comSelecionadas.clear();
+  document.querySelectorAll('.com-check').forEach(cb=>cb.checked=false);
+  const master = el('com-check-all'); if(master) master.checked=false;
+  _atualizarBulkBarComissoes();
+}
+
+function _atualizarBulkBarComissoes() {
+  const n = window._comSelecionadas.size;
+  const bar = el('com-bulk-bar');
+  if(bar) bar.style.display = n>0 ? 'flex' : 'none';
+  const cnt = el('com-bulk-count');
+  if(cnt) cnt.textContent = `${n} selecionada${n!==1?'s':''}`;
+  // sincroniza o "selecionar todas" conforme o estado das linhas visíveis
+  const master = el('com-check-all');
+  if(master) {
+    const todos = document.querySelectorAll('.com-check');
+    const marc = document.querySelectorAll('.com-check:checked');
+    master.checked = todos.length>0 && marc.length===todos.length;
+  }
+}
+
+function moverComissoesSelecionadas() {
+  const sel = window._comSelecionadas;
+  if(sel.size===0){ alert('Selecione ao menos uma comissão.'); return; }
+  const novoMes = (el('com-bulk-mes')||{}).value || '';
+  if(!novoMes){ alert('Escolha o mês de destino no seletor "Mover para o mês…".'); return; }
+
+  // Verifica se há comissões já recebidas na seleção
+  const selecionadas = comissoes_data.filter(c=>sel.has(c.id));
+  const jaRecebidas = selecionadas.filter(c=>c.status==='Recebida');
+  let moverRecebidas = true;
+  if(jaRecebidas.length>0){
+    moverRecebidas = confirm(`${jaRecebidas.length} das ${selecionadas.length} selecionada(s) já estão como "Recebida".\n\nOK = mover TODAS (inclusive as recebidas)\nCancelar = mover só as NÃO recebidas`);
+  }
+
+  let movidas = 0;
+  comissoes_data = comissoes_data.map(c=>{
+    if(!sel.has(c.id)) return c;
+    if(c.status==='Recebida' && !moverRecebidas) return c;
+    movidas++;
+    return {...c, mesPrevisao: novoMes};
+  });
+
+  addAudit(usuarioLogado?.login||'admin', `Transferência em massa: ${movidas} comissão(ões) movida(s) para ${novoMes}`, '📅');
+  limparSelecaoComissoes();
+  if(el('com-bulk-mes')) el('com-bulk-mes').value='';
+  renderComissoes();
+  syncAutoSaveHook();
+  toast(`📅 ${movidas} comissão(ões) movida(s) para ${novoMes}`);
 }
 
 // Mantém compatibilidade com código legado
@@ -9315,7 +9409,15 @@ function popularSelectsDinamicos() {
   filtroInd.forEach(id=>{
     const s=el(id); if(!s) return;
     const cur=s.value;
-    s.innerHTML='<option value="">Todas as indústrias</option>'+optsInd;
+    let opts = optsInd;
+    // Filtro de Comissões: inclui também nomes órfãos presentes nas comissões (após renome)
+    if(id==='com-filtro-ind' && Array.isArray(comissoes_data)) {
+      const jaTem = new Set(todasInds);
+      const extras = [...new Set(comissoes_data.filter(c=>!c.excluido&&c.industria).map(c=>c.industria))]
+        .filter(n=>!jaTem.has(n)).sort();
+      if(extras.length) opts += extras.map(n=>`<option value="${esc(n)}">${esc(n)} ⚠️</option>`).join('');
+    }
+    s.innerHTML='<option value="">Todas as indústrias</option>'+opts;
     if(cur) s.value=cur;
   });
 
@@ -9807,6 +9909,129 @@ function editarIndustria(id) {
   openModal('modal-industria');
 }
 
+function propagarRenomeIndustria(nomeAntigo, nomeNovo) {
+  if(!nomeAntigo || !nomeNovo || nomeAntigo === nomeNovo) return 0;
+  let n = 0;
+  const troca = arr => { if(!Array.isArray(arr)) return; arr.forEach(o=>{ if(o && o.industria===nomeAntigo){ o.industria=nomeNovo; n++; } }); };
+  troca(comissoes_data);
+  troca(pedidos);
+  troca(orcamentos);
+  troca(bonificacoesData);
+  troca(sellOutData);
+  troca(metasData);
+  troca(ctrlSaldosData);
+  troca(logisticaData);
+  troca(window.saldoUsosData);
+  // Regras comerciais — não mexer no coringa "Todas"
+  if(Array.isArray(regrasComerciais)) regrasComerciais.forEach(r=>{ if(r && r.industria===nomeAntigo){ r.industria=nomeNovo; n++; } });
+  // Catálogo de produtos usa a chave .ind
+  if(PRODUTOS_CAT && typeof PRODUTOS_CAT==='object') Object.values(PRODUTOS_CAT).forEach(p=>{ if(p && p.ind===nomeAntigo){ p.ind=nomeNovo; n++; } });
+  return n;
+}
+
+// Reparo: realinha registros presos a um nome de indústria antigo (após renomear) ao cadastro atual
+function repararNomesIndustria() {
+  const nomesCad = new Set(industrias.map(i=>i.nome));
+  // Coleta todos os nomes de indústria presentes nos dados
+  const usados = new Set();
+  const add = arr => { if(Array.isArray(arr)) arr.forEach(o=>{ if(o&&o.industria) usados.add(o.industria); }); };
+  add(comissoes_data); add(pedidos); add(orcamentos); add(bonificacoesData);
+  add(sellOutData); add(metasData); add(ctrlSaldosData); add(logisticaData); add(window.saldoUsosData);
+  if(PRODUTOS_CAT && typeof PRODUTOS_CAT==='object') Object.values(PRODUTOS_CAT).forEach(p=>{ if(p&&p.ind) usados.add(p.ind); });
+  // Órfãos = nomes usados nos dados que não existem no cadastro atual (ignora coringa "Todas")
+  const orfaos = [...usados].filter(n=> n!=='Todas' && !nomesCad.has(n)).sort();
+
+  const listaCad = industrias.map(i=>i.nome).sort();
+  // Normalização tolerante: sem acento, minúsculas, espaços colapsados
+  const norm = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+  // Tenta achar o melhor candidato no cadastro para um nome órfão
+  const sugerir = antigo => {
+    const a = norm(antigo);
+    // 1) match exato tolerante
+    let cands = industrias.filter(i=> norm(i.nome)===a);
+    if(cands.length===1) return cands[0].nome;
+    // 2) cadastro começa com o nome órfão (ex.: "...ESPECIAIS)" → "...ESPECIAIS) 1,5%")
+    cands = industrias.filter(i=> norm(i.nome).startsWith(a));
+    if(cands.length===1) return cands[0].nome;
+    // 3) nome órfão começa com o cadastro
+    cands = industrias.filter(i=> a.startsWith(norm(i.nome)));
+    if(cands.length===1) return cands[0].nome;
+    return '';
+  };
+  let totalGeral = 0;
+  const alteracoes = [];
+  for(const antigo of orfaos) {
+    // Quantas comissões dependem deste nome
+    const qtdCom = comissoes_data.filter(c=>!c.excluido && c.industria===antigo).length;
+    const sugestao = sugerir(antigo);
+    let novo;
+    if(sugestao) {
+      // Achou candidato único — confirma direto
+      if(confirm(`Nome órfão: "${antigo}" (${qtdCom} comissão(ões))\n\nMigrar automaticamente para:\n"${sugestao}" ?\n\nOK = confirmar   |   Cancelar = digitar outro`)) {
+        novo = sugestao;
+      } else {
+        novo = (prompt(`Digite o nome atual para "${antigo}":\n\nIndústrias no cadastro:\n`+listaCad.map(n=>'• '+n).join('\n'), sugestao)||'').trim();
+      }
+    } else {
+      const msg = `Nome órfão encontrado: "${antigo}"\n`+
+        `(${qtdCom} comissão(ões) presa(s) a este nome)\n\n`+
+        `Digite EXATAMENTE o nome atual da indústria para onde migrar,\n`+
+        `ou deixe em branco / Cancelar para pular este.\n\n`+
+        `Indústrias no cadastro:\n`+listaCad.map(n=>'• '+n).join('\n');
+      novo = (prompt(msg, '')||'').trim();
+    }
+    if(!novo) continue;
+    if(!nomesCad.has(novo)) {
+      if(!confirm(`"${novo}" não está no cadastro de indústrias.\nMigrar assim mesmo?`)) continue;
+    }
+    const n = propagarRenomeIndustria(antigo, novo);
+    totalGeral += n;
+    alteracoes.push(`"${antigo}" → "${novo}" (${n} registro(s))`);
+    addAudit(usuarioLogado?.login||'admin', `Reparo de nome: "${antigo}" → "${novo}" (${n} registro(s))`, '🩹');
+  }
+
+  // ── ETAPA 2: gerar comissões faltantes ──────────────────────────────
+  // Pedidos tipo venda, com NF líquida > 0, sem comissão vinculada
+  const comPorPed = new Set(comissoes_data.map(c=>c.pedido));
+  const faltantes = pedidos.filter(p=>
+    !p.excluido &&
+    p.tipo!=='bonificacao' &&
+    p.nf && (p.nf.liquida||0) > 0 &&
+    !comPorPed.has(p.id)
+  );
+  let geradas = 0;
+  const detGeradas = [];
+  if(faltantes.length){
+    const lista = faltantes.slice(0,40).map(p=>`• ${p.id} — ${p.cliente} / ${p.industria} — NF ${p.nf.numero||'?'} (Líq ${fmt(p.nf.liquida)})`).join('\n');
+    const extra = faltantes.length>40 ? `\n… e mais ${faltantes.length-40}` : '';
+    if(confirm(`Encontrei ${faltantes.length} pedido(s) com NF lançada mas SEM comissão gerada:\n\n${lista}${extra}\n\nGerar as comissões faltantes agora?`)){
+      faltantes.forEach(p=>{
+        const antes = comissoes_data.length;
+        try { gerarComissaoAuto(p, p.nf.liquida); } catch(e){}
+        if(comissoes_data.length>antes){ geradas++; detGeradas.push(`${p.id} — ${p.industria}`); }
+      });
+      if(geradas>0) addAudit(usuarioLogado?.login||'admin', `Reparo: ${geradas} comissão(ões) faltante(s) gerada(s)`, '🩹');
+    }
+  }
+
+  if(alteracoes.length===0 && geradas===0) {
+    alert('Nenhuma alteração necessária.\n\n• Nenhum nome órfão para migrar.\n• Nenhum pedido com NF sem comissão.\n\nSe ainda falta uma comissão específica, confirme se o pedido é do tipo "venda" (não bonificação) e se a NF tem valor líquido maior que zero.');
+    return;
+  }
+
+  // Re-renderiza tudo que depende dos nomes
+  try { popularSelectsDinamicos(); } catch(e){}
+  try { _popularSelectsIndustriaTodos(); } catch(e){}
+  try { renderComissoes(); } catch(e){}
+  try { renderIndustrias(); } catch(e){}
+  syncAutoSaveHook();
+  toast(`🩹 Reparo concluído: ${totalGeral} realinhado(s), ${geradas} comissão(ões) gerada(s)`, 'info');
+  let resumoFinal = '🩹 Reparo concluído.\n';
+  if(alteracoes.length){ resumoFinal += `\nNomes migrados:\n`+alteracoes.join('\n')+`\n(${totalGeral} registro(s) atualizado(s))\n`; }
+  if(geradas){ resumoFinal += `\nComissões geradas (pedidos com NF que estavam sem comissão): ${geradas}\n`+detGeradas.slice(0,30).map(d=>'• '+d).join('\n')+(detGeradas.length>30?`\n… e mais ${detGeradas.length-30}`:''); }
+  alert(resumoFinal);
+}
+
 function salvarIndustria() {
   const nome = el('i-nome').value.trim().toUpperCase();
   if(!nome) { alert('Informe o Nome da indústria.'); el('i-nome').focus(); return; }
@@ -9833,6 +10058,13 @@ function salvarIndustria() {
     if(indAnterior && indAnterior.tipoCom !== obj.tipoCom) {
       const qtd = recalcularTipoComissoesIndustria(indAnterior.nome, obj.tipoCom);
       if(qtd > 0) toast(`🔄 ${qtd} comissão(ões) de ${obj.nome} recalculada(s) para "${obj.tipoCom}"`, 'info');
+    }
+    // Renomeou? Propaga o novo nome para todos os registros vinculados
+    if(indAnterior && indAnterior.nome !== nome) {
+      const nomeAntigo = indAnterior.nome;
+      const qtdRen = propagarRenomeIndustria(nomeAntigo, nome);
+      addAudit(usuarioLogado?.login||'admin', `Indústria renomeada: "${nomeAntigo}" → "${nome}" (${qtdRen} registro(s) atualizado(s))`, '✏️');
+      if(qtdRen > 0) toast(`✏️ ${qtdRen} registro(s) atualizado(s) de "${nomeAntigo}" para "${nome}"`, 'info');
     }
     industrias = industrias.map(x=>x.id===_indEditId ? obj : x);
   } else            industrias.push(obj);
