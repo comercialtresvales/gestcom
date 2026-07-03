@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4922,13 +4923,15 @@ function pedNFAnexarArquivo(tipo, input) {
         const dhEmi = (gv('dhEmi')||gv('dEmi')||'').substring(0,10);
         if(dhEmi && el('ped-nf-data')) el('ped-nf-data').value = dhEmi;
 
-        // Valor total da NF
+        // Valor total da NF (já é líquido do desconto comercial vDesc)
         const vNF = parseFloat(gv('ICMSTot vNF')||gv('vNFe')||'0');
         if(vNF > 0 && el('ped-nf-valor')) el('ped-nf-valor').value = vNF.toFixed(2);
 
-        // Desconto → abatimento
-        const vDesc = parseFloat(gv('ICMSTot vDesc')||'0');
-        if(vDesc > 0 && el('ped-nf-abat')) el('ped-nf-abat').value = vDesc.toFixed(2);
+        // NÃO puxar vDesc do XML como abatimento: o vNF já vem líquido do desconto
+        // comercial da nota. Subtrair vDesc de novo geraria desconto em dobro e uma
+        // NF Líquida menor que a nota. Abatimentos reais de comissão (NFD, devolução,
+        // bonificação s/ comissão etc.) devem ser lançados manualmente nos campos.
+        if(el('ped-nf-abat')) el('ped-nf-abat').value = '0';
 
         // Recalcula NF líquida
         pedCalcNFInline();
@@ -5912,7 +5915,10 @@ function anexarArquivoNF(pedId, tipo, input) {
         // Monta comparação detalhada
         const nReg = ped.nf || {};
         const diffValor  = Math.abs(vNF - (nReg.valorNF||0));
-        const diffLiq    = Math.abs((vNF-vDesc) - (nReg.liquida||0));
+        // NF Líquida registrada = vNF menos abatimentos MANUAIS (não o vDesc do XML,
+        // que já está embutido no vNF). Comparamos contra o valor total da nota.
+        const diffLiq    = Math.abs(vNF - (nReg.valorNF||0)) > 0.02
+                           ? Math.abs(vNF - (nReg.valorNF||0)) : 0;
         const diffNum    = nReg.numero && nReg.numero !== nNF;
         const diffData   = nReg.data && dhEmi && nReg.data !== dhEmi;
 
@@ -5952,8 +5958,8 @@ function anexarArquivoNF(pedId, tipo, input) {
                 ${row('Número da NF', nNF, nReg.numero||'—', false)}
                 ${row('Data Emissão', dhEmi, nReg.data||'—', false)}
                 ${row('Valor Total NF', vNF, nReg.valorNF||0)}
-                ${vDesc>0?row('Desconto XML', vDesc, nReg.abatimentos||0):''}
-                ${row('NF Líquida (NF−Desc)', vNF-vDesc, nReg.liquida||0)}
+                ${vDesc>0?`<tr><td style="padding:6px 8px;font-size:12px">Desconto comercial (XML)</td><td class="bold" style="padding:6px 8px;font-size:12px">${fmt(vDesc)}</td><td colspan="2" style="padding:6px 8px;font-size:11px;color:#888">Informativo · já embutido no valor da nota</td></tr>`:''}
+                ${row('NF Líquida', vNF, nReg.liquida||0)}
                 ${vFrete>0?`<tr><td style="padding:6px 8px;font-size:12px">Frete (XML)</td><td class="bold" style="padding:6px 8px;font-size:12px">${fmt(vFrete)}</td><td colspan="2" style="padding:6px 8px;font-size:11px;color:#888">Informativo</td></tr>`:''}
               </tbody>
             </table>
@@ -8751,9 +8757,11 @@ function confirmarImportNFe() {
     data:        p.dataNF,
     valorPedido: total,
     valorNF:     p.vNF,
-    abatimentos: p.vDesc || 0,
+    // vDesc do XML é desconto comercial já embutido no vNF — não é abatimento de
+    // comissão. NF Líquida = valor da nota. Abatimentos reais entram manualmente.
+    abatimentos: 0,
     devolucoes:  0, descFin: 0, nfd: 0, bonif: 0,
-    liquida:     Math.max(0, p.vNF - (p.vDesc||0)),
+    liquida:     p.vNF,
     pdf: null, xml: null,
     obs: 'Importado via XML NFe' + (p.chNFe ? ' · Chave: '+p.chNFe : '')
   };
