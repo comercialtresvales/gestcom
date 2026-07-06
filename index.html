@@ -3139,6 +3139,106 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- Modal Editar Comissão (valor + informações de recebimento) -->
+<div class="modal-bg" id="modal-editar-comissao">
+  <div class="modal" style="width:760px;max-height:92vh;overflow-y:auto">
+    <div class="modal-title">
+      <span id="edcom-titulo">Editar Comissão</span>
+      <button class="close-btn" onclick="closeModal('modal-editar-comissao')">✕</button>
+    </div>
+
+    <!-- Info da comissão -->
+    <div style="background:#1a1a1a;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12px">
+      <div id="edcom-info" style="color:#aaa"></div>
+    </div>
+
+    <!-- ── VALOR PREVISTO ── -->
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin-bottom:8px">💵 Valor Previsto da Comissão</div>
+    <div class="form-grid" style="margin-bottom:6px">
+      <div class="form-group">
+        <label>Base de Cálculo — NF Líq. (R$)</label>
+        <input type="number" id="edcom-base" step="0.01" min="0" placeholder="0,00" oninput="edcomRecalcPrevisto()">
+      </div>
+      <div class="form-group">
+        <label>% Comissão</label>
+        <input type="number" id="edcom-pct" step="0.5" min="0" max="100" placeholder="0" oninput="edcomRecalcPrevisto()">
+      </div>
+      <div class="form-group full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;color:var(--preto);font-weight:600">
+          <input type="checkbox" id="edcom-override" onchange="edcomToggleOverride()" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer">
+          <span>Definir o valor previsto manualmente (ignora base × %)</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Valor Previsto (R$) *</label>
+        <input type="number" id="edcom-valor" step="0.01" min="0" placeholder="0,00"
+          style="font-size:16px;font-weight:700;color:#8a6d00"
+          readonly oninput="edcomAtualizarSaldo()">
+        <div id="edcom-valor-hint" style="font-size:11px;color:#888;margin-top:3px">Calculado automaticamente a partir de base × %</div>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Comissão</label>
+        <select id="edcom-tipo" style="font-size:13px">
+          <option value="Faturamento">Faturamento</option>
+          <option value="Liquidez">Liquidez</option>
+          <option value="Bonificacao">Bonificação</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── INFORMAÇÕES DE RECEBIMENTO ── -->
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin:14px 0 8px">💰 Informações de Recebimento</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Valor Recebido (R$)</label>
+        <input type="number" id="edcom-recebido" step="0.01" min="0" placeholder="0,00"
+          style="font-size:16px;font-weight:700;color:var(--verde)" oninput="edcomAtualizarSaldo()">
+        <div style="font-size:11px;color:#888;margin-top:3px">Total efetivamente recebido até agora</div>
+      </div>
+      <div class="form-group">
+        <label>Desconto / Abatimento (R$)</label>
+        <input type="number" id="edcom-desconto" step="0.01" min="0" placeholder="0,00" oninput="edcomAtualizarSaldo()">
+        <div style="font-size:11px;color:#888;margin-top:3px">Diferença aceita como desconto de nota</div>
+      </div>
+      <div class="form-group">
+        <label>Mês de Previsão</label>
+        <select id="edcom-mes-prev" style="font-size:13px"></select>
+      </div>
+      <div class="form-group">
+        <label>Mês de Recebimento</label>
+        <select id="edcom-mes-rec" style="font-size:13px"></select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="edcom-status" style="font-size:13px">
+          <option>Prevista</option>
+          <option>Parcial</option>
+          <option>Recebida</option>
+          <option>Atrasada</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;color:var(--preto);font-weight:600;margin-top:22px">
+          <input type="checkbox" id="edcom-status-auto" checked onchange="edcomAtualizarSaldo()" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer">
+          <span>Recalcular status automaticamente pelo valor recebido</span>
+        </label>
+      </div>
+      <div class="form-group full">
+        <label>Observação</label>
+        <input id="edcom-obs" placeholder="Ex: Ajuste manual do valor / recebimento referente à NF...">
+      </div>
+      <div class="form-group full">
+        <div id="edcom-preview" style="border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600;background:#fafaf8;color:#666;border:1px solid var(--cinza-medio)"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--cinza-medio)">
+      <button class="btn btn-outline" onclick="closeModal('modal-editar-comissao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoComissao()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Logistica Status -->
 <div class="modal-bg" id="modal-log-status">
   <div class="modal">
@@ -4923,15 +5023,13 @@ function pedNFAnexarArquivo(tipo, input) {
         const dhEmi = (gv('dhEmi')||gv('dEmi')||'').substring(0,10);
         if(dhEmi && el('ped-nf-data')) el('ped-nf-data').value = dhEmi;
 
-        // Valor total da NF (já é líquido do desconto comercial vDesc)
+        // Valor total da NF
         const vNF = parseFloat(gv('ICMSTot vNF')||gv('vNFe')||'0');
         if(vNF > 0 && el('ped-nf-valor')) el('ped-nf-valor').value = vNF.toFixed(2);
 
-        // NÃO puxar vDesc do XML como abatimento: o vNF já vem líquido do desconto
-        // comercial da nota. Subtrair vDesc de novo geraria desconto em dobro e uma
-        // NF Líquida menor que a nota. Abatimentos reais de comissão (NFD, devolução,
-        // bonificação s/ comissão etc.) devem ser lançados manualmente nos campos.
-        if(el('ped-nf-abat')) el('ped-nf-abat').value = '0';
+        // Desconto → abatimento
+        const vDesc = parseFloat(gv('ICMSTot vDesc')||'0');
+        if(vDesc > 0 && el('ped-nf-abat')) el('ped-nf-abat').value = vDesc.toFixed(2);
 
         // Recalcula NF líquida
         pedCalcNFInline();
@@ -5915,10 +6013,7 @@ function anexarArquivoNF(pedId, tipo, input) {
         // Monta comparação detalhada
         const nReg = ped.nf || {};
         const diffValor  = Math.abs(vNF - (nReg.valorNF||0));
-        // NF Líquida registrada = vNF menos abatimentos MANUAIS (não o vDesc do XML,
-        // que já está embutido no vNF). Comparamos contra o valor total da nota.
-        const diffLiq    = Math.abs(vNF - (nReg.valorNF||0)) > 0.02
-                           ? Math.abs(vNF - (nReg.valorNF||0)) : 0;
+        const diffLiq    = Math.abs((vNF-vDesc) - (nReg.liquida||0));
         const diffNum    = nReg.numero && nReg.numero !== nNF;
         const diffData   = nReg.data && dhEmi && nReg.data !== dhEmi;
 
@@ -5958,8 +6053,8 @@ function anexarArquivoNF(pedId, tipo, input) {
                 ${row('Número da NF', nNF, nReg.numero||'—', false)}
                 ${row('Data Emissão', dhEmi, nReg.data||'—', false)}
                 ${row('Valor Total NF', vNF, nReg.valorNF||0)}
-                ${vDesc>0?`<tr><td style="padding:6px 8px;font-size:12px">Desconto comercial (XML)</td><td class="bold" style="padding:6px 8px;font-size:12px">${fmt(vDesc)}</td><td colspan="2" style="padding:6px 8px;font-size:11px;color:#888">Informativo · já embutido no valor da nota</td></tr>`:''}
-                ${row('NF Líquida', vNF, nReg.liquida||0)}
+                ${vDesc>0?row('Desconto XML', vDesc, nReg.abatimentos||0):''}
+                ${row('NF Líquida (NF−Desc)', vNF-vDesc, nReg.liquida||0)}
                 ${vFrete>0?`<tr><td style="padding:6px 8px;font-size:12px">Frete (XML)</td><td class="bold" style="padding:6px 8px;font-size:12px">${fmt(vFrete)}</td><td colspan="2" style="padding:6px 8px;font-size:11px;color:#888">Informativo</td></tr>`:''}
               </tbody>
             </table>
@@ -6600,7 +6695,7 @@ function renderComissoes() {
                 ? `<button class="btn btn-success btn-xs" onclick="abrirLancarRecebimento('${c.id}')" title="Lançar valor recebido">💰 Receber</button>`
                 : ''
               }
-              <button class="btn btn-outline btn-xs" onclick="editarComissao('${c.id}')" title="Editar mês e dados">✏️</button>
+              <button class="btn btn-outline btn-xs" onclick="editarComissao('${c.id}')" title="Editar valor e informações de recebimento">✏️ Editar</button>
               <button class="btn btn-danger btn-xs" onclick="excluirComissao('${c.id}')" title="Excluir comissão">🗑️</button>
             </div>
           </td>
@@ -6996,15 +7091,178 @@ function confirmarRecebimento() {
   toast(toastMsg);
 }
 
-// Edição rápida de comissão (mês de previsão)
+// ─── Edição completa de comissão (valor + informações de recebimento) ───
+let _edComId = null;
+
+// Gera <option>s de meses (12 atrás + atual + 35 à frente). Garante que o
+// valor atual da comissão apareça mesmo que esteja fora dessa janela.
+function _edcomMesesOptions(selecionado) {
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const hoje = new Date();
+  const labels = [];
+  for(let i=-12; i<36; i++){
+    const totalMes = hoje.getMonth() + i;
+    const idx = ((totalMes % 12) + 12) % 12;
+    const ano = hoje.getFullYear() + Math.floor(totalMes / 12);
+    labels.push(MESES[idx]+'/'+String(ano).slice(2));
+  }
+  if(selecionado && !labels.includes(selecionado)) labels.unshift(selecionado);
+  let html = '<option value="">—</option>';
+  labels.forEach(l=>{ html += `<option value="${l}"${l===selecionado?' selected':''}>${l}</option>`; });
+  return html;
+}
+
 function editarComissao(comId) {
   const c = comissoes_data.find(x=>x.id===comId); if(!c) return;
-  const novoMes = prompt(`Alterar mês de previsão para "${c.id}"?\nAtual: ${c.mesPrevisao||'—'}\n\nNovo mês (ex: Abr/26):`);
-  if(!novoMes) return;
-  comissoes_data = comissoes_data.map(x=>x.id===comId?{...x,mesPrevisao:novoMes.trim()}:x);
+  _edComId = comId;
+
+  el('edcom-titulo').textContent = `Editar Comissão — ${c.id}`;
+  el('edcom-info').textContent   = `${c.cliente} · ${c.industria} · Pedido ${c.pedido}`;
+
+  // Valor previsto
+  el('edcom-base').value     = (c.baseLiq!=null ? c.baseLiq : '');
+  el('edcom-pct').value      = (c.pct!=null ? c.pct : '');
+  el('edcom-valor').value    = (c.valor!=null ? Number(c.valor).toFixed(2) : '');
+  el('edcom-override').checked = false;
+
+  // Tipo
+  const tipoSel = el('edcom-tipo');
+  if(tipoSel){
+    const tv = c.tipo==='Bonificação' ? 'Bonificacao' : (c.tipo||'Faturamento');
+    tipoSel.value = ['Faturamento','Liquidez','Bonificacao'].includes(tv) ? tv : 'Faturamento';
+  }
+
+  // Recebimento
+  el('edcom-recebido').value = (c.valorRecebido ? Number(c.valorRecebido).toFixed(2) : '');
+  el('edcom-desconto').value = (c.desconto ? Number(c.desconto).toFixed(2) : '');
+  el('edcom-mes-prev').innerHTML = _edcomMesesOptions(c.mesPrevisao||'');
+  el('edcom-mes-rec').innerHTML  = _edcomMesesOptions(c.mesRecebimento||'');
+  el('edcom-status').value   = c.status || 'Prevista';
+  el('edcom-status-auto').checked = false; // ao editar, respeita o status atual por padrão
+  el('edcom-obs').value      = '';
+
+  edcomToggleOverride();   // ajusta readonly do valor previsto
+  edcomAtualizarSaldo();   // monta preview
+  openModal('modal-editar-comissao');
+}
+
+// Liga/desliga edição manual do valor previsto
+function edcomToggleOverride() {
+  const manual = el('edcom-override').checked;
+  const inpVal = el('edcom-valor');
+  inpVal.readOnly = !manual;
+  inpVal.style.background = manual ? '#fffdf0' : '#f5f5f5';
+  el('edcom-valor-hint').textContent = manual
+    ? 'Valor definido manualmente — base × % ignorados'
+    : 'Calculado automaticamente a partir de base × %';
+  if(!manual) edcomRecalcPrevisto(); else edcomAtualizarSaldo();
+}
+
+// Recalcula valor previsto = base × % (quando não está em modo manual)
+function edcomRecalcPrevisto() {
+  if(el('edcom-override').checked) { edcomAtualizarSaldo(); return; }
+  const base = parseFloat(el('edcom-base').value)||0;
+  const pct  = parseFloat(el('edcom-pct').value)||0;
+  el('edcom-valor').value = (base * pct / 100).toFixed(2);
+  edcomAtualizarSaldo();
+}
+
+// Calcula status sugerido a partir de recebido/desconto vs previsto
+function _edcomStatusCalc(previsto, recebido, desconto) {
+  const coberto = recebido + desconto;
+  const saldo = previsto - coberto;
+  if(previsto<=0) return 'Prevista';
+  if(Math.abs(saldo) <= 0.01 || coberto >= previsto) return 'Recebida';
+  if(recebido > 0) return 'Parcial';
+  return 'Prevista';
+}
+
+// Atualiza preview + eventualmente o status automático
+function edcomAtualizarSaldo() {
+  const previsto = parseFloat(el('edcom-valor').value)||0;
+  const recebido = parseFloat(el('edcom-recebido').value)||0;
+  const desconto = parseFloat(el('edcom-desconto').value)||0;
+  const saldo = previsto - recebido - desconto;
+
+  if(el('edcom-status-auto').checked){
+    const st = _edcomStatusCalc(previsto, recebido, desconto);
+    el('edcom-status').value = st;
+    el('edcom-status').disabled = true;
+  } else {
+    el('edcom-status').disabled = false;
+  }
+
+  const prev = el('edcom-preview');
+  if(!prev) return;
+  let txt, css;
+  if(Math.abs(saldo) <= 0.01){
+    txt = `✅ Previsto ${fmt(previsto)} · Recebido ${fmt(recebido)}${desconto>0?' · Desconto '+fmt(desconto):''} — quitado`;
+    css = 'background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+  } else if(saldo < 0){
+    txt = `➕ Recebido a mais: ${fmt(Math.abs(saldo))} · Previsto ${fmt(previsto)} · Recebido ${fmt(recebido)}`;
+    css = 'background:#e3f2fd;color:#1565c0;border:1px solid #90caf9';
+  } else {
+    txt = `⏳ Saldo em aberto: ${fmt(saldo)} · Previsto ${fmt(previsto)} · Recebido ${fmt(recebido)}${desconto>0?' · Desconto '+fmt(desconto):''}`;
+    css = 'background:#fff8e1;color:#a17700;border:1px solid #ffe082';
+  }
+  prev.style.cssText = 'border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600;' + css;
+  prev.textContent = txt;
+}
+
+function salvarEdicaoComissao() {
+  const c = comissoes_data.find(x=>x.id===_edComId); if(!c) return;
+
+  const base     = parseFloat(el('edcom-base').value)||0;
+  const pct      = parseFloat(el('edcom-pct').value)||0;
+  const valor    = parseFloat(el('edcom-valor').value)||0;
+  const recebido = parseFloat(el('edcom-recebido').value)||0;
+  const desconto = parseFloat(el('edcom-desconto').value)||0;
+  const tipoRaw  = el('edcom-tipo').value;
+  const tipo     = tipoRaw==='Bonificacao' ? 'Bonificação' : tipoRaw;
+  const mesPrev  = el('edcom-mes-prev').value;
+  const mesRec   = el('edcom-mes-rec').value;
+  const obs      = el('edcom-obs').value.trim();
+  let status     = el('edcom-status').value;
+
+  if(valor <= 0 && !confirm('O valor previsto está zerado. Deseja salvar mesmo assim?')) return;
+  if(el('edcom-status-auto').checked) status = _edcomStatusCalc(valor, recebido, desconto);
+
+  const antes = `Prev ${fmt(c.valor)} / Rec ${fmt(c.valorRecebido||0)} / ${c.status}`;
+  const depois= `Prev ${fmt(valor)} / Rec ${fmt(recebido)} / ${status}`;
+
+  comissoes_data = comissoes_data.map(x=>{
+    if(x.id!==_edComId) return x;
+    const upd = {...x,
+      baseLiq: base,
+      pct: pct,
+      valor: parseFloat(valor.toFixed(2)),
+      valorRecebido: parseFloat(recebido.toFixed(2)),
+      desconto: parseFloat(desconto.toFixed(2)),
+      tipo: tipo,
+      mesPrevisao: mesPrev,
+      mesRecebimento: mesRec,
+      status: status
+    };
+    // registra a alteração manual no histórico de parcelas
+    if(obs){
+      upd.parcelas = [...(x.parcelas||[]), {
+        valor: 0, mes: mesRec||mesPrev||'', obs: '✏️ Edição manual: '+obs,
+        data: new Date().toLocaleDateString('pt-BR'),
+        usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
+      }];
+    }
+    return upd;
+  });
+
+  try {
+    addAudit((typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin',
+      `Comissão editada: ${c.id} — ${antes} → ${depois}${obs?' · '+obs:''}`, '✏️');
+  } catch(e){}
+
+  closeModal('modal-editar-comissao');
   renderComissoes();
-  syncAutoSaveHook();
-  toast('Mês de previsão atualizado.');
+  try { syncAutoSaveHook(); } catch(e){}
+  toast('✏️ Comissão atualizada — valor e recebimento salvos.');
 }
 
 // ─── Seleção em massa de comissões ───────────────────────────────
@@ -8757,11 +9015,9 @@ function confirmarImportNFe() {
     data:        p.dataNF,
     valorPedido: total,
     valorNF:     p.vNF,
-    // vDesc do XML é desconto comercial já embutido no vNF — não é abatimento de
-    // comissão. NF Líquida = valor da nota. Abatimentos reais entram manualmente.
-    abatimentos: 0,
+    abatimentos: p.vDesc || 0,
     devolucoes:  0, descFin: 0, nfd: 0, bonif: 0,
-    liquida:     p.vNF,
+    liquida:     Math.max(0, p.vNF - (p.vDesc||0)),
     pdf: null, xml: null,
     obs: 'Importado via XML NFe' + (p.chNFe ? ' · Chave: '+p.chNFe : '')
   };
