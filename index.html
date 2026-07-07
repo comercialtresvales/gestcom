@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -3192,8 +3191,8 @@ tr:last-child td{border-bottom:none;}
       <div class="form-group">
         <label>Valor Recebido (R$)</label>
         <input type="number" id="edcom-recebido" step="0.01" min="0" placeholder="0,00"
-          style="font-size:16px;font-weight:700;color:var(--verde)" oninput="edcomAtualizarSaldo()">
-        <div style="font-size:11px;color:#888;margin-top:3px">Total efetivamente recebido até agora</div>
+          style="font-size:16px;font-weight:700;color:var(--verde);background:#f5f5f5" readonly>
+        <div style="font-size:11px;color:#888;margin-top:3px">Somado automaticamente das parcelas abaixo</div>
       </div>
       <div class="form-group">
         <label>Desconto / Abatimento (R$)</label>
@@ -3206,7 +3205,8 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-group">
         <label>Mês de Recebimento</label>
-        <select id="edcom-mes-rec" style="font-size:13px"></select>
+        <select id="edcom-mes-rec" style="font-size:13px" disabled title="Definido automaticamente pela última parcela"></select>
+        <div style="font-size:11px;color:#888;margin-top:3px">Segue o mês da última parcela recebida</div>
       </div>
       <div class="form-group">
         <label>Status</label>
@@ -3231,6 +3231,22 @@ tr:last-child td{border-bottom:none;}
         <div id="edcom-preview" style="border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600;background:#fafaf8;color:#666;border:1px solid var(--cinza-medio)"></div>
       </div>
     </div>
+
+    <!-- ── PARCELAS / RECEBIMENTOS ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px">📅 Parcelas / Recebimentos</div>
+      <button type="button" class="btn btn-success btn-xs" onclick="edcomAddParcela()">➕ Adicionar Parcela</button>
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">
+      Cada parcela mantém o seu próprio mês. O total recebido é a soma das parcelas. Recebeu parte agora? Registre; quando receber o restante, adicione outra parcela com o mês daquele recebimento.
+    </div>
+    <div style="border:1px solid var(--cinza-medio);border-radius:8px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 34px;gap:0;background:#f4f3ef;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px">
+        <div>#</div><div>Valor (R$)</div><div>Mês</div><div>Observação</div><div></div>
+      </div>
+      <div id="edcom-parcelas-body"></div>
+    </div>
+    <div id="edcom-parcelas-resumo" style="font-size:12px;color:#666;margin-top:8px;font-weight:600"></div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--cinza-medio)">
       <button class="btn btn-outline" onclick="closeModal('modal-editar-comissao')">Cancelar</button>
@@ -6613,15 +6629,39 @@ function renderComissoes() {
     }
     if(filtInd && c.industria!==filtInd) return false;
     if(filtSt  && c.status!==filtSt)    return false;
-    if(filtMes && c.mesPrevisao!==filtMes) return false;
+    if(filtMes){
+      // Mostra a comissão se o mês de PREVISÃO bater OU se houver alguma
+      // parcela recebida naquele mês (recebimentos podem cair em meses
+      // diferentes do previsto).
+      const temParcelaNoMes = (c.parcelas||[]).some(p => (parseFloat(p.valor)||0) > 0 && p.mes === filtMes);
+      if(c.mesPrevisao !== filtMes && !temParcelaNoMes) return false;
+    }
     return true;
   });
 
-  // KPIs baseados em valor previsto vs valor efetivamente recebido
+  // KPIs baseados em valor previsto vs valor efetivamente recebido.
+  // Quando há filtro de MÊS, "Total Recebido" considera apenas as parcelas
+  // recebidas NAQUELE mês (cada parcela guarda o seu próprio mês); sem filtro,
+  // usa o total recebido acumulado da comissão.
+  const _recNoMes = (c, mes) => {
+    const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
+    if(mes){
+      // soma só as parcelas cujo mês bate com o filtro
+      return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+    }
+    // sem filtro de mês: usa o acumulado (ou a soma das parcelas, se houver)
+    if(reais.length) return reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+    return c.valorRecebido||0;
+  };
+
   const totPrev = list.reduce((s,c)=>s+c.valor, 0);
-  const totRec  = list.reduce((s,c)=>s+(c.valorRecebido||0), 0);
-  const totDif  = totPrev - totRec;
-  const totRest = list.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+(c.valor-(c.valorRecebido||0)), 0);
+  // Recebido exibido = do mês filtrado (ou acumulado, se sem filtro)
+  const totRec  = list.reduce((s,c)=>s+_recNoMes(c, filtMes), 0);
+  // Diferença e A Receber olham o saldo REAL da comissão (acumulado de todos os
+  // meses), pois representam o que ainda falta receber — não muda com o filtro.
+  const totRecAcum = list.reduce((s,c)=>s+_recNoMes(c, ''), 0);
+  const totDif  = totPrev - totRecAcum;
+  const totRest = list.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+(c.valor-_recNoMes(c,'')), 0);
 
   if(el('ckpi1')) el('ckpi1').textContent = fmt(totPrev);
   if(el('ckpi2')) el('ckpi2').textContent = fmt(totRec);
@@ -7098,6 +7138,68 @@ function confirmarRecebimento() {
 
 // ─── Edição completa de comissão (valor + informações de recebimento) ───
 let _edComId = null;
+// Cópia de trabalho das parcelas enquanto o modal está aberto
+let _edcomParcelas = [];
+
+// Reaproveita as <option>s de meses para os selects de cada parcela
+function _edcomParcelaMesSelect(idx, selecionado) {
+  return `<select data-pidx="${idx}" onchange="edcomParcelaChange(${idx},'mes',this.value)"
+      style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+      ${_edcomMesesOptions(selecionado||'')}
+    </select>`;
+}
+
+// Desenha a tabela de parcelas dentro do modal de edição
+function edcomRenderParcelas() {
+  const body = el('edcom-parcelas-body');
+  if(!body) return;
+  if(!_edcomParcelas.length){
+    body.innerHTML = `<div style="padding:14px;text-align:center;color:#aaa;font-size:12px">Nenhuma parcela registrada. Clique em <strong>➕ Adicionar Parcela</strong> para lançar um recebimento.</div>`;
+  } else {
+    body.innerHTML = _edcomParcelas.map((p,i)=>`
+      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 34px;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--cinza-medio)">
+        <div style="font-size:11px;color:#888;font-weight:700">P${i+1}</div>
+        <div><input type="number" step="0.01" min="0" value="${p.valor!=null?p.valor:''}" placeholder="0,00"
+              oninput="edcomParcelaChange(${i},'valor',this.value)"
+              style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-weight:600;color:var(--verde);outline:none"></div>
+        <div>${_edcomParcelaMesSelect(i, p.mes)}</div>
+        <div><input type="text" value="${(p.obs||'').replace(/"/g,'&quot;')}" placeholder="Ex: 1ª parcela"
+              oninput="edcomParcelaChange(${i},'obs',this.value)"
+              style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none"></div>
+        <div style="text-align:center"><button type="button" title="Remover parcela" onclick="edcomRemoveParcela(${i})"
+              style="background:#fef2f2;color:var(--vermelho);border:1px solid #fecaca;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:12px">🗑️</button></div>
+      </div>`).join('');
+  }
+  edcomAtualizarSaldo();
+}
+
+function edcomParcelaChange(idx, campo, valor) {
+  if(!_edcomParcelas[idx]) return;
+  if(campo==='valor') _edcomParcelas[idx].valor = parseFloat(valor)||0;
+  else _edcomParcelas[idx][campo] = valor;
+  edcomAtualizarSaldo();
+}
+
+function edcomAddParcela() {
+  const previsto = parseFloat(el('edcom-valor').value)||0;
+  const somaAtual = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  const saldo = Math.max(0, previsto - somaAtual);
+  // Mês sugerido: o da última parcela, ou o mês de previsão
+  const ultimoMes = _edcomParcelas.length ? _edcomParcelas[_edcomParcelas.length-1].mes : (el('edcom-mes-prev').value||'');
+  _edcomParcelas.push({
+    valor: parseFloat(saldo.toFixed(2)),
+    mes: ultimoMes,
+    obs: '',
+    data: new Date().toLocaleDateString('pt-BR'),
+    usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
+  });
+  edcomRenderParcelas();
+}
+
+function edcomRemoveParcela(idx) {
+  _edcomParcelas.splice(idx, 1);
+  edcomRenderParcelas();
+}
 
 // Gera <option>s de meses (12 atrás + atual + 35 à frente). Garante que o
 // valor atual da comissão apareça mesmo que esteja fora dessa janela.
@@ -7137,7 +7239,7 @@ function editarComissao(comId) {
     tipoSel.value = ['Faturamento','Liquidez','Bonificacao'].includes(tv) ? tv : 'Faturamento';
   }
 
-  // Recebimento
+  // Recebimento (o valor recebido é recalculado a partir das parcelas em edcomRenderParcelas)
   el('edcom-recebido').value = (c.valorRecebido ? Number(c.valorRecebido).toFixed(2) : '');
   el('edcom-desconto').value = (c.desconto ? Number(c.desconto).toFixed(2) : '');
   el('edcom-mes-prev').innerHTML = _edcomMesesOptions(c.mesPrevisao||'');
@@ -7146,8 +7248,20 @@ function editarComissao(comId) {
   el('edcom-status-auto').checked = false; // ao editar, respeita o status atual por padrão
   el('edcom-obs').value      = '';
 
+  // Carrega parcelas existentes numa cópia de trabalho (só as que têm valor;
+  // ignora as entradas de "edição manual" que ficam com valor 0 e obs de log)
+  _edcomParcelas = (c.parcelas||[])
+    .filter(p => (parseFloat(p.valor)||0) > 0)
+    .map(p => ({
+      valor: parseFloat(p.valor)||0,
+      mes: p.mes||'',
+      obs: p.obs||'',
+      data: p.data || new Date().toLocaleDateString('pt-BR'),
+      usuario: p.usuario || ((typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin')
+    }));
+
   edcomToggleOverride();   // ajusta readonly do valor previsto
-  edcomAtualizarSaldo();   // monta preview
+  edcomRenderParcelas();   // desenha parcelas + recalcula recebido/saldo/preview
   openModal('modal-editar-comissao');
 }
 
@@ -7185,7 +7299,32 @@ function _edcomStatusCalc(previsto, recebido, desconto) {
 // Atualiza preview + eventualmente o status automático
 function edcomAtualizarSaldo() {
   const previsto = parseFloat(el('edcom-valor').value)||0;
-  const recebido = parseFloat(el('edcom-recebido').value)||0;
+
+  // Recebido = SOMA das parcelas (cada uma com seu próprio mês)
+  const recebido = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  el('edcom-recebido').value = recebido ? recebido.toFixed(2) : '';
+
+  // Mês de recebimento = mês da ÚLTIMA parcela lançada
+  const selRec = el('edcom-mes-rec');
+  if(selRec){
+    const ultima = _edcomParcelas.length ? _edcomParcelas[_edcomParcelas.length-1].mes : '';
+    // garante que a opção exista antes de selecionar
+    if(ultima && ![...selRec.options].some(o=>o.value===ultima)){
+      selRec.insertAdjacentHTML('beforeend', `<option value="${ultima}">${ultima}</option>`);
+    }
+    selRec.value = ultima || '';
+  }
+
+  // Resumo das parcelas
+  const resumo = el('edcom-parcelas-resumo');
+  if(resumo){
+    const n = _edcomParcelas.length;
+    const saldoParc = previsto - recebido;
+    resumo.textContent = n
+      ? `${n} parcela(s) · Total recebido ${fmt(recebido)}` + (Math.abs(saldoParc)>0.01 ? ` · ${saldoParc>0?'Saldo a receber '+fmt(saldoParc):'Recebido a mais '+fmt(Math.abs(saldoParc))}` : ' · quitado ✅')
+      : '';
+  }
+
   const desconto = parseFloat(el('edcom-desconto').value)||0;
   const saldo = previsto - recebido - desconto;
 
@@ -7220,14 +7359,27 @@ function salvarEdicaoComissao() {
   const base     = parseFloat(el('edcom-base').value)||0;
   const pct      = parseFloat(el('edcom-pct').value)||0;
   const valor    = parseFloat(el('edcom-valor').value)||0;
-  const recebido = parseFloat(el('edcom-recebido').value)||0;
   const desconto = parseFloat(el('edcom-desconto').value)||0;
   const tipoRaw  = el('edcom-tipo').value;
   const tipo     = tipoRaw==='Bonificacao' ? 'Bonificação' : tipoRaw;
   const mesPrev  = el('edcom-mes-prev').value;
-  const mesRec   = el('edcom-mes-rec').value;
   const obs      = el('edcom-obs').value.trim();
   let status     = el('edcom-status').value;
+
+  // Monta parcelas finais a partir da cópia de trabalho (só as com valor > 0)
+  const parcelasFinais = _edcomParcelas
+    .filter(p => (parseFloat(p.valor)||0) > 0)
+    .map((p,i) => ({
+      valor: parseFloat((parseFloat(p.valor)||0).toFixed(2)),
+      mes: p.mes||'',
+      obs: (p.obs||'').trim() || `Parcela ${i+1}`,
+      data: p.data || new Date().toLocaleDateString('pt-BR'),
+      usuario: p.usuario || ((typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin')
+    }));
+
+  // Recebido = soma das parcelas · Mês de recebimento = mês da última parcela
+  const recebido = parcelasFinais.reduce((s,p)=>s+p.valor,0);
+  const mesRec   = parcelasFinais.length ? parcelasFinais[parcelasFinais.length-1].mes : '';
 
   if(valor <= 0 && !confirm('O valor previsto está zerado. Deseja salvar mesmo assim?')) return;
   if(el('edcom-status-auto').checked) status = _edcomStatusCalc(valor, recebido, desconto);
@@ -7237,7 +7389,18 @@ function salvarEdicaoComissao() {
 
   comissoes_data = comissoes_data.map(x=>{
     if(x.id!==_edComId) return x;
-    const upd = {...x,
+    // preserva entradas de log antigas (valor 0) que não são recebimentos
+    const logsAntigos = (x.parcelas||[]).filter(p => (parseFloat(p.valor)||0) <= 0);
+    const parcelas = [...parcelasFinais, ...logsAntigos];
+    // registra a alteração manual como log se houver observação
+    if(obs){
+      parcelas.push({
+        valor: 0, mes: mesRec||mesPrev||'', obs: '✏️ Edição manual: '+obs,
+        data: new Date().toLocaleDateString('pt-BR'),
+        usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
+      });
+    }
+    return {...x,
       baseLiq: base,
       pct: pct,
       valor: parseFloat(valor.toFixed(2)),
@@ -7246,17 +7409,9 @@ function salvarEdicaoComissao() {
       tipo: tipo,
       mesPrevisao: mesPrev,
       mesRecebimento: mesRec,
-      status: status
+      status: status,
+      parcelas: parcelas
     };
-    // registra a alteração manual no histórico de parcelas
-    if(obs){
-      upd.parcelas = [...(x.parcelas||[]), {
-        valor: 0, mes: mesRec||mesPrev||'', obs: '✏️ Edição manual: '+obs,
-        data: new Date().toLocaleDateString('pt-BR'),
-        usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
-      }];
-    }
-    return upd;
   });
 
   try {
