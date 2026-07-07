@@ -3702,6 +3702,11 @@ function _carregarLocal() {
     if(Array.isArray(d.saldoUsosData))    window.saldoUsosData = d.saldoUsosData;
     if(Array.isArray(d.ctrlSaldosData))       ctrlSaldosData       = d.ctrlSaldosData;
     if(Array.isArray(d.ctrlSaldosHistorico))  ctrlSaldosHistorico  = d.ctrlSaldosHistorico;
+    // Migração: realinha cliente/indústria das comissões ao pedido de origem
+    comissoes_data.forEach(c=>{
+      const pv = pedidos.find(p=>p.id===c.pedido);
+      if(pv){ c.cliente = pv.cliente; c.industria = pv.industria; }
+    });
     // Migração: cria entradas de logística para pedidos antigos
     pedidos.filter(p=>!p.excluido).forEach(p=>{
       if(!logisticaData.find(l=>l.pedId===p.id))
@@ -5199,7 +5204,7 @@ function salvarPedido() {
         const prazoUpd = _regraUpd?.prazo || obj.cond || cliCadUpd?.prazo || '';
         const dataNFUpd = nfInline?.data || obj.nf?.data || obj.data || new Date();
         const mesLabelUpd = _calcMesPrevisaoComissao(dataNFUpd, tipoUpd, prazoUpd);
-        comissoes_data[cIdx] = {...c, baseLiq: baseCom, valor: baseCom*c.pct/100, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
+        comissoes_data[cIdx] = {...c, cliente: obj.cliente, industria: obj.industria, baseLiq: baseCom, valor: baseCom*c.pct/100, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
       } else {
         // Cria comissão se não existia ainda
         gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
@@ -5454,7 +5459,7 @@ function salvarNF() {
           const prazoNF  = _regraNF?.prazo || ped.cond || cliCadNF?.prazo || '';
           const dataNFUpd = nfObj.data || ped.data || new Date();
           const mesNF = _calcMesPrevisaoComissao(dataNFUpd, tipoNF, prazoNF);
-          comissoes_data[cIdx] = {...c, baseLiq: liq, valor: liq * c.pct / 100, tipo: tipoNF, mesPrevisao: mesNF};
+          comissoes_data[cIdx] = {...c, cliente: ped.cliente, industria: ped.industria, baseLiq: liq, valor: liq * c.pct / 100, tipo: tipoNF, mesPrevisao: mesNF};
         }
       }
       // v5: gerar saldo automaticamente se pedido > NF
@@ -5705,7 +5710,7 @@ function gerarComissaoAuto(ped, baseLiq) {
   if(existente) {
     // Atualiza a comissão existente com os novos valores
     const idx = comissoes_data.indexOf(existente);
-    comissoes_data[idx] = {...existente, baseLiq, pct, valor: baseLiq*pct/100, tipo, mesPrevisao: mesLabel};
+    comissoes_data[idx] = {...existente, cliente: ped.cliente, industria: ped.industria, baseLiq, pct, valor: baseLiq*pct/100, tipo, mesPrevisao: mesLabel};
     return;
   }
 
