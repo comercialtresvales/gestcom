@@ -3138,6 +3138,123 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- Modal Editar Comissão (valor + informações de recebimento) -->
+<div class="modal-bg" id="modal-editar-comissao">
+  <div class="modal" style="width:760px;max-height:92vh;overflow-y:auto">
+    <div class="modal-title">
+      <span id="edcom-titulo">Editar Comissão</span>
+      <button class="close-btn" onclick="closeModal('modal-editar-comissao')">✕</button>
+    </div>
+
+    <!-- Info da comissão -->
+    <div style="background:#1a1a1a;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12px">
+      <div id="edcom-info" style="color:#aaa"></div>
+    </div>
+
+    <!-- ── VALOR PREVISTO ── -->
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin-bottom:8px">💵 Valor Previsto da Comissão</div>
+    <div class="form-grid" style="margin-bottom:6px">
+      <div class="form-group">
+        <label>Base de Cálculo — NF Líq. (R$)</label>
+        <input type="number" id="edcom-base" step="0.01" min="0" placeholder="0,00" oninput="edcomRecalcPrevisto()">
+      </div>
+      <div class="form-group">
+        <label>% Comissão</label>
+        <input type="number" id="edcom-pct" step="0.5" min="0" max="100" placeholder="0" oninput="edcomRecalcPrevisto()">
+      </div>
+      <div class="form-group full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;color:var(--preto);font-weight:600">
+          <input type="checkbox" id="edcom-override" onchange="edcomToggleOverride()" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer">
+          <span>Definir o valor previsto manualmente (ignora base × %)</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label>Valor Previsto (R$) *</label>
+        <input type="number" id="edcom-valor" step="0.01" min="0" placeholder="0,00"
+          style="font-size:16px;font-weight:700;color:#8a6d00"
+          readonly oninput="edcomAtualizarSaldo()">
+        <div id="edcom-valor-hint" style="font-size:11px;color:#888;margin-top:3px">Calculado automaticamente a partir de base × %</div>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Comissão</label>
+        <select id="edcom-tipo" style="font-size:13px">
+          <option value="Faturamento">Faturamento</option>
+          <option value="Liquidez">Liquidez</option>
+          <option value="Bonificacao">Bonificação</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── INFORMAÇÕES DE RECEBIMENTO ── -->
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin:14px 0 8px">💰 Informações de Recebimento</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Valor Recebido (R$)</label>
+        <input type="number" id="edcom-recebido" step="0.01" min="0" placeholder="0,00"
+          style="font-size:16px;font-weight:700;color:var(--verde);background:#f5f5f5" readonly>
+        <div style="font-size:11px;color:#888;margin-top:3px">Somado automaticamente das parcelas abaixo</div>
+      </div>
+      <div class="form-group">
+        <label>Desconto / Abatimento (R$)</label>
+        <input type="number" id="edcom-desconto" step="0.01" min="0" placeholder="0,00" oninput="edcomAtualizarSaldo()">
+        <div style="font-size:11px;color:#888;margin-top:3px">Diferença aceita como desconto de nota</div>
+      </div>
+      <div class="form-group">
+        <label>Mês de Previsão</label>
+        <select id="edcom-mes-prev" style="font-size:13px"></select>
+      </div>
+      <div class="form-group">
+        <label>Mês de Recebimento</label>
+        <select id="edcom-mes-rec" style="font-size:13px" disabled title="Definido automaticamente pela última parcela"></select>
+        <div style="font-size:11px;color:#888;margin-top:3px">Segue o mês da última parcela recebida</div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="edcom-status" style="font-size:13px">
+          <option>Prevista</option>
+          <option>Parcial</option>
+          <option>Recebida</option>
+          <option>Atrasada</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;color:var(--preto);font-weight:600;margin-top:22px">
+          <input type="checkbox" id="edcom-status-auto" checked onchange="edcomAtualizarSaldo()" style="width:16px;height:16px;accent-color:var(--amarelo);cursor:pointer">
+          <span>Recalcular status automaticamente pelo valor recebido</span>
+        </label>
+      </div>
+      <div class="form-group full">
+        <label>Observação</label>
+        <input id="edcom-obs" placeholder="Ex: Ajuste manual do valor / recebimento referente à NF...">
+      </div>
+      <div class="form-group full">
+        <div id="edcom-preview" style="border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600;background:#fafaf8;color:#666;border:1px solid var(--cinza-medio)"></div>
+      </div>
+    </div>
+
+    <!-- ── PARCELAS / RECEBIMENTOS ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px">📅 Parcelas / Recebimentos</div>
+      <button type="button" class="btn btn-success btn-xs" onclick="edcomAddParcela()">➕ Adicionar Parcela</button>
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:8px">
+      Cada parcela mantém o seu próprio mês. O total recebido é a soma das parcelas. Recebeu parte agora? Registre; quando receber o restante, adicione outra parcela com o mês daquele recebimento.
+    </div>
+    <div style="border:1px solid var(--cinza-medio);border-radius:8px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 34px;gap:0;background:#f4f3ef;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px">
+        <div>#</div><div>Valor (R$)</div><div>Mês</div><div>Observação</div><div></div>
+      </div>
+      <div id="edcom-parcelas-body"></div>
+    </div>
+    <div id="edcom-parcelas-resumo" style="font-size:12px;color:#666;margin-top:8px;font-weight:600"></div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--cinza-medio)">
+      <button class="btn btn-outline" onclick="closeModal('modal-editar-comissao')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoComissao()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Logistica Status -->
 <div class="modal-bg" id="modal-log-status">
   <div class="modal">
@@ -3553,6 +3670,26 @@ const el = id => document.getElementById(id);
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 /* ──────────────────────────────────────
+   FIX #1 — merge que respeita exclusões
+   Object.assign só adiciona/sobrescreve chaves: um item excluído
+   com `delete OBJ[k]` era reinjetado pelo merge do localStorage/nuvem.
+   _mergeLimpo remove as chaves órfãs antes de aplicar a origem,
+   preservando a referência do objeto (evita quebrar closures).
+────────────────────────────────────── */
+function _mergeLimpo(destino, origem) {
+  if(!destino || !origem || typeof origem !== 'object') return destino;
+  Object.keys(destino).forEach(k => { if(!(k in origem)) delete destino[k]; });
+  Object.assign(destino, origem);
+  return destino;
+}
+
+/* FIX #2 — trava anti-corrida entre auto-save e polling.
+   Enquanto houver push pendente, o polling não aplica dados da nuvem
+   (senão puxa a versão antiga, ainda com o registro excluído). */
+var _pushPendente = false;
+window._pushPendente = false;
+
+/* ──────────────────────────────────────
    PERSISTÊNCIA LOCAL — fallback offline
    Salva em localStorage a cada alteração.
    Restaura automaticamente ao abrir.
@@ -3594,13 +3731,20 @@ function _carregarLocal() {
     if(Array.isArray(d.mixProdutos))      mixProdutos      = d.mixProdutos;
     if(Array.isArray(d.bonificacoesData)) bonificacoesData = d.bonificacoesData;
     if(Array.isArray(d.usuarios))         usuarios         = d.usuarios;
-    if(d.PRODUTOS_CAT  && typeof d.PRODUTOS_CAT  ==='object') Object.assign(PRODUTOS_CAT,   d.PRODUTOS_CAT);
-    if(d.userPerms     && typeof d.userPerms     ==='object') Object.assign(userPerms,       d.userPerms);
+    // FIX: _mergeLimpo em vez de Object.assign — chaves excluídas não voltam
+    if(d.PRODUTOS_CAT  && typeof d.PRODUTOS_CAT  ==='object') _mergeLimpo(PRODUTOS_CAT, d.PRODUTOS_CAT);
+    if(d.userPerms     && typeof d.userPerms     ==='object') _mergeLimpo(userPerms,     d.userPerms);
+    // configSistema é objeto de configuração (não coleção de registros) — Object.assign é correto aqui
     if(d.configSistema && typeof d.configSistema ==='object') Object.assign(configSistema,   d.configSistema);
     if(Array.isArray(d.auditLog))         auditLog             = d.auditLog;
     if(Array.isArray(d.saldoUsosData))    window.saldoUsosData = d.saldoUsosData;
     if(Array.isArray(d.ctrlSaldosData))       ctrlSaldosData       = d.ctrlSaldosData;
     if(Array.isArray(d.ctrlSaldosHistorico))  ctrlSaldosHistorico  = d.ctrlSaldosHistorico;
+    // Migração: realinha cliente/indústria das comissões ao pedido de origem
+    comissoes_data.forEach(c=>{
+      const pv = pedidos.find(p=>p.id===c.pedido);
+      if(pv){ c.cliente = pv.cliente; c.industria = pv.industria; }
+    });
     // Migração: cria entradas de logística para pedidos antigos
     pedidos.filter(p=>!p.excluido).forEach(p=>{
       if(!logisticaData.find(l=>l.pedId===p.id))
@@ -3650,15 +3794,26 @@ function syncAutoSaveHook() {
   if(configSync.autoSave && configSync.conectado && configSync.dbUrl) {
     clearTimeout(window._syncDebounce);
     _mostrarIndicadorSalvando(true);
+    // FIX #2: marca ANTES do debounce (sincronamente). Se marcasse só dentro do
+    // setTimeout, o polling poderia rodar durante os 1500ms e puxar a versão
+    // antiga da nuvem — ressuscitando o registro recém-excluído.
+    _pushPendente = true; window._pushPendente = true;
     window._syncDebounce = setTimeout(async () => {
       try {
         await syncPush(true);
       } catch(e) {
         // falha silenciosa — dados já estão salvos localmente
         console.warn('[GestCom] Auto-save falhou (silencioso):', e.message);
+      } finally {
+        // libera o polling só depois que o push terminou (ok ou erro)
+        _pushPendente = false; window._pushPendente = false;
       }
       _mostrarIndicadorSalvando(false);
     }, 1500);
+  } else {
+    // Sem sync ativo não haverá push que libere a trava. Sem isto, uma trava
+    // ligada por exclusão em lote ficaria presa e mataria o polling da sessão.
+    _pushPendente = false; window._pushPendente = false;
   }
 }
 
@@ -3826,11 +3981,10 @@ function excluirOrcamento(id) {
   const o = orcamentos.find(x=>x.id===id); if(!o) return;
   if(!confirm(`Excluir PERMANENTEMENTE o orçamento "${o.id}" — ${o.cliente}?\n\nEsta ação não pode ser desfeita.`)) return;
   orcamentos = orcamentos.filter(x=>x.id!==id);
-  registrarExclusao('orcamentos', id);
   addAudit(usuarioLogado?.login||'admin', `Orçamento excluído permanentemente: ${o.id} — ${o.cliente}`, '🗑️');
   renderOrcamentos();
   renderDashboard();
-  syncPushImediato();
+  syncAutoSaveHook();
   toast('Orçamento excluído com sucesso.');
 }
 
@@ -4115,7 +4269,7 @@ function salvarOrcamento() {
   if(orcItens.length===0){alert('Adicione pelo menos um produto.');return;}
   const total = orcItens.reduce((s,i)=>s+i.total,0);
   const obj = {
-    id: orcEditId || (()=>{ let n=orcamentos.length+1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id) || (_tombstones.orcamentos||[]).includes(id));return id; })(),
+    id: orcEditId || (()=>{ let n=orcamentos.length+1,id; do{id='ORC-'+String(n).padStart(4,'0');n++;}while(orcamentos.some(x=>x.id===id));return id; })(),
     cliente: cli, industria: el('orc-ind').value, data: el('orc-data').value||today(),
     validade: el('orc-validade').value, cond: el('orc-cond').value,
     status: el('orc-status').value, itens: [...orcItens], total, obs: el('orc-obs').value,
@@ -4123,7 +4277,6 @@ function salvarOrcamento() {
   };
   if(orcEditId) { orcamentos = orcamentos.map(x=>x.id===orcEditId?obj:x); }
   else { orcamentos.push(obj); }
-  limparTombstone('orcamentos', obj.id);
   orcItens = []; orcEditId = null;
   closeModal('modal-orcamento');
   renderOrcamentos();
@@ -5100,7 +5253,7 @@ function salvarPedido() {
         const prazoUpd = _regraUpd?.prazo || obj.cond || cliCadUpd?.prazo || '';
         const dataNFUpd = nfInline?.data || obj.nf?.data || obj.data || new Date();
         const mesLabelUpd = _calcMesPrevisaoComissao(dataNFUpd, tipoUpd, prazoUpd);
-        comissoes_data[cIdx] = {...c, baseLiq: baseCom, valor: baseCom*c.pct/100, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
+        comissoes_data[cIdx] = {...c, cliente: obj.cliente, industria: obj.industria, baseLiq: baseCom, valor: baseCom*c.pct/100, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
       } else {
         // Cria comissão se não existia ainda
         gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
@@ -5355,7 +5508,7 @@ function salvarNF() {
           const prazoNF  = _regraNF?.prazo || ped.cond || cliCadNF?.prazo || '';
           const dataNFUpd = nfObj.data || ped.data || new Date();
           const mesNF = _calcMesPrevisaoComissao(dataNFUpd, tipoNF, prazoNF);
-          comissoes_data[cIdx] = {...c, baseLiq: liq, valor: liq * c.pct / 100, tipo: tipoNF, mesPrevisao: mesNF};
+          comissoes_data[cIdx] = {...c, cliente: ped.cliente, industria: ped.industria, baseLiq: liq, valor: liq * c.pct / 100, tipo: tipoNF, mesPrevisao: mesNF};
         }
       }
       // v5: gerar saldo automaticamente se pedido > NF
@@ -5606,13 +5759,13 @@ function gerarComissaoAuto(ped, baseLiq) {
   if(existente) {
     // Atualiza a comissão existente com os novos valores
     const idx = comissoes_data.indexOf(existente);
-    comissoes_data[idx] = {...existente, baseLiq, pct, valor: baseLiq*pct/100, tipo, mesPrevisao: mesLabel};
+    comissoes_data[idx] = {...existente, cliente: ped.cliente, industria: ped.industria, baseLiq, pct, valor: baseLiq*pct/100, tipo, mesPrevisao: mesLabel};
     return;
   }
 
   let comN = comissoes_data.length + 1;
   let comIdStr;
-  do { comIdStr = 'COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr) || (_tombstones.comissoes||[]).includes(comIdStr));
+  do { comIdStr = 'COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr));
   const id = comIdStr;
 
   comissoes_data.push({id, pedido:ped.id, cliente:ped.cliente, industria:ped.industria,
@@ -6509,15 +6662,39 @@ function renderComissoes() {
     }
     if(filtInd && c.industria!==filtInd) return false;
     if(filtSt  && c.status!==filtSt)    return false;
-    if(filtMes && c.mesPrevisao!==filtMes) return false;
+    if(filtMes){
+      // Mostra a comissão se o mês de PREVISÃO bater OU se houver alguma
+      // parcela recebida naquele mês (recebimentos podem cair em meses
+      // diferentes do previsto).
+      const temParcelaNoMes = (c.parcelas||[]).some(p => (parseFloat(p.valor)||0) > 0 && p.mes === filtMes);
+      if(c.mesPrevisao !== filtMes && !temParcelaNoMes) return false;
+    }
     return true;
   });
 
-  // KPIs baseados em valor previsto vs valor efetivamente recebido
+  // KPIs baseados em valor previsto vs valor efetivamente recebido.
+  // Quando há filtro de MÊS, "Total Recebido" considera apenas as parcelas
+  // recebidas NAQUELE mês (cada parcela guarda o seu próprio mês); sem filtro,
+  // usa o total recebido acumulado da comissão.
+  const _recNoMes = (c, mes) => {
+    const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
+    if(mes){
+      // soma só as parcelas cujo mês bate com o filtro
+      return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+    }
+    // sem filtro de mês: usa o acumulado (ou a soma das parcelas, se houver)
+    if(reais.length) return reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+    return c.valorRecebido||0;
+  };
+
   const totPrev = list.reduce((s,c)=>s+c.valor, 0);
-  const totRec  = list.reduce((s,c)=>s+(c.valorRecebido||0), 0);
-  const totDif  = totPrev - totRec;
-  const totRest = list.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+(c.valor-(c.valorRecebido||0)), 0);
+  // Recebido exibido = do mês filtrado (ou acumulado, se sem filtro)
+  const totRec  = list.reduce((s,c)=>s+_recNoMes(c, filtMes), 0);
+  // Diferença e A Receber olham o saldo REAL da comissão (acumulado de todos os
+  // meses), pois representam o que ainda falta receber — não muda com o filtro.
+  const totRecAcum = list.reduce((s,c)=>s+_recNoMes(c, ''), 0);
+  const totDif  = totPrev - totRecAcum;
+  const totRest = list.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+(c.valor-_recNoMes(c,'')), 0);
 
   if(el('ckpi1')) el('ckpi1').textContent = fmt(totPrev);
   if(el('ckpi2')) el('ckpi2').textContent = fmt(totRec);
@@ -6596,7 +6773,7 @@ function renderComissoes() {
                 ? `<button class="btn btn-success btn-xs" onclick="abrirLancarRecebimento('${c.id}')" title="Lançar valor recebido">💰 Receber</button>`
                 : ''
               }
-              <button class="btn btn-outline btn-xs" onclick="editarComissao('${c.id}')" title="Editar mês e dados">✏️</button>
+              <button class="btn btn-outline btn-xs" onclick="editarComissao('${c.id}')" title="Editar valor e informações de recebimento">✏️ Editar</button>
               <button class="btn btn-danger btn-xs" onclick="excluirComissao('${c.id}')" title="Excluir comissão">🗑️</button>
             </div>
           </td>
@@ -6704,9 +6881,8 @@ function excluirComissao(id) {
   if (!c) return;
   if (!confirm(`Excluir permanentemente a comissão ${id}?\n\nCliente: ${c.cliente}\nIndústria: ${c.industria}\nValor: ${fmt(c.valor)}\n\nEsta ação não pode ser desfeita.`)) return;
   comissoes_data = comissoes_data.filter(x => x.id !== id);
-  registrarExclusao('comissoes', id);
   addAudit(usuarioLogado?.login || 'admin', `Comissão ${id} excluída manualmente (${c.cliente} / ${c.industria} / ${fmt(c.valor)})`, '🗑️');
-  syncPushImediato();
+  syncAutoSaveHook();
   renderComissoes();
   renderDashboard();
   toast(`Comissão ${id} excluída com sucesso.`);
@@ -6993,15 +7169,293 @@ function confirmarRecebimento() {
   toast(toastMsg);
 }
 
-// Edição rápida de comissão (mês de previsão)
+// ─── Edição completa de comissão (valor + informações de recebimento) ───
+let _edComId = null;
+// Cópia de trabalho das parcelas enquanto o modal está aberto
+let _edcomParcelas = [];
+
+// Reaproveita as <option>s de meses para os selects de cada parcela
+function _edcomParcelaMesSelect(idx, selecionado) {
+  return `<select data-pidx="${idx}" onchange="edcomParcelaChange(${idx},'mes',this.value)"
+      style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+      ${_edcomMesesOptions(selecionado||'')}
+    </select>`;
+}
+
+// Desenha a tabela de parcelas dentro do modal de edição
+function edcomRenderParcelas() {
+  const body = el('edcom-parcelas-body');
+  if(!body) return;
+  if(!_edcomParcelas.length){
+    body.innerHTML = `<div style="padding:14px;text-align:center;color:#aaa;font-size:12px">Nenhuma parcela registrada. Clique em <strong>➕ Adicionar Parcela</strong> para lançar um recebimento.</div>`;
+  } else {
+    body.innerHTML = _edcomParcelas.map((p,i)=>`
+      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 34px;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--cinza-medio)">
+        <div style="font-size:11px;color:#888;font-weight:700">P${i+1}</div>
+        <div><input type="number" step="0.01" min="0" value="${p.valor!=null?p.valor:''}" placeholder="0,00"
+              oninput="edcomParcelaChange(${i},'valor',this.value)"
+              style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-weight:600;color:var(--verde);outline:none"></div>
+        <div>${_edcomParcelaMesSelect(i, p.mes)}</div>
+        <div><input type="text" value="${(p.obs||'').replace(/"/g,'&quot;')}" placeholder="Ex: 1ª parcela"
+              oninput="edcomParcelaChange(${i},'obs',this.value)"
+              style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none"></div>
+        <div style="text-align:center"><button type="button" title="Remover parcela" onclick="edcomRemoveParcela(${i})"
+              style="background:#fef2f2;color:var(--vermelho);border:1px solid #fecaca;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:12px">🗑️</button></div>
+      </div>`).join('');
+  }
+  edcomAtualizarSaldo();
+}
+
+function edcomParcelaChange(idx, campo, valor) {
+  if(!_edcomParcelas[idx]) return;
+  if(campo==='valor') _edcomParcelas[idx].valor = parseFloat(valor)||0;
+  else _edcomParcelas[idx][campo] = valor;
+  edcomAtualizarSaldo();
+}
+
+function edcomAddParcela() {
+  const previsto = parseFloat(el('edcom-valor').value)||0;
+  const somaAtual = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  const saldo = Math.max(0, previsto - somaAtual);
+  // Mês sugerido: o da última parcela, ou o mês de previsão
+  const ultimoMes = _edcomParcelas.length ? _edcomParcelas[_edcomParcelas.length-1].mes : (el('edcom-mes-prev').value||'');
+  _edcomParcelas.push({
+    valor: parseFloat(saldo.toFixed(2)),
+    mes: ultimoMes,
+    obs: '',
+    data: new Date().toLocaleDateString('pt-BR'),
+    usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
+  });
+  edcomRenderParcelas();
+}
+
+function edcomRemoveParcela(idx) {
+  _edcomParcelas.splice(idx, 1);
+  edcomRenderParcelas();
+}
+
+// Gera <option>s de meses (12 atrás + atual + 35 à frente). Garante que o
+// valor atual da comissão apareça mesmo que esteja fora dessa janela.
+function _edcomMesesOptions(selecionado) {
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const hoje = new Date();
+  const labels = [];
+  for(let i=-12; i<36; i++){
+    const totalMes = hoje.getMonth() + i;
+    const idx = ((totalMes % 12) + 12) % 12;
+    const ano = hoje.getFullYear() + Math.floor(totalMes / 12);
+    labels.push(MESES[idx]+'/'+String(ano).slice(2));
+  }
+  if(selecionado && !labels.includes(selecionado)) labels.unshift(selecionado);
+  let html = '<option value="">—</option>';
+  labels.forEach(l=>{ html += `<option value="${l}"${l===selecionado?' selected':''}>${l}</option>`; });
+  return html;
+}
+
 function editarComissao(comId) {
   const c = comissoes_data.find(x=>x.id===comId); if(!c) return;
-  const novoMes = prompt(`Alterar mês de previsão para "${c.id}"?\nAtual: ${c.mesPrevisao||'—'}\n\nNovo mês (ex: Abr/26):`);
-  if(!novoMes) return;
-  comissoes_data = comissoes_data.map(x=>x.id===comId?{...x,mesPrevisao:novoMes.trim()}:x);
+  _edComId = comId;
+
+  el('edcom-titulo').textContent = `Editar Comissão — ${c.id}`;
+  el('edcom-info').textContent   = `${c.cliente} · ${c.industria} · Pedido ${c.pedido}`;
+
+  // Valor previsto
+  el('edcom-base').value     = (c.baseLiq!=null ? c.baseLiq : '');
+  el('edcom-pct').value      = (c.pct!=null ? c.pct : '');
+  el('edcom-valor').value    = (c.valor!=null ? Number(c.valor).toFixed(2) : '');
+  el('edcom-override').checked = false;
+
+  // Tipo
+  const tipoSel = el('edcom-tipo');
+  if(tipoSel){
+    const tv = c.tipo==='Bonificação' ? 'Bonificacao' : (c.tipo||'Faturamento');
+    tipoSel.value = ['Faturamento','Liquidez','Bonificacao'].includes(tv) ? tv : 'Faturamento';
+  }
+
+  // Recebimento (o valor recebido é recalculado a partir das parcelas em edcomRenderParcelas)
+  el('edcom-recebido').value = (c.valorRecebido ? Number(c.valorRecebido).toFixed(2) : '');
+  el('edcom-desconto').value = (c.desconto ? Number(c.desconto).toFixed(2) : '');
+  el('edcom-mes-prev').innerHTML = _edcomMesesOptions(c.mesPrevisao||'');
+  el('edcom-mes-rec').innerHTML  = _edcomMesesOptions(c.mesRecebimento||'');
+  el('edcom-status').value   = c.status || 'Prevista';
+  el('edcom-status-auto').checked = false; // ao editar, respeita o status atual por padrão
+  el('edcom-obs').value      = '';
+
+  // Carrega parcelas existentes numa cópia de trabalho (só as que têm valor;
+  // ignora as entradas de "edição manual" que ficam com valor 0 e obs de log)
+  _edcomParcelas = (c.parcelas||[])
+    .filter(p => (parseFloat(p.valor)||0) > 0)
+    .map(p => ({
+      valor: parseFloat(p.valor)||0,
+      mes: p.mes||'',
+      obs: p.obs||'',
+      data: p.data || new Date().toLocaleDateString('pt-BR'),
+      usuario: p.usuario || ((typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin')
+    }));
+
+  edcomToggleOverride();   // ajusta readonly do valor previsto
+  edcomRenderParcelas();   // desenha parcelas + recalcula recebido/saldo/preview
+  openModal('modal-editar-comissao');
+}
+
+// Liga/desliga edição manual do valor previsto
+function edcomToggleOverride() {
+  const manual = el('edcom-override').checked;
+  const inpVal = el('edcom-valor');
+  inpVal.readOnly = !manual;
+  inpVal.style.background = manual ? '#fffdf0' : '#f5f5f5';
+  el('edcom-valor-hint').textContent = manual
+    ? 'Valor definido manualmente — base × % ignorados'
+    : 'Calculado automaticamente a partir de base × %';
+  if(!manual) edcomRecalcPrevisto(); else edcomAtualizarSaldo();
+}
+
+// Recalcula valor previsto = base × % (quando não está em modo manual)
+function edcomRecalcPrevisto() {
+  if(el('edcom-override').checked) { edcomAtualizarSaldo(); return; }
+  const base = parseFloat(el('edcom-base').value)||0;
+  const pct  = parseFloat(el('edcom-pct').value)||0;
+  el('edcom-valor').value = (base * pct / 100).toFixed(2);
+  edcomAtualizarSaldo();
+}
+
+// Calcula status sugerido a partir de recebido/desconto vs previsto
+function _edcomStatusCalc(previsto, recebido, desconto) {
+  const coberto = recebido + desconto;
+  const saldo = previsto - coberto;
+  if(previsto<=0) return 'Prevista';
+  if(Math.abs(saldo) <= 0.01 || coberto >= previsto) return 'Recebida';
+  if(recebido > 0) return 'Parcial';
+  return 'Prevista';
+}
+
+// Atualiza preview + eventualmente o status automático
+function edcomAtualizarSaldo() {
+  const previsto = parseFloat(el('edcom-valor').value)||0;
+
+  // Recebido = SOMA das parcelas (cada uma com seu próprio mês)
+  const recebido = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  el('edcom-recebido').value = recebido ? recebido.toFixed(2) : '';
+
+  // Mês de recebimento = mês da ÚLTIMA parcela lançada
+  const selRec = el('edcom-mes-rec');
+  if(selRec){
+    const ultima = _edcomParcelas.length ? _edcomParcelas[_edcomParcelas.length-1].mes : '';
+    // garante que a opção exista antes de selecionar
+    if(ultima && ![...selRec.options].some(o=>o.value===ultima)){
+      selRec.insertAdjacentHTML('beforeend', `<option value="${ultima}">${ultima}</option>`);
+    }
+    selRec.value = ultima || '';
+  }
+
+  // Resumo das parcelas
+  const resumo = el('edcom-parcelas-resumo');
+  if(resumo){
+    const n = _edcomParcelas.length;
+    const saldoParc = previsto - recebido;
+    resumo.textContent = n
+      ? `${n} parcela(s) · Total recebido ${fmt(recebido)}` + (Math.abs(saldoParc)>0.01 ? ` · ${saldoParc>0?'Saldo a receber '+fmt(saldoParc):'Recebido a mais '+fmt(Math.abs(saldoParc))}` : ' · quitado ✅')
+      : '';
+  }
+
+  const desconto = parseFloat(el('edcom-desconto').value)||0;
+  const saldo = previsto - recebido - desconto;
+
+  if(el('edcom-status-auto').checked){
+    const st = _edcomStatusCalc(previsto, recebido, desconto);
+    el('edcom-status').value = st;
+    el('edcom-status').disabled = true;
+  } else {
+    el('edcom-status').disabled = false;
+  }
+
+  const prev = el('edcom-preview');
+  if(!prev) return;
+  let txt, css;
+  if(Math.abs(saldo) <= 0.01){
+    txt = `✅ Previsto ${fmt(previsto)} · Recebido ${fmt(recebido)}${desconto>0?' · Desconto '+fmt(desconto):''} — quitado`;
+    css = 'background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+  } else if(saldo < 0){
+    txt = `➕ Recebido a mais: ${fmt(Math.abs(saldo))} · Previsto ${fmt(previsto)} · Recebido ${fmt(recebido)}`;
+    css = 'background:#e3f2fd;color:#1565c0;border:1px solid #90caf9';
+  } else {
+    txt = `⏳ Saldo em aberto: ${fmt(saldo)} · Previsto ${fmt(previsto)} · Recebido ${fmt(recebido)}${desconto>0?' · Desconto '+fmt(desconto):''}`;
+    css = 'background:#fff8e1;color:#a17700;border:1px solid #ffe082';
+  }
+  prev.style.cssText = 'border-radius:6px;padding:12px 14px;font-size:13px;font-weight:600;' + css;
+  prev.textContent = txt;
+}
+
+function salvarEdicaoComissao() {
+  const c = comissoes_data.find(x=>x.id===_edComId); if(!c) return;
+
+  const base     = parseFloat(el('edcom-base').value)||0;
+  const pct      = parseFloat(el('edcom-pct').value)||0;
+  const valor    = parseFloat(el('edcom-valor').value)||0;
+  const desconto = parseFloat(el('edcom-desconto').value)||0;
+  const tipoRaw  = el('edcom-tipo').value;
+  const tipo     = tipoRaw==='Bonificacao' ? 'Bonificação' : tipoRaw;
+  const mesPrev  = el('edcom-mes-prev').value;
+  const obs      = el('edcom-obs').value.trim();
+  let status     = el('edcom-status').value;
+
+  // Monta parcelas finais a partir da cópia de trabalho (só as com valor > 0)
+  const parcelasFinais = _edcomParcelas
+    .filter(p => (parseFloat(p.valor)||0) > 0)
+    .map((p,i) => ({
+      valor: parseFloat((parseFloat(p.valor)||0).toFixed(2)),
+      mes: p.mes||'',
+      obs: (p.obs||'').trim() || `Parcela ${i+1}`,
+      data: p.data || new Date().toLocaleDateString('pt-BR'),
+      usuario: p.usuario || ((typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin')
+    }));
+
+  // Recebido = soma das parcelas · Mês de recebimento = mês da última parcela
+  const recebido = parcelasFinais.reduce((s,p)=>s+p.valor,0);
+  const mesRec   = parcelasFinais.length ? parcelasFinais[parcelasFinais.length-1].mes : '';
+
+  if(valor <= 0 && !confirm('O valor previsto está zerado. Deseja salvar mesmo assim?')) return;
+  if(el('edcom-status-auto').checked) status = _edcomStatusCalc(valor, recebido, desconto);
+
+  const antes = `Prev ${fmt(c.valor)} / Rec ${fmt(c.valorRecebido||0)} / ${c.status}`;
+  const depois= `Prev ${fmt(valor)} / Rec ${fmt(recebido)} / ${status}`;
+
+  comissoes_data = comissoes_data.map(x=>{
+    if(x.id!==_edComId) return x;
+    // preserva entradas de log antigas (valor 0) que não são recebimentos
+    const logsAntigos = (x.parcelas||[]).filter(p => (parseFloat(p.valor)||0) <= 0);
+    const parcelas = [...parcelasFinais, ...logsAntigos];
+    // registra a alteração manual como log se houver observação
+    if(obs){
+      parcelas.push({
+        valor: 0, mes: mesRec||mesPrev||'', obs: '✏️ Edição manual: '+obs,
+        data: new Date().toLocaleDateString('pt-BR'),
+        usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
+      });
+    }
+    return {...x,
+      baseLiq: base,
+      pct: pct,
+      valor: parseFloat(valor.toFixed(2)),
+      valorRecebido: parseFloat(recebido.toFixed(2)),
+      desconto: parseFloat(desconto.toFixed(2)),
+      tipo: tipo,
+      mesPrevisao: mesPrev,
+      mesRecebimento: mesRec,
+      status: status,
+      parcelas: parcelas
+    };
+  });
+
+  try {
+    addAudit((typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin',
+      `Comissão editada: ${c.id} — ${antes} → ${depois}${obs?' · '+obs:''}`, '✏️');
+  } catch(e){}
+
+  closeModal('modal-editar-comissao');
   renderComissoes();
-  syncAutoSaveHook();
-  toast('Mês de previsão atualizado.');
+  try { syncAutoSaveHook(); } catch(e){}
+  toast('✏️ Comissão atualizada — valor e recebimento salvos.');
 }
 
 // ─── Seleção em massa de comissões ───────────────────────────────
@@ -7936,6 +8390,9 @@ function excluirProdutosSelecionados() {
 
   if(!confirm(`⚠️ Tem certeza que deseja excluir ${selecionados.length} produto${selecionados.length!==1?'s':''}?\n\nEsta ação não pode ser desfeita.`)) return;
 
+  // FIX #3: trava o polling durante a exclusão em lote — um pull no meio
+  // da operação reintroduziria parte dos itens já removidos.
+  _pushPendente = true; window._pushPendente = true;
   selecionados.forEach(cod => {
     const p = PRODUTOS_CAT[cod];
     if(p) addAudit(usuarioLogado?.login||'admin', `Produto excluído: ${cod} — ${p.desc}`, '🗑️');
@@ -7943,7 +8400,7 @@ function excluirProdutosSelecionados() {
   });
   popularSelectsDinamicos();
   renderProdutos();
-  syncAutoSaveHook();
+  syncAutoSaveHook(); // reassume a trava e a libera após o push
   toast(`🗑️ ${selecionados.length} produto${selecionados.length!==1?'s':''} excluído${selecionados.length!==1?'s':''}!`);
 }
 
@@ -9143,7 +9600,7 @@ function confirmarImport() {
             const mesLabel = _calcMesPrevisaoComissao(nfObj.data, tipo, prazo);
             let comN = comissoes_data.length+1;
             let comIdStr;
-            do { comIdStr='COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr) || (_tombstones.comissoes||[]).includes(comIdStr));
+            do { comIdStr='COM-'+String(comN).padStart(4,'0'); comN++; } while(comissoes_data.some(x=>x.id===comIdStr));
             comissoes_data.push({id:comIdStr, pedido:pedId, cliente:g.cliente, industria:g.industria,
               tipo, baseLiq:nfObj.liquida, pct:g.pct, valor:nfObj.liquida*g.pct/100,
               mesPrevisao:mesLabel, mesRecebimento:'', status:'Prevista'});
@@ -9782,6 +10239,8 @@ function excluirClientesSelecionados() {
   }
   if(!confirm(msg)) return;
 
+  // FIX #3: trava o polling durante a exclusão em lote
+  _pushPendente = true; window._pushPendente = true;
   selecionados.forEach(id => {
     const c = clientes.find(x=>x.id===id);
     if(!c) return;
@@ -12604,61 +13063,6 @@ let configSync = {
 var _rtdbPollInterval = null;
 var _rtdbLastTs = 0;
 
-/* ──────────────────────────────────────
-   TOMBSTONES — registro de exclusões
-   Guarda IDs apagados para impedir que
-   versões antigas vindas da nuvem os
-   "ressuscitem". Persistido em localStorage.
-────────────────────────────────────── */
-var _tombstones = (function(){
-  try { return JSON.parse(localStorage.getItem('gestcom_tombstones')) || {orcamentos:[],comissoes:[]}; }
-  catch(e){ return {orcamentos:[],comissoes:[]}; }
-})();
-if(!_tombstones.orcamentos) _tombstones.orcamentos = [];
-if(!_tombstones.comissoes)  _tombstones.comissoes  = [];
-
-function _salvarTombstones(){
-  try { localStorage.setItem('gestcom_tombstones', JSON.stringify(_tombstones)); } catch(e){}
-}
-function registrarExclusao(tipo, id){
-  if(!_tombstones[tipo]) _tombstones[tipo] = [];
-  if(!_tombstones[tipo].includes(id)) _tombstones[tipo].push(id);
-  _salvarTombstones();
-}
-// Ao (re)criar um item com um ID antes excluído, tira ele da lista de exclusões
-function limparTombstone(tipo, id){
-  if(_tombstones[tipo] && _tombstones[tipo].includes(id)){
-    _tombstones[tipo] = _tombstones[tipo].filter(x => x !== id);
-    _salvarTombstones();
-  }
-}
-// Remove dos arrays locais tudo que está marcado como excluído (aplicado após cada pull)
-function aplicarTombstones(){
-  if(Array.isArray(window.orcamentos) && _tombstones.orcamentos.length)
-    orcamentos = orcamentos.filter(o => !_tombstones.orcamentos.includes(o.id));
-  if(Array.isArray(window.comissoes_data) && _tombstones.comissoes.length)
-    comissoes_data = comissoes_data.filter(c => !_tombstones.comissoes.includes(c.id));
-}
-
-// Envia para a nuvem IMEDIATAMENTE (sem o debounce de 1,5s).
-// Usado em exclusões para "ganhar a corrida" contra o polling.
-function syncPushImediato(){
-  _salvarLocal();
-  // reconecta silenciosamente se houver credenciais salvas
-  if(!configSync.conectado){
-    try{
-      const saved = localStorage.getItem('gestcom_rtdb');
-      if(saved){ const {dbUrl,apiKey}=JSON.parse(saved); if(dbUrl){ configSync.dbUrl=dbUrl.replace(/\/$/,''); configSync.apiKey=apiKey||''; configSync.conectado=true; } }
-    }catch(e){}
-  }
-  if(configSync.conectado && configSync.dbUrl){
-    clearTimeout(window._syncDebounce); // cancela qualquer envio atrasado pendente
-    try{ _mostrarIndicadorSalvando(true); }catch(e){}
-    syncPush(true).catch(e=>console.warn('[GestCom] push imediato falhou:',e.message))
-      .finally(()=>{ try{_mostrarIndicadorSalvando(false);}catch(e){} });
-  }
-}
-
 function syncLog(msg, tipo='info') {
   const logEl = el('sync-log');
   const emptyEl = el('sync-log-empty');
@@ -12805,8 +13209,10 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(Array.isArray(dados.tratativas)) tratativas = dados.tratativas.map(t=>({notas:[],...t}));
   if(Array.isArray(dados.mixProdutos)) mixProdutos = dados.mixProdutos;
   if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
-  if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==="object") Object.assign(PRODUTOS_CAT, dados.PRODUTOS_CAT);
-  if(dados.userPerms && typeof dados.userPerms==="object") Object.assign(userPerms, dados.userPerms);
+  // FIX: _mergeLimpo em vez de Object.assign — chaves excluídas não voltam da nuvem
+  if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==="object") _mergeLimpo(PRODUTOS_CAT, dados.PRODUTOS_CAT);
+  if(dados.userPerms && typeof dados.userPerms==="object") _mergeLimpo(userPerms, dados.userPerms);
+  // configSistema é objeto de configuração (não coleção) — Object.assign é correto aqui
   if(dados.configSistema && typeof dados.configSistema==="object") Object.assign(configSistema, dados.configSistema);
   if(Array.isArray(dados.saldoUsosData)) window.saldoUsosData = dados.saldoUsosData;
   if(Array.isArray(dados.usuarios)) {
@@ -12815,8 +13221,6 @@ const _loginAtual = usuarioLogado?.login;
     usuarios = dados.usuarios;
     if(_usrAtual && !usuarios.find(u=>u.login===_loginAtual)) usuarios.push(_usrAtual);
   }
-  // Remove itens que foram excluídos localmente mas ainda vieram numa versão antiga da nuvem
-  try{ aplicarTombstones(); }catch(e){}
   if(!silencioso) {
     ['renderPedidos','renderFaturamento','renderComissoes','renderSaldo','renderLogistica',
      'renderDashboard','renderClientes','renderIndustrias','renderRedes','renderOrcamentos',
@@ -12841,6 +13245,10 @@ function ativarPollingRealtime(){
   // Intervalo de 30s em vez de 5s — reduz downloads drasticamente (~6x menos)
   _rtdbPollInterval = setInterval(async()=>{
     if(!configSync.conectado||!usuarioLogado) return;
+    // FIX #2: há alteração local ainda não enviada (ex.: exclusão recém-feita).
+    // Aplicar a nuvem agora traria de volta o registro excluído — e o push
+    // seguinte gravaria essa ressurreição para todos os usuários.
+    if(_pushPendente) return;
     try {
       // Primeiro busca apenas o timestamp — evita baixar 3MB toda vez
       const res = await fetch(rtdbUrl('gestcom/dados/_ts'));
@@ -12851,6 +13259,8 @@ function ativarPollingRealtime(){
         const resDados = await fetch(rtdbUrl('gestcom/dados'));
         if(!resDados.ok) return;
         const dados = await resDados.json();
+        // Revalida: o usuário pode ter excluído algo enquanto o fetch estava em voo
+        if(_pushPendente) return;
         if(dados && dados._ts && dados._ts > (_rtdbLastTs||0)) {
           aplicarDadosDaNuvem(dados, true);
           _rtdbLastTs = dados._ts;
