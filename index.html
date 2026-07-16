@@ -4164,6 +4164,8 @@ function _salvarLocal() {
       PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms,
       configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
       ctrlSaldosData, ctrlSaldosHistorico,
+      tarefasData, atasData, crmData, contaCorrenteData, ccContas, ccContasCadastradas,
+      finCRData, finCPData, finCBData, cbTipos, modulosConfig, modulosCustom, userAcoes,
       _ts: Date.now()
     });
     localStorage.setItem('gestcom_dados', payload);
@@ -4193,6 +4195,20 @@ function _carregarLocal() {
     if(Array.isArray(d.mixProdutos))      mixProdutos      = d.mixProdutos;
     if(Array.isArray(d.bonificacoesData)) bonificacoesData = d.bonificacoesData;
     if(Array.isArray(d.usuarios))         usuarios         = d.usuarios;
+    // ─── Módulos novos ───
+    if(Array.isArray(d.tarefasData))       tarefasData       = d.tarefasData;
+    if(Array.isArray(d.atasData))          atasData          = d.atasData;
+    if(Array.isArray(d.crmData))           crmData           = d.crmData;
+    if(Array.isArray(d.contaCorrenteData)) contaCorrenteData = d.contaCorrenteData;
+    if(Array.isArray(d.ccContas))          ccContas          = d.ccContas;
+    if(d.ccContasCadastradas && typeof d.ccContasCadastradas==='object') ccContasCadastradas = d.ccContasCadastradas;
+    if(Array.isArray(d.finCRData))         finCRData         = d.finCRData;
+    if(Array.isArray(d.finCPData))         finCPData         = d.finCPData;
+    if(Array.isArray(d.finCBData))         finCBData         = d.finCBData;
+    if(Array.isArray(d.cbTipos))           cbTipos           = d.cbTipos;
+    if(d.modulosConfig && typeof d.modulosConfig==='object') modulosConfig = d.modulosConfig;
+    if(Array.isArray(d.modulosCustom))     modulosCustom     = d.modulosCustom;
+    if(d.userAcoes && typeof d.userAcoes==='object') userAcoes = d.userAcoes;
     // FIX: _mergeLimpo em vez de Object.assign — chaves excluídas não voltam
     if(d.PRODUTOS_CAT  && typeof d.PRODUTOS_CAT  ==='object') _mergeLimpo(PRODUTOS_CAT, d.PRODUTOS_CAT);
     if(d.userPerms     && typeof d.userPerms     ==='object') _mergeLimpo(userPerms,     d.userPerms);
@@ -13695,6 +13711,20 @@ function coletarDadosParaSync() {
     userPerms:      JSON.parse(JSON.stringify(userPerms)),
     configSistema:  JSON.parse(JSON.stringify(configSistema)),
     saldoUsosData:  JSON.parse(JSON.stringify(window.saldoUsosData||[])),
+    // ─── Módulos novos: Tarefas, Atas, CRM, Conta Corrente, Financeiro ───
+    tarefasData:        JSON.parse(JSON.stringify(typeof tarefasData!=='undefined'?tarefasData:[])),
+    atasData:           JSON.parse(JSON.stringify(typeof atasData!=='undefined'?atasData:[])),
+    crmData:            JSON.parse(JSON.stringify(typeof crmData!=='undefined'?crmData:[])),
+    contaCorrenteData:  JSON.parse(JSON.stringify(typeof contaCorrenteData!=='undefined'?contaCorrenteData:[])),
+    ccContas:           JSON.parse(JSON.stringify(typeof ccContas!=='undefined'?ccContas:[])),
+    ccContasCadastradas:JSON.parse(JSON.stringify(typeof ccContasCadastradas!=='undefined'?ccContasCadastradas:{})),
+    finCRData:          JSON.parse(JSON.stringify(typeof finCRData!=='undefined'?finCRData:[])),
+    finCPData:          JSON.parse(JSON.stringify(typeof finCPData!=='undefined'?finCPData:[])),
+    finCBData:          JSON.parse(JSON.stringify(typeof finCBData!=='undefined'?finCBData:[])),
+    cbTipos:            JSON.parse(JSON.stringify(typeof cbTipos!=='undefined'?cbTipos:[])),
+    modulosConfig:      JSON.parse(JSON.stringify(typeof modulosConfig!=='undefined'?modulosConfig:{})),
+    modulosCustom:      JSON.parse(JSON.stringify(typeof modulosCustom!=='undefined'?modulosCustom:[])),
+    userAcoes:          JSON.parse(JSON.stringify(typeof userAcoes!=='undefined'?userAcoes:{})),
     _ts:      Date.now(),
     _usuario: usuarioLogado?.login || 'sistema',
   };
@@ -13720,6 +13750,20 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(Array.isArray(dados.tratativas)) tratativas = dados.tratativas.map(t=>({notas:[],...t}));
   if(Array.isArray(dados.mixProdutos)) mixProdutos = dados.mixProdutos;
   if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
+  // ─── Módulos novos: Tarefas, Atas, CRM, Conta Corrente, Financeiro ───
+  if(Array.isArray(dados.tarefasData)) tarefasData = dados.tarefasData;
+  if(Array.isArray(dados.atasData)) atasData = dados.atasData;
+  if(Array.isArray(dados.crmData)) crmData = dados.crmData;
+  if(Array.isArray(dados.contaCorrenteData)) contaCorrenteData = dados.contaCorrenteData;
+  if(Array.isArray(dados.ccContas)) ccContas = dados.ccContas;
+  if(dados.ccContasCadastradas && typeof dados.ccContasCadastradas==='object') ccContasCadastradas = dados.ccContasCadastradas;
+  if(Array.isArray(dados.finCRData)) finCRData = dados.finCRData;
+  if(Array.isArray(dados.finCPData)) finCPData = dados.finCPData;
+  if(Array.isArray(dados.finCBData)) finCBData = dados.finCBData;
+  if(Array.isArray(dados.cbTipos)) cbTipos = dados.cbTipos;
+  if(dados.modulosConfig && typeof dados.modulosConfig==='object') modulosConfig = dados.modulosConfig;
+  if(Array.isArray(dados.modulosCustom)) modulosCustom = dados.modulosCustom;
+  if(dados.userAcoes && typeof dados.userAcoes==='object') userAcoes = dados.userAcoes;
   // FIX: _mergeLimpo em vez de Object.assign — chaves excluídas não voltam da nuvem
   if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==="object") _mergeLimpo(PRODUTOS_CAT, dados.PRODUTOS_CAT);
   if(dados.userPerms && typeof dados.userPerms==="object") _mergeLimpo(userPerms, dados.userPerms);
