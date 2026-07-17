@@ -18929,7 +18929,8 @@ function _atualizarExecPanel() {
     var reunioesHoje = 0;
     if(typeof atasData !== 'undefined') {
       var hjStr = today();
-      reunioesHoje = atasData.filter(function(a){ return a.data === hjStr && a.status === 'Agendada'; }).length;
+      reunioesHoje = (typeof atasVisiveis === 'function' ? atasVisiveis() : atasData)
+        .filter(function(a){ return a.data === hjStr && a.status === 'Agendada'; }).length;
     }
     var eR = document.getElementById('exec-reunioes');
     if(eR) eR.textContent = reunioesHoje;
@@ -19154,7 +19155,8 @@ function _atualizarBadgeModuloTarefas() {
 }
 
 function _atualizarBadgeModuloAtas() {
-  const n = atasData.filter(a => a.status === 'Agendada').length;
+  // FIX: contava atas de todo mundo — o número entregava reuniões alheias.
+  const n = atasVisiveis().filter(a => a.status === 'Agendada').length;
   const b = document.getElementById('mod-ata-badge');
   if(b) b.textContent = n + ' agendada' + (n !== 1 ? 's' : '');
 }
@@ -19856,8 +19858,21 @@ function _corpoReuniao(a, cabecalho) {
 }
 
 /* fase: 'convite' | 'vespera' | 'hoje' */
-function enviarConviteReuniao(a, fase) {
-  if(!a || a.status !== 'Agendada') return 0;
+function enviarConviteReuniao(a, fase, avisarNaTela) {
+  if(!a) return 0;
+
+  // FIX: antes saía calado quando o status não era "Agendada". O usuário via
+  // "Ata salva com sucesso!" e achava que o convite tinha ido.
+  if(a.status !== 'Agendada') {
+    if(avisarNaTela) toast('ℹ️ Convite não enviado: a reunião está como "' + a.status + '". Só reuniões "Agendada" disparam convite.', 'warning');
+    return 0;
+  }
+
+  // FIX: EmailJS não configurado só aparecia no console (que ninguém abre).
+  if(!_emailJSPronto()) {
+    if(avisarNaTela) toast('⚠️ Convite não enviado: o EmailJS não está configurado. Vá em Configurações.', 'error');
+    return 0;
+  }
 
   let cabecalho, assunto;
   if(fase === 'convite') {
@@ -19875,22 +19890,47 @@ function enviarConviteReuniao(a, fase) {
 
   // Destinatários = participantes com e-mail (+ admin, se configurado)
   const destinos = [];
+  const semEmail = [];
   (a.participantes || []).forEach(p => {
     const e = _emailDoUsuario(p);
     if(e) destinos.push({ email: e, nome: p });
-    else console.warn('[Reunião] participante "' + p + '" sem e-mail cadastrado.');
+    else { semEmail.push(p); console.warn('[Reunião] participante "' + p + '" sem e-mail cadastrado.'); }
   });
   if(configSistema.emailAdmin && !destinos.some(d => d.email === configSistema.emailAdmin)) {
     destinos.push({ email: configSistema.emailAdmin, nome: 'Admin' });
   }
 
+  // FIX: mensagens específicas — dizem exatamente o que fazer.
   if(!destinos.length) {
-    toast('⚠️ "' + a.titulo + '": nenhum participante com e-mail cadastrado.', 'warning');
+    if(!(a.participantes||[]).length) {
+      toast('⚠️ "' + a.titulo + '": nenhum participante foi adicionado — convite não enviado.', 'warning');
+    } else {
+      toast('⚠️ Convite não enviado: ' + semEmail.join(', ') + ' sem e-mail cadastrado. Cadastre em Administração → Usuários.', 'warning');
+    }
     return 0;
   }
 
+  // Avisa quem ficou de fora, mesmo quando alguns receberam
+  if(semEmail.length && avisarNaTela) {
+    toast('⚠️ Sem e-mail cadastrado (não recebeu): ' + semEmail.join(', '), 'warning');
+  }
+
   destinos.forEach(d => _enviarEmail(d.email, d.nome, assunto, corpo));
+  if(avisarNaTela) {
+    toast('✉️ Convite enviado para ' + destinos.length + ' pessoa(s): ' + destinos.map(d=>d.nome).join(', '));
+  }
   return destinos.length;
+}
+
+/* Reenvia o convite de uma ata sob demanda — recupera atas em que o
+   convite falhou (participante sem e-mail, EmailJS fora do ar, etc). */
+function reenviarConviteAta(id) {
+  const a = atasData.find(x => x.id === id);
+  if(!a) { toast('Ata não encontrada.', 'error'); return; }
+  if(!podeVerAta(a)) { toast('Você não participa desta reunião.', 'error'); return; }
+  if(!confirm('Reenviar o convite de "' + a.titulo + '" para os participantes?')) return;
+  const n = enviarConviteReuniao(a, 'convite', true);
+  if(n) { try { addAudit((usuarioLogado||{}).login||'?', 'Reenviou convite: ' + a.titulo, '✉️'); } catch(e) {} }
 }
 
 function verificarLembretesReunioes(forcar) {
@@ -20014,12 +20054,26 @@ function ataRemoveParticipante(nome) {
 function renderAtaParticipantes() {
   const box = el('ata-participantes-list');
   if(!box) return;
-  box.innerHTML = _ataParticipantesSel.map(p=>`
-    <span style="display:inline-flex;align-items:center;gap:5px;background:var(--cinza);border-radius:20px;padding:3px 10px;font-size:12px;margin:2px">
-      👤 ${esc(p)}
+  // FIX: mostra na hora quem NÃO tem e-mail cadastrado. Antes o usuário só
+  // descobria depois de salvar — ou nunca, porque o aviso ia só pro console.
+  const semEmail = [];
+  const chips = _ataParticipantesSel.map(p=>{
+    const temEmail = !!_emailDoUsuario(p);
+    if(!temEmail) semEmail.push(p);
+    const bg = temEmail ? 'var(--cinza)' : '#fff4e5';
+    const brd = temEmail ? 'transparent' : '#f0b429';
+    return `
+    <span title="${temEmail ? '' : 'Sem e-mail cadastrado — não vai receber o convite'}" style="display:inline-flex;align-items:center;gap:5px;background:${bg};border:1px solid ${brd};border-radius:20px;padding:3px 10px;font-size:12px;margin:2px">
+      ${temEmail ? '👤' : '⚠️'} ${esc(p)}${temEmail ? '' : ' <span style="font-size:10px;color:#b8860b;font-weight:600">(sem e-mail)</span>'}
       <button onclick="ataRemoveParticipante('${p}')" style="background:none;border:none;cursor:pointer;color:#888;font-size:13px;padding:0;line-height:1">×</button>
-    </span>
-  `).join('') || '<span style="color:#aaa;font-size:12px">Nenhum participante selecionado</span>';
+    </span>`;
+  }).join('');
+
+  box.innerHTML = (chips || '<span style="color:#aaa;font-size:12px">Nenhum participante selecionado</span>')
+    + (semEmail.length ? `<div style="font-size:11px;color:#b8860b;margin-top:6px;background:#fff4e5;border-left:3px solid #f0b429;padding:5px 8px;border-radius:0 4px 4px 0">
+         ⚠️ <strong>${esc(semEmail.join(', '))}</strong> não tem e-mail cadastrado e <strong>não vai receber o convite</strong>.
+         Cadastre em Administração → Usuários.
+       </div>` : '');
 }
 
 function salvarAta() {
@@ -20057,8 +20111,15 @@ function salvarAta() {
   // FIX: o convite era disparado DENTRO do forEach dos participantes, e
   // enviarEmailLembrete já manda para todos — 5 participantes = 25 e-mails.
   // Agora é uma chamada só, e o convite sai assim que a ata é criada.
-  if(ehNova && obj.status === 'Agendada' && configSistema.lembReuniaoAtivo && configSistema.lembReuniaoConvite) {
-    enviarConviteReuniao(obj, 'convite');
+  // O `true` no fim faz o resultado aparecer na tela (antes falhava calado).
+  if(ehNova) {
+    if(!configSistema.lembReuniaoAtivo) {
+      toast('ℹ️ Ata salva. Convite não enviado: lembretes de reunião estão desligados em Configurações.', 'warning');
+    } else if(!configSistema.lembReuniaoConvite) {
+      toast('ℹ️ Ata salva. Convite ao criar está desligado em Configurações.', 'warning');
+    } else {
+      enviarConviteReuniao(obj, 'convite', true);
+    }
   }
 
   toast('Ata salva com sucesso!');
@@ -20067,6 +20128,7 @@ function salvarAta() {
 function editarAta(id) {
   const a = atasData.find(x=>x.id===id);
   if(!a) return;
+  if(!podeVerAta(a)) { toast('Você não participa desta reunião.', 'error'); return; }
   _ataEditId = id;
   el('ata-modal-titulo').textContent = 'Editar Ata';
   el('ata-titulo').value = a.titulo;
@@ -20090,6 +20152,7 @@ function editarAta(id) {
 function excluirAta(id) {
   var a = atasData.find(function(x){ return x.id===id; });
   if(!a) return;
+  if(!podeVerAta(a)) { toast('Você não participa desta reunião.', 'error'); return; }
   // Permissão
   var perfil = (usuarioLogado||{}).perfil||'';
   var ehAdmin = (perfil==='admin' || perfil==='diretoria');
@@ -20110,13 +20173,46 @@ function excluirAta(id) {
   toast('Ata excluída.');
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   FIX DE PRIVACIDADE — visibilidade das atas
+   BUG: renderAtas() não filtrava nada. Toda ata aparecia para todos os
+   usuários, mesmo quem não foi convidado. Reunião de uma pessoa ficava
+   visível para o comercial inteiro, com pauta e deliberações.
+
+   Regra (espelha a de Tarefas): cada um vê só as reuniões em que está
+   envolvido — como participante ou como criador. Diretoria/admin vê tudo.
+═══════════════════════════════════════════════════════════════ */
+function _souAdminAtas() {
+  const perfil = (usuarioLogado && usuarioLogado.perfil) || '';
+  return perfil === 'diretoria' || perfil === 'admin';
+}
+
+function podeVerAta(a) {
+  if(!a) return false;
+  if(!usuarioLogado) return false;
+  if(_souAdminAtas()) return true;                     // diretoria/admin vê tudo
+  const meuNome  = usuarioLogado.nome  || '';
+  const meuLogin = usuarioLogado.login || '';
+  // Participante da reunião?
+  const parts = a.participantes || [];
+  if(parts.some(function(p){ return p === meuNome || p === meuLogin; })) return true;
+  // Foi eu que criei?
+  if(a.criadoPor && (a.criadoPor === meuNome || a.criadoPor === meuLogin)) return true;
+  return false;
+}
+
+/* Lista já filtrada — usar SEMPRE no lugar de atasData direto na tela */
+function atasVisiveis() {
+  return atasData.filter(function(a){ return !a.excluido && podeVerAta(a); });
+}
+
 function renderAtas() {
   const box = el('atas-list'); if(!box) return;
 
   // Popular select meses
   const selMes = el('ata-filtro-mes');
   if(selMes) {
-    const meses = [...new Set(atasData.map(a=>a.data?a.data.substring(0,7):null).filter(Boolean))].sort().reverse();
+    const meses = [...new Set(atasVisiveis().map(a=>a.data?a.data.substring(0,7):null).filter(Boolean))].sort().reverse();
     const valAtual = selMes.value;
     const nomesMes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     selMes.innerHTML = '<option value="">Todos os meses</option>' +
@@ -20127,7 +20223,8 @@ function renderAtas() {
   const filtMes = el('ata-filtro-mes')?.value||'';
   const filtStatus = el('ata-filtro-status')?.value||'';
 
-  const list = atasData.filter(a=>{
+  // FIX: só as atas que este usuário pode ver
+  const list = atasVisiveis().filter(a=>{
     if(busca && !a.titulo.toLowerCase().includes(busca) && !(a.cliente||'').toLowerCase().includes(busca) && !(a.industria||'').toLowerCase().includes(busca)) return false;
     if(filtMes && !(a.data||'').startsWith(filtMes)) return false;
     if(filtStatus && a.status!==filtStatus) return false;
@@ -20135,10 +20232,13 @@ function renderAtas() {
   }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
 
   // KPIs
+  // FIX: os KPIs contavam atasData inteiro — o número denunciava a existência
+  // de reuniões que o usuário nem podia ver.
   const mesAtual = hoje().substring(0,7);
-  if(el('ata-kpi-mes')) el('ata-kpi-mes').textContent = atasData.filter(a=>(a.data||'').startsWith(mesAtual)).length;
-  if(el('ata-kpi-agendadas')) el('ata-kpi-agendadas').textContent = atasData.filter(a=>a.status==='Agendada').length;
-  if(el('ata-kpi-realizadas')) el('ata-kpi-realizadas').textContent = atasData.filter(a=>a.status==='Realizada').length;
+  const _vis = atasVisiveis();
+  if(el('ata-kpi-mes')) el('ata-kpi-mes').textContent = _vis.filter(a=>(a.data||'').startsWith(mesAtual)).length;
+  if(el('ata-kpi-agendadas')) el('ata-kpi-agendadas').textContent = _vis.filter(a=>a.status==='Agendada').length;
+  if(el('ata-kpi-realizadas')) el('ata-kpi-realizadas').textContent = _vis.filter(a=>a.status==='Realizada').length;
 
   const stCls = {Agendada:'badge-azul', Realizada:'badge-verde', Cancelada:'badge-cinza'};
 
@@ -20159,6 +20259,7 @@ function renderAtas() {
             <span class="badge ${stCls[a.status]||'badge-cinza'}">${a.status}</span>
             <button class="btn btn-outline btn-xs" onclick="editarAta('${a.id}')">✏️ Editar</button>
             <button class="btn btn-info btn-xs" onclick="verAtaCompleta('${a.id}')">👁️ Ver</button>
+            ${a.status==='Agendada'?`<button class="btn btn-outline btn-xs" onclick="reenviarConviteAta('${a.id}')" title="Reenviar convite por e-mail">✉️ Convite</button>`:''}
             ${a.proximosPassos?`<button class="btn btn-success btn-xs" onclick="abrirConverterPendencias('${a.id}')" title="Transformar pendências em tarefas">✅ Gerar tarefas</button>`:''}
             <button class="btn btn-danger btn-xs" onclick="excluirAta('${a.id}')">🗑️</button>
           </div>
@@ -20172,6 +20273,7 @@ function renderAtas() {
 
 function abrirConverterPendencias(id) {
   var a = atasData.find(function(x){ return x.id===id; }); if(!a) return;
+  if(!podeVerAta(a)) { toast('Você não participa desta reunião.', 'error'); return; }
   _ataConvId = id;
   var linhas = (a.proximosPassos||'').split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
   if (linhas.length === 0) { toast('Esta ata não tem próximos passos/pendências.', 'error'); return; }
@@ -20266,6 +20368,9 @@ function converterPendenciasEmTarefas() {
 function verAtaCompleta(id) {
   const a = atasData.find(x=>x.id===id);
   if(!a) return;
+  // FIX: sem isto, bastava chamar verAtaCompleta('ATA-000X') pelo console
+  // para ler a pauta e as deliberações de uma reunião alheia.
+  if(!podeVerAta(a)) { toast('Você não participa desta reunião.', 'error'); return; }
   el('ata-view-titulo').textContent = a.titulo;
   el('ata-view-content').innerHTML = `
     <div class="form-grid" style="margin-bottom:14px">
@@ -20287,7 +20392,8 @@ function exportarAtasExcel() {
   if(typeof XLSX==='undefined') { alert('Biblioteca XLSX não carregada.'); return; }
   const wb = XLSX.utils.book_new();
   const rows = [['ID','Título','Data','Hora','Local','Status','Participantes','Cliente']];
-  atasData.forEach(a=>rows.push([a.id,a.titulo,a.data,a.hora,a.local,a.status,(a.participantes||[]).join(';'),a.cliente||'']));
+  // FIX: exportava TODAS as atas da empresa, furando a regra de visibilidade.
+  atasVisiveis().forEach(a=>rows.push([a.id,a.titulo,a.data,a.hora,a.local,a.status,(a.participantes||[]).join(';'),a.cliente||'']));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Atas');
   XLSX.writeFile(wb, 'Atas_GestCom.xlsx');
 }
@@ -23353,6 +23459,10 @@ function _avisarTarefaConcluida(t) {
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <select id="ata-participante-add" style="flex:1;padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif"></select>
         <button class="btn btn-outline btn-sm" onclick="ataAddParticipante()">+ Add</button>
+      </div>
+      <div style="font-size:11px;color:#666;background:#eef2ff;border-left:3px solid #5b6ee1;padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:8px">
+        🔒 Esta reunião só aparece para os <strong>participantes</strong> aqui listados (e para a diretoria).
+        Quem não estiver na lista não vê a ata.
       </div>
       <div id="ata-participantes-list"></div>
     </div>
