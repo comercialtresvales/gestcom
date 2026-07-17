@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4121,6 +4120,8 @@ function defaultPerms(perfil) {
     diretoria:    { 'financeiro':'editar', 'conta-corrente':'editar', 'crm':'editar', 'tarefas':'editar', 'atas':'editar',...allEdit},
     admin:        { 'financeiro':'editar', 'conta-corrente':'editar', 'crm':'editar', 'tarefas':'editar', 'atas':'editar',...allEdit},
     financeiro: {
+      // chave mestra do card Financeiro
+      'financeiro':'editar', 'conta-corrente':'ver', 'tarefas':'editar', 'atas':'ver',
       dashboard:'ver', faturamento:'editar', nfcompare:'ver',
       saldo:'ver', comissoes:'editar', fatmensal:'ver', tratativas:'editar',
       metas:'ver', relatorios:'ver', clientes:'ver',
@@ -4129,6 +4130,8 @@ function defaultPerms(perfil) {
       regras:'nenhum', usuarios:'nenhum', configuracoes:'nenhum',
     },
     comercial: {
+      // SEM 'financeiro' e SEM 'conta-corrente' — o comercial não vê dinheiro.
+      'tarefas':'editar', 'atas':'editar', 'crm':'editar',
       dashboard:'ver', orcamentos:'editar', pedidos:'editar', faturamento:'ver',
       nfcompare:'ver', fatmensal:'ver', sellinout:'editar', metas:'ver',
       relatorios:'ver', mix:'editar', clientes:'ver', industrias:'ver',
@@ -4137,6 +4140,7 @@ function defaultPerms(perfil) {
       usuarios:'nenhum', configuracoes:'nenhum',
     },
     logistica: {
+      'tarefas':'editar', 'atas':'ver',
       dashboard:'ver', pedidos:'ver', logistica:'editar',
       orcamentos:'nenhum', faturamento:'nenhum', nfcompare:'nenhum',
       fatmensal:'nenhum', sellinout:'nenhum', metas:'nenhum', relatorios:'nenhum',
@@ -4145,6 +4149,8 @@ function defaultPerms(perfil) {
       regras:'nenhum', usuarios:'nenhum', configuracoes:'nenhum',
     },
     representante: {
+      // SEM 'financeiro'. Tarefas/atas liberadas: precisa das próprias.
+      'tarefas':'editar', 'atas':'ver',
       dashboard:'ver', orcamentos:'editar', pedidos:'ver', sellinout:'ver',
       mix:'ver', clientes:'ver',
       faturamento:'nenhum', nfcompare:'nenhum', logistica:'nenhum', tratativas:'nenhum',
@@ -16613,24 +16619,54 @@ var SETORES_INDUSTRIA = [
 ];
 var _crmSelecionados = {};
 const MODULOS_TELA_PROPRIA = new Set(['tarefas','atas','conta-corrente','crm','financeiro']);
+/* ═══════════════════════════════════════════════════════════════
+   FIX DE SEGURANÇA — cards do launcher
+   BUG: o card abria se o usuário tivesse acesso a QUALQUER sub-módulo
+   da lista (.some). Como Financeiro listava 'fatmensal', 'sellinout' e
+   'metas' — que são COMERCIAIS — todo vendedor abria o Financeiro.
+   E Administração listava 'mix', então o comercial entrava em
+   Configurações/Usuários.
+
+   Agora cada card tem `chaveMestra`: a permissão que MANDA. Se ela for
+   'nenhum', o card fica bloqueado, não importa o resto.
+   `subModulos` continua só para navegação interna.
+═══════════════════════════════════════════════════════════════ */
 const LAUNCHER_MODULOS = [
   { key:'comercial',       label:'Comercial',        icon:'📋', grupo:'comercial',
+    // Comercial não tem chave própria: libera por qualquer módulo comercial de fato.
+    chavesQualquer:['pedidos','orcamentos','faturamento','nfcompare','tratativas','logistica','dashboard'],
     subModulos:['pedidos','orcamentos','bonificacoes','logistica','faturamento','nfcompare','tratativas','saldo','comissoes','fatmensal','sellinout','metas','dashboard'] },
   { key:'financeiro',      label:'Financeiro',       icon:'💰', grupo:'financeiro',
+    chaveMestra:'financeiro',
     subModulos:['comissoes','saldo','ctrlsaldo','fatmensal','sellinout','metas'] },
   { key:'conta-corrente',  label:'Conta Corrente',   icon:'🔄', grupo:'conta-corrente',
+    chaveMestra:'conta-corrente',
     subModulos:['conta-corrente'] },
   { key:'tarefas',         label:'Tarefas',          icon:'✅', grupo:'tarefas',
+    chaveMestra:'tarefas',
     subModulos:['tarefas'] },
   { key:'atas',            label:'Atas de Reuniao',  icon:'🤝', grupo:'atas',
+    chaveMestra:'atas',
     subModulos:['atas'] },
   { key:'crm',             label:'Clientes / CRM',   icon:'👥', grupo:'clientes',
+    chavesQualquer:['crm','clientes','redes','industrias'],
     subModulos:['crm','clientes','redes','industrias'] },
   { key:'relatorios',      label:'Relatorios',       icon:'📊', grupo:'relatorios',
+    chaveMestra:'relatorios',
     subModulos:['relatorios'] },
   { key:'administracao',   label:'Administracao',    icon:'⚙️', grupo:'administracao',
+    // Só entra quem administra de verdade — 'mix' NÃO abre mais este card.
+    chavesQualquer:['usuarios','configuracoes','sync','regras'],
     subModulos:['usuarios','configuracoes','importexport','sync','mix','industrias','produtos','regras'] },
 ];
+
+/* Fonte única de verdade: o card abre ou não? */
+function launcherTemAcesso(mod) {
+  if(!mod || !usuarioLogado) return false;
+  if(mod.chaveMestra) return nivelAcesso(mod.chaveMestra) !== 'nenhum';
+  if(mod.chavesQualquer) return mod.chavesQualquer.some(function(k){ return nivelAcesso(k) !== 'nenhum'; });
+  return false;   // sem regra declarada = fechado (falha segura)
+}
 const LAUNCHER_PAINEL_DESTINO = {
   comercial:       'dashboard',
   financeiro:      'financeiro',
@@ -18910,11 +18946,9 @@ function renderLauncherCards() {
   if(!grid) return;
 
   grid.innerHTML = LAUNCHER_MODULOS.map(mod => {
-    // Verifica se o usuário tem acesso a pelo menos um sub-módulo
-    const temAcesso = mod.subModulos.some(sm => {
-      const nivel = nivelAcesso(sm);
-      return nivel !== 'nenhum';
-    });
+    // FIX: usa a chave mestra do card, não mais .some() em sub-módulos
+    // compartilhados (que deixava o comercial entrar no Financeiro).
+    const temAcesso = launcherTemAcesso(mod);
 
     const cardClass = temAcesso ? 'launcher-card' : 'launcher-card disabled';
     const btnTitle = temAcesso ? 'Acessar' : 'Sem acesso';
@@ -18931,10 +18965,10 @@ function renderLauncherCards() {
       `;
     }
     return `
-      <div class="${cardClass}" onclick="launcherAbrirModulo('${mod.key}','${mod.icon}','${mod.label}',true)">
+      <div class="${cardClass}" onclick="launcherAbrirModulo('${mod.key}','${mod.icon}','${mod.label}')">
         <div class="launcher-card-icon">${mod.icon}</div>
         <div class="launcher-card-title">${mod.label}</div>
-        <button class="launcher-card-btn" onclick="event.stopPropagation();launcherAbrirModulo('${mod.key}','${mod.icon}','${mod.label}',true)">
+        <button class="launcher-card-btn" onclick="event.stopPropagation();launcherAbrirModulo('${mod.key}','${mod.icon}','${mod.label}')">
           Acessar <span class="arrow">›</span>
         </button>
       </div>
@@ -18943,8 +18977,12 @@ function renderLauncherCards() {
 }
 
 function launcherAbrirModulo(modKey, icon, label, temAcesso) {
-  if(!temAcesso) {
-    toast('Voce nao tem permissao para acessar ' + label, 'error');
+  // FIX DE SEGURANÇA: antes confiava no parâmetro `temAcesso`, que o próprio
+  // HTML do card mandava como `true` fixo. Quem chamasse a função pelo console
+  // entrava em qualquer módulo. Agora a permissão é revalidada aqui, sempre.
+  const mod = LAUNCHER_MODULOS.find(function(m){ return m.key === modKey; });
+  if(!launcherTemAcesso(mod)) {
+    toast('Voce nao tem permissao para acessar ' + (label || modKey), 'error');
     return;
   }
   _launcherModuloAlvo = modKey;
