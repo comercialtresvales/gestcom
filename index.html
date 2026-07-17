@@ -2487,7 +2487,7 @@ tr:last-child td{border-bottom:none;}
             <input type="email" id="cfg-email-admin" placeholder="admin@empresa.com">
           </div>
           <div class="form-group full" style="margin-top:10px"><label>⚙️ E-mail Automático (EmailJS)</label>
-            <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Para os <strong>lembretes de tarefas</strong> e os <strong>convites de reunião</strong> chegarem por e-mail, configure o <a href="https://www.emailjs.com" target="_blank">EmailJS</a>. Gratuito até 200 e-mails/mês.</div>
+            <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Para o <strong>resumo diário de tarefas</strong> e os <strong>convites/lembretes de reunião</strong> chegarem por e-mail, configure o <a href="https://www.emailjs.com" target="_blank">EmailJS</a>. Gratuito até 200 e-mails/mês.<br><span style="font-size:11px">Seu template no EmailJS precisa ter as variáveis <code>to_email</code>, <code>to_name</code>, <code>subject</code> e <code>message</code>.</span></div>
           </div>
           <div class="form-group"><label>EmailJS Service ID</label><input id="cfg-emailjs-service" placeholder="service_xxxxxxx"></div>
           <div class="form-group"><label>EmailJS Template ID</label><input id="cfg-emailjs-template" placeholder="template_xxxxxxx"></div>
@@ -2499,6 +2499,95 @@ tr:last-child td{border-bottom:none;}
           <div class="form-group full">
             <button class="btn btn-outline btn-sm" onclick="testarEmailJS()">✉️ Enviar e-mail de teste</button>
             <span style="font-size:11px;color:#888;margin-left:8px">Envia para o seu e-mail cadastrado</span>
+          </div>
+
+          <!-- ═══ AGENDA DOS LEMBRETES ═══ -->
+          <div class="form-group full" style="margin-top:16px;border-top:2px solid var(--cinza-medio);padding-top:14px">
+            <label style="font-size:13px">🗓️ Quando enviar os lembretes</label>
+            <div class="alert alert-warning" style="margin:8px 0;font-size:11.5px">
+              ⚠️ <strong>Importante:</strong> o GestCom roda no navegador, então os e-mails só saem
+              com o sistema aberto por alguém. <strong>Os dias da semana são respeitados sempre</strong>
+              (sábado/domingo não sai nada). Já o <strong>horário funciona como “não enviar antes de”</strong>:
+              se ninguém abrir o sistema no horário marcado, o envio acontece quando abrirem.
+            </div>
+          </div>
+
+          <!-- Tarefas -->
+          <div class="form-group full" style="background:#f8f9fb;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <strong style="font-size:13px">📋 Resumo diário de tarefas</strong>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600">
+                <input type="checkbox" id="cfg-lemb-tar-ativo" onchange="toggleBlocoLembrete('tar')" style="width:16px;height:16px;cursor:pointer">
+                Ativado
+              </label>
+            </div>
+            <div id="cfg-lemb-tar-bloco">
+              <div style="font-size:11px;color:#666;margin-bottom:8px">
+                Um e-mail por responsável, uma vez por dia, com 📌 A Fazer · ⚙️ Em Andamento · ⚠️ Em Atraso.
+              </div>
+              <div style="font-size:11px;font-weight:700;color:#666;margin-bottom:5px">DIAS DA SEMANA</div>
+              <div id="cfg-lemb-tar-dias" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px"></div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <label style="font-size:12px;font-weight:600">Não enviar antes das</label>
+                <input type="time" id="cfg-lemb-tar-hora" style="width:110px;padding:5px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px">
+              </div>
+            </div>
+          </div>
+
+          <!-- Reuniões -->
+          <div class="form-group full" style="background:#f8f9fb;border:1px solid var(--cinza-medio);border-radius:8px;padding:12px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <strong style="font-size:13px">📅 Lembretes de reunião (atas)</strong>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600">
+                <input type="checkbox" id="cfg-lemb-reu-ativo" onchange="toggleBlocoLembrete('reu')" style="width:16px;height:16px;cursor:pointer">
+                Ativado
+              </label>
+            </div>
+            <div id="cfg-lemb-reu-bloco">
+              <div style="font-size:11px;font-weight:700;color:#666;margin-bottom:5px">DIAS DA SEMANA PERMITIDOS</div>
+              <div id="cfg-lemb-reu-dias" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+              <div style="border-left:3px solid var(--azul,#5b6ee1);padding-left:10px;margin-bottom:10px">
+                <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;font-weight:600">
+                  <input type="checkbox" id="cfg-lemb-reu-convite" style="width:15px;height:15px;cursor:pointer">
+                  1️⃣ Convite assim que a ata é criada
+                </label>
+                <div style="font-size:11px;color:#888;margin-top:3px">Sai na hora, com pauta, link ou endereço.</div>
+              </div>
+
+              <div style="border-left:3px solid var(--amarelo,#e1b45b);padding-left:10px;margin-bottom:10px">
+                <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;font-weight:600">
+                  <input type="checkbox" id="cfg-lemb-reu-vespera" style="width:15px;height:15px;cursor:pointer">
+                  2️⃣ Lembrete 1 dia antes
+                </label>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+                  <span style="font-size:11.5px;color:#666">Não enviar antes das</span>
+                  <input type="time" id="cfg-lemb-reu-vespera-hora" style="width:110px;padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12.5px">
+                </div>
+              </div>
+
+              <div style="border-left:3px solid var(--vermelho,#e15b5b);padding-left:10px">
+                <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;font-weight:600">
+                  <input type="checkbox" id="cfg-lemb-reu-dia" style="width:15px;height:15px;cursor:pointer">
+                  3️⃣ Lembrete no dia da reunião
+                </label>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">
+                  <input type="number" id="cfg-lemb-reu-horas" min="1" max="12" step="1" style="width:65px;padding:4px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12.5px;font-weight:600">
+                  <span style="font-size:11.5px;color:#666">hora(s) antes do horário da reunião</span>
+                </div>
+                <div style="font-size:10.5px;color:#888;margin-top:4px">
+                  Ex.: reunião 14h com 2h antes → o e-mail sai a partir das 12h. Ata sem horário → avisa em qualquer momento do dia.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full">
+            <button class="btn btn-outline btn-sm" onclick="enviarResumoTarefasAgora()">📋 Enviar resumo de tarefas agora</button>
+            <button class="btn btn-outline btn-sm" onclick="verificarReunioesAgora()" style="margin-left:6px">📅 Verificar reuniões agora</button>
+            <div style="font-size:11px;color:#888;margin-top:5px">
+              Os botões acima <strong>ignoram a agenda e o controle de “já enviado”</strong> — servem para testar na hora.
+            </div>
           </div>
           <div class="form-group"><label>Versão do Sistema</label>
             <input type="text" value="GestCom v5 · Comercial Três Vales" readonly style="background:#f4f3ef">
@@ -3949,6 +4038,18 @@ let configSistema = {
   moeda:        'BRL',
   diasAlerta:   5,
   emailAdmin:   '',
+  /* ─── Lembretes: configuração do usuário ───
+     Tarefas e Reuniões são independentes. Dias: 0=Dom ... 6=Sáb. */
+  lembTarefasAtivo:   true,
+  lembTarefasDias:    [1,2,3,4,5],   // seg a sex
+  lembTarefasHora:    '08:00',       // não envia antes disso
+  lembReuniaoAtivo:   true,
+  lembReuniaoConvite: true,          // e-mail na hora em que a ata é criada
+  lembReuniaoVespera: true,          // e-mail 1 dia antes
+  lembReuniaoVesperaHora: '17:00',   // não envia a véspera antes disso
+  lembReuniaoDia:     true,          // e-mail no dia, X horas antes da reunião
+  lembReuniaoHorasAntes: 2,          // quantas horas antes do horário da reunião
+  lembReuniaoDias:    [1,2,3,4,5],   // dias em que é permitido enviar
   modulosAtivos: ['dashboard','orcamentos','pedidos','faturamento','nfcompare','logistica',
     'tratativas','saldo','ctrlsaldo','comissoes','fatmensal','sellinout','metas','relatorios',
     'mix','redes','clientes','industrias','produtos','regras','usuarios','configuracoes','importexport','sync']
@@ -4156,6 +4257,25 @@ window._pushPendente = false;
    Salva em localStorage a cada alteração.
    Restaura automaticamente ao abrir.
 ────────────────────────────────────── */
+/* Config salva antes desta versão não tem as chaves de lembrete.
+   Object.assign não cria chave que não existe na origem — sem isto,
+   quem já usa o sistema ficaria com os campos undefined. */
+function _migrarConfigLembretes() {
+  var padrao = {
+    lembTarefasAtivo: true, lembTarefasDias: [1,2,3,4,5], lembTarefasHora: '08:00',
+    lembReuniaoAtivo: true, lembReuniaoConvite: true,
+    lembReuniaoVespera: true, lembReuniaoVesperaHora: '17:00',
+    lembReuniaoDia: true, lembReuniaoHorasAntes: 2, lembReuniaoDias: [1,2,3,4,5]
+  };
+  Object.keys(padrao).forEach(function(k){
+    if(typeof configSistema[k] === 'undefined') {
+      configSistema[k] = Array.isArray(padrao[k]) ? padrao[k].slice() : padrao[k];
+    }
+  });
+  if(!Array.isArray(configSistema.lembTarefasDias)) configSistema.lembTarefasDias = [1,2,3,4,5];
+  if(!Array.isArray(configSistema.lembReuniaoDias)) configSistema.lembReuniaoDias = [1,2,3,4,5];
+}
+
 function _salvarLocal() {
   try {
     const payload = JSON.stringify({
@@ -4213,7 +4333,7 @@ function _carregarLocal() {
     if(d.PRODUTOS_CAT  && typeof d.PRODUTOS_CAT  ==='object') _mergeLimpo(PRODUTOS_CAT, d.PRODUTOS_CAT);
     if(d.userPerms     && typeof d.userPerms     ==='object') _mergeLimpo(userPerms,     d.userPerms);
     // configSistema é objeto de configuração (não coleção de registros) — Object.assign é correto aqui
-    if(d.configSistema && typeof d.configSistema ==='object') Object.assign(configSistema,   d.configSistema);
+    if(d.configSistema && typeof d.configSistema ==='object') { Object.assign(configSistema,   d.configSistema); _migrarConfigLembretes(); }
     if(Array.isArray(d.auditLog))         auditLog             = d.auditLog;
     if(Array.isArray(d.saldoUsosData))    window.saldoUsosData = d.saldoUsosData;
     if(Array.isArray(d.ctrlSaldosData))       ctrlSaldosData       = d.ctrlSaldosData;
@@ -11327,6 +11447,18 @@ function fazerLogin() {
 
       try { _emailjsInit(); } catch(e) {}
 
+      // FIX: nada disparava os lembretes na abertura. Só rodavam se você
+      // salvasse uma tarefa com lembrete = hoje, na mesma sessão.
+      // Agora roda no login e a cada 30 min enquanto o sistema estiver aberto.
+      try {
+        setTimeout(function(){ try { verificarLembretesHoje(); } catch(e) { console.warn('[Lembretes]', e); } }, 3000);
+        if(!window._lembretesInterval) {
+          window._lembretesInterval = setInterval(function(){
+            try { verificarLembretesHoje(); } catch(e) { console.warn('[Lembretes]', e); }
+          }, 30*60*1000);
+        }
+      } catch(e) { console.warn('[Lembretes] agendador:', e); }
+
       // ── Abre o LAUNCHER (tela de módulos) em vez do dashboard ──
       try {
         setTimeout(function(){ mostrarLauncher(); }, 200);
@@ -12496,6 +12628,81 @@ function exportarTudo(){
   toast('Relatório completo exportado!');
 }
 
+/* ═══════ Agenda dos lembretes — UI ═══════ */
+function renderConfigLembretes() {
+  _migrarConfigLembretes();
+
+  // Switches on/off
+  if(el('cfg-lemb-tar-ativo')) el('cfg-lemb-tar-ativo').checked = !!configSistema.lembTarefasAtivo;
+  if(el('cfg-lemb-reu-ativo')) el('cfg-lemb-reu-ativo').checked = !!configSistema.lembReuniaoAtivo;
+
+  // Horários e antecedência
+  if(el('cfg-lemb-tar-hora'))         el('cfg-lemb-tar-hora').value         = configSistema.lembTarefasHora || '08:00';
+  if(el('cfg-lemb-reu-vespera-hora')) el('cfg-lemb-reu-vespera-hora').value = configSistema.lembReuniaoVesperaHora || '17:00';
+  if(el('cfg-lemb-reu-horas'))        el('cfg-lemb-reu-horas').value        = configSistema.lembReuniaoHorasAntes || 2;
+
+  // Etapas da reunião
+  if(el('cfg-lemb-reu-convite')) el('cfg-lemb-reu-convite').checked = !!configSistema.lembReuniaoConvite;
+  if(el('cfg-lemb-reu-vespera')) el('cfg-lemb-reu-vespera').checked = !!configSistema.lembReuniaoVespera;
+  if(el('cfg-lemb-reu-dia'))     el('cfg-lemb-reu-dia').checked     = !!configSistema.lembReuniaoDia;
+
+  // Pílulas de dia da semana
+  _renderPilulasDias('cfg-lemb-tar-dias', configSistema.lembTarefasDias || []);
+  _renderPilulasDias('cfg-lemb-reu-dias', configSistema.lembReuniaoDias || []);
+
+  toggleBlocoLembrete('tar');
+  toggleBlocoLembrete('reu');
+}
+
+function _renderPilulasDias(containerId, selecionados) {
+  const box = el(containerId); if(!box) return;
+  box.innerHTML = _NOMES_DIA.map(function(nome, i){
+    const on = selecionados.indexOf(i) >= 0;
+    return '<button type="button" data-dia="' + i + '" onclick="toggleDiaLembrete(\'' + containerId + '\',' + i + ')" ' +
+      'style="cursor:pointer;border-radius:16px;padding:5px 11px;font-size:11.5px;font-weight:700;font-family:inherit;' +
+      'border:1.5px solid ' + (on ? 'var(--verde,#3d9970)' : 'var(--cinza-medio,#ccc)') + ';' +
+      'background:' + (on ? 'var(--verde,#3d9970)' : '#fff') + ';' +
+      'color:' + (on ? '#fff' : '#999') + '">' + nome + '</button>';
+  }).join('');
+}
+
+function toggleDiaLembrete(containerId, dia) {
+  const chave = containerId === 'cfg-lemb-tar-dias' ? 'lembTarefasDias' : 'lembReuniaoDias';
+  let arr = (configSistema[chave] || []).slice();
+  const i = arr.indexOf(dia);
+  if(i >= 0) arr.splice(i,1); else arr.push(dia);
+  arr.sort();
+  configSistema[chave] = arr;
+  _renderPilulasDias(containerId, arr);
+}
+
+function toggleBlocoLembrete(qual) {
+  const chk   = el(qual === 'tar' ? 'cfg-lemb-tar-ativo' : 'cfg-lemb-reu-ativo');
+  const bloco = el(qual === 'tar' ? 'cfg-lemb-tar-bloco' : 'cfg-lemb-reu-bloco');
+  if(!chk || !bloco) return;
+  bloco.style.opacity = chk.checked ? '1' : '0.4';
+  bloco.style.pointerEvents = chk.checked ? 'auto' : 'none';
+}
+
+/* Lê a agenda da tela para o configSistema */
+function _coletarConfigLembretes() {
+  if(el('cfg-lemb-tar-ativo')) configSistema.lembTarefasAtivo = el('cfg-lemb-tar-ativo').checked;
+  if(el('cfg-lemb-reu-ativo')) configSistema.lembReuniaoAtivo = el('cfg-lemb-reu-ativo').checked;
+  if(el('cfg-lemb-tar-hora') && el('cfg-lemb-tar-hora').value) configSistema.lembTarefasHora = el('cfg-lemb-tar-hora').value;
+  if(el('cfg-lemb-reu-vespera-hora') && el('cfg-lemb-reu-vespera-hora').value) configSistema.lembReuniaoVesperaHora = el('cfg-lemb-reu-vespera-hora').value;
+  if(el('cfg-lemb-reu-convite')) configSistema.lembReuniaoConvite = el('cfg-lemb-reu-convite').checked;
+  if(el('cfg-lemb-reu-vespera')) configSistema.lembReuniaoVespera = el('cfg-lemb-reu-vespera').checked;
+  if(el('cfg-lemb-reu-dia'))     configSistema.lembReuniaoDia     = el('cfg-lemb-reu-dia').checked;
+  if(el('cfg-lemb-reu-horas')) {
+    let h = parseFloat(el('cfg-lemb-reu-horas').value);
+    if(isNaN(h) || h < 1) h = 1;
+    if(h > 12) h = 12;
+    configSistema.lembReuniaoHorasAntes = h;
+    el('cfg-lemb-reu-horas').value = h;
+  }
+  // As pílulas de dia já gravam direto em configSistema ao clicar.
+}
+
 function salvarConfig(){
   // Salvar parâmetros gerais
   configSistema.layoutPdf    = (el('cfg-layout-pdf')||{}).value || configSistema.layoutPdf;
@@ -12507,7 +12714,14 @@ function salvarConfig(){
   configSistema.emailJSTemplateId = (el('cfg-emailjs-template')||{}).value || '';
   configSistema.emailJSPublicKey  = (el('cfg-emailjs-public')||{}).value   || '';
   configSistema.emailConclusaoTarefa = (el('cfg-email-conclusao')||{}).value || '';
+  // Agenda dos lembretes
+  try { _coletarConfigLembretes(); } catch(e) { console.warn('[Config lembretes]', e); }
   try { _emailjsInit(); } catch(e) {}
+
+  // FIX: persistir de fato (localStorage + nuvem). Antes só alterava a memória
+  // e tudo era perdido no reload — o EmailJS nunca ficava salvo.
+  try { _salvarLocal(); } catch(e) { console.warn('[GestCom] salvarConfig/local:', e); }
+  try { if(typeof syncAutoSaveHook === 'function') syncAutoSaveHook(); } catch(e) {}
 
   addAudit(usuarioLogado?.login||'admin', 'Configurações do sistema salvas', '⚙️');
 
@@ -13229,6 +13443,9 @@ function renderConfiguracoes() {
     if(el('cfg-email-conclusao'))  el('cfg-email-conclusao').value  = configSistema.emailConclusaoTarefa || '';
   } catch(e) {}
 
+  // Agenda dos lembretes — preencher com o que está salvo
+  try { renderConfigLembretes(); } catch(e) { console.warn('[Config lembretes]', e); }
+
   const isAdmin = usuarioLogado && (usuarioLogado.perfil==='diretoria' || usuarioLogado.perfil==='admin');
 
   // ─── Módulos do sistema (switches reais com estado) ───
@@ -13768,7 +13985,7 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(dados.PRODUTOS_CAT && typeof dados.PRODUTOS_CAT==="object") _mergeLimpo(PRODUTOS_CAT, dados.PRODUTOS_CAT);
   if(dados.userPerms && typeof dados.userPerms==="object") _mergeLimpo(userPerms, dados.userPerms);
   // configSistema é objeto de configuração (não coleção) — Object.assign é correto aqui
-  if(dados.configSistema && typeof dados.configSistema==="object") Object.assign(configSistema, dados.configSistema);
+  if(dados.configSistema && typeof dados.configSistema==="object") { Object.assign(configSistema, dados.configSistema); _migrarConfigLembretes(); }
   if(Array.isArray(dados.saldoUsosData)) window.saldoUsosData = dados.saldoUsosData;
   if(Array.isArray(dados.usuarios)) {
 const _loginAtual = usuarioLogado?.login;
@@ -18947,6 +19164,7 @@ function novaTarefa() {
   el('tar-prior').value = 'Média';
   el('tar-status-campo').value = 'Pendente';
   el('tar-cliente').value = '';
+  if(el('tar-industria')) el('tar-industria').value = '';
   el('tar-notas-list').innerHTML = '';
   el('tar-nova-nota').value = '';
   _tarAnexosTmp = [];
@@ -18966,6 +19184,12 @@ function popularSelectResponsavelTarefa() {
     selCli.innerHTML = '<option value="">Sem cliente vinculado</option>' +
       clientes.filter(c=>c.status==='Ativo').map(c=>`<option value="${c.nome}">${esc(c.nome)}</option>`).join('');
   }
+  // Indústria vinculada — permite tarefa por cliente, por indústria, ou os dois
+  const selInd = el('tar-industria');
+  if(selInd) {
+    selInd.innerHTML = '<option value="">Sem indústria vinculada</option>' +
+      industrias.filter(i=>!i.status || i.status==='Ativo').map(i=>`<option value="${esc(i.nome)}">${esc(i.nome)}</option>`).join('');
+  }
 }
 
 function salvarTarefa() {
@@ -18975,7 +19199,7 @@ function salvarTarefa() {
   if(!resp) { alert('Selecione o responsável.'); return; }
 
   const obj = {
-    id: _tarEditId || ('TAR-' + String(tarefasData.length+1).padStart(4,'0')),
+    id: _tarEditId || _proximoIdTarefa(),
     titulo,
     descricao: el('tar-desc')?.value || '',
     responsavel: resp,
@@ -18984,6 +19208,7 @@ function salvarTarefa() {
     prioridade: el('tar-prior')?.value || 'Média',
     status: el('tar-status-campo')?.value || 'Pendente',
     cliente: el('tar-cliente')?.value || '',
+    industria: el('tar-industria')?.value || '',
     notas: _tarEditId ? (tarefasData.find(t=>t.id===_tarEditId)?.notas||[]) : [],
     comentarios: _tarEditId ? (tarefasData.find(t=>t.id===_tarEditId)?.comentarios||[]) : [],
     historico: _tarEditId ? (tarefasData.find(t=>t.id===_tarEditId)?.historico||[]) : [],
@@ -19037,6 +19262,7 @@ function editarTarefa(id) {
   setTimeout(()=>{
     el('tar-resp').value = t.responsavel||'';
     if(el('tar-cliente')) el('tar-cliente').value = t.cliente||'';
+    if(el('tar-industria')) el('tar-industria').value = t.industria||'';
   },50);
   // Renderizar notas
   renderNotasTarefa(t.notas||[]);
@@ -19279,7 +19505,7 @@ function renderTarefas() {
       var r = (t.responsavel||'');
       if(r !== meuNome && r !== meuLogin) return false;
     }
-    if(busca && !(t.titulo||'').toLowerCase().includes(busca) && !(t.responsavel||'').toLowerCase().includes(busca) && !(t.cliente||'').toLowerCase().includes(busca)) return false;
+    if(busca && !(t.titulo||'').toLowerCase().includes(busca) && !(t.responsavel||'').toLowerCase().includes(busca) && !(t.cliente||'').toLowerCase().includes(busca) && !(t.industria||'').toLowerCase().includes(busca)) return false;
     if(filtResp && t.responsavel !== filtResp) return false;
     if(filtPrior && t.prioridade !== filtPrior) return false;
     return true;
@@ -19319,6 +19545,7 @@ function renderTarefas() {
       (t.descricao ? '<div style="font-size:11px;color:#888;margin-bottom:5px">' + esc(t.descricao.substring(0,70)) + (t.descricao.length>70?'…':'') + '</div>' : '') +
       '<div class="tc-meta"><span>👤 ' + esc(t.responsavel||'—') + '</span>' +
       '<span style="' + (atrasada?'color:var(--vermelho);font-weight:700':'') + '">📅 ' + prazoTxt + (atrasada?' ⚠️':'') + '</span></div>' +
+      (_vinculoLabel(t) ? '<div style="font-size:10.5px;color:#5b6ee1;margin-top:4px;font-weight:600">🔗 ' + esc(_vinculoLabel(t)) + '</div>' : '') +
       (nAnexos ? '<div style="font-size:10.5px;color:#888;margin-top:4px">📎 ' + nAnexos + ' anexo(s)</div>' : '') +
       '<div style="display:flex;gap:4px;margin-top:8px;justify-content:space-between;align-items:center">' +
         '<button class="btn btn-outline btn-xs" onclick="abrirComentarios(' + jid + ')" title="Comentários">💬' + (nComents ? ' ' + nComents : '') + '</button>' +
@@ -19360,79 +19587,337 @@ function exportarTarefasExcel() {
   XLSX.writeFile(wb, 'Tarefas_GestCom.xlsx');
 }
 
-function agendarLembreteTarefa(tarefa) {
-  // Verifica config de e-mail
-  const emailCfg = configSistema.emailJSServiceId || '';
-  if(!emailCfg) return; // Sem EmailJS configurado — usa notificação local
+/* ═══════════════════════════════════════════════════════════════
+   MOTOR DE LEMBRETES — reescrito
+   • TAREFAS  → 1 resumo diário por responsável (A Fazer / Em Andamento / Em Atraso)
+   • REUNIÕES → convite na criação + lembrete 1 dia antes + lembrete no dia
+   São e-mails SEPARADOS e independentes.
+═══════════════════════════════════════════════════════════════ */
 
-  // Programa verificação de lembretes
-  verificarLembretesHoje();
+/* Helpers de data — evita o bug de fuso do toISOString() */
+function _dataISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _amanhaISO() { const d = new Date(); d.setDate(d.getDate()+1); return _dataISO(d); }
+
+/* Resolve o e-mail de um usuário pelo nome OU login */
+function _emailDoUsuario(nomeOuLogin) {
+  if(!nomeOuLogin) return '';
+  const u = usuarios.find(x => x.nome === nomeOuLogin || x.login === nomeOuLogin);
+  return (u && u.email) ? u.email.trim() : '';
 }
 
-function verificarLembretesHoje() {
+/* Rótulo do vínculo Cliente / Indústria / ambos */
+function _vinculoLabel(o) {
+  const c = (o && o.cliente) || '', i = (o && o.industria) || '';
+  if(c && i) return c + ' + ' + i;
+  if(c) return c;
+  if(i) return i;
+  return '';
+}
+
+/* IDs sequenciais sem colisão — length+1 repetia ID depois de excluir */
+function _proximoIdTarefa() {
+  let max = 0;
+  tarefasData.forEach(t => { const n = parseInt(String(t.id||'').replace(/\D/g,''),10); if(n>max) max=n; });
+  return 'TAR-' + String(max+1).padStart(4,'0');
+}
+function _proximoIdAta() {
+  let max = 0;
+  atasData.forEach(a => { const n = parseInt(String(a.id||'').replace(/\D/g,''),10); if(n>max) max=n; });
+  return 'ATA-' + String(max+1).padStart(4,'0');
+}
+
+/* ─── Janela de envio configurada pelo usuário ───
+   ATENÇÃO: só valem enquanto o sistema está aberto. "Dia da semana" é
+   garantido (bloqueia sábado/domingo). "Hora" funciona como "não antes de":
+   se ninguém abrir o sistema no horário, sai quando abrirem. Um .html no
+   navegador não tem como acordar sozinho. */
+const _NOMES_DIA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function _diaSemanaHoje() { return new Date().getDay(); }
+
+function _horaAgoraMin() { const d = new Date(); return d.getHours()*60 + d.getMinutes(); }
+
+function _hhmmParaMin(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm||'').trim());
+  if(!m) return 0;
+  return parseInt(m[1],10)*60 + parseInt(m[2],10);
+}
+
+/* Pode enviar o resumo de tarefas agora? */
+function _janelaTarefasOk() {
+  if(!configSistema.lembTarefasAtivo) return false;
+  const dias = configSistema.lembTarefasDias || [];
+  if(dias.indexOf(_diaSemanaHoje()) < 0) return false;         // dia não liberado
+  if(_horaAgoraMin() < _hhmmParaMin(configSistema.lembTarefasHora)) return false; // cedo demais
+  return true;
+}
+
+/* Dia da semana liberado para reuniões? */
+function _diaReuniaoOk() {
+  const dias = configSistema.lembReuniaoDias || [];
+  return dias.indexOf(_diaSemanaHoje()) >= 0;
+}
+
+/* ─── Controle de duplicatas ─── */
+function _lembreteJaEnviado(chave) {
+  configSistema._lembretesEnviados = configSistema._lembretesEnviados || {};
+  return !!configSistema._lembretesEnviados[chave];
+}
+function _marcarLembreteEnviado(chave) {
+  configSistema._lembretesEnviados = configSistema._lembretesEnviados || {};
+  configSistema._lembretesEnviados[chave] = Date.now();
+  const limite = Date.now() - 60*24*60*60*1000;
+  Object.keys(configSistema._lembretesEnviados).forEach(k => {
+    if(configSistema._lembretesEnviados[k] < limite) delete configSistema._lembretesEnviados[k];
+  });
+  try { _salvarLocal(); } catch(e) {}
+}
+
+function _emailJSPronto() {
+  return !!(configSistema.emailJSServiceId && configSistema.emailJSTemplateId
+            && configSistema.emailJSPublicKey && typeof emailjs !== 'undefined');
+}
+
+/* Envio unitário — 1 destinatário, 1 e-mail */
+function _enviarEmail(to_email, to_name, subject, message) {
+  if(!_emailJSPronto()) { console.warn('[EmailJS] não configurado — e-mail não enviado:', subject); return Promise.resolve(false); }
+  try { _emailjsInit(); } catch(e) {}
+  return emailjs.send(configSistema.emailJSServiceId, configSistema.emailJSTemplateId, {
+    to_email: to_email,
+    to_name:  to_name || 'Usuário',
+    subject:  subject,
+    message:  message
+  }, configSistema.emailJSPublicKey).then(
+    function(){ return true; },
+    function(err){ console.warn('[EmailJS] falha para ' + to_email + ':', (err && (err.text||err.message)) || err); return false; }
+  );
+}
+
+/* ═══════ 1) RESUMO DIÁRIO DE TAREFAS ═══════
+   Um e-mail por responsável, uma vez por dia, com as tarefas em aberto
+   separadas em: A Fazer · Em Andamento · Em Atraso.                       */
+function _classificarTarefa(t, hj) {
+  if(t.status === 'Concluída' || t.status === 'Cancelada') return null;
+  if(t.prazo && t.prazo < hj) return 'atraso';          // prazo vencido tem prioridade
+  if(t.status === 'Em andamento') return 'andamento';
+  return 'afazer';                                       // Pendente / A Fazer
+}
+
+function montarResumoTarefas(responsavel, hj) {
+  const minhas = tarefasData.filter(t => !t.excluido && t.responsavel === responsavel);
+  const g = { afazer: [], andamento: [], atraso: [] };
+  minhas.forEach(t => { const c = _classificarTarefa(t, hj); if(c) g[c].push(t); });
+  return g;
+}
+
+function _linhaTarefa(t, hj) {
+  let s = '  • ' + t.titulo;
+  const v = _vinculoLabel(t);
+  if(v) s += ' [' + v + ']';
+  if(t.prioridade === 'Alta') s += ' (PRIORIDADE ALTA)';
+  if(t.prazo) {
+    s += ' — prazo ' + fmtData(t.prazo);
+    if(t.prazo < hj) {
+      const dias = Math.floor((new Date(hj) - new Date(t.prazo)) / 86400000);
+      s += ' (atrasada ' + dias + ' dia' + (dias>1?'s':'') + ')';
+    } else if(t.prazo === hj) {
+      s += ' (vence HOJE)';
+    }
+  }
+  return s;
+}
+
+function enviarResumoDiarioTarefas(forcar) {
+  if(!forcar && !_janelaTarefasOk()) return 0;   // desligado, dia não liberado, ou cedo demais
   const hj = hoje();
-  // Verificar tarefas com lembrete hoje
-  const lembretes = tarefasData.filter(t => t.lembrete === hj && t.status !== 'Concluída' && t.status !== 'Cancelada');
-  lembretes.forEach(t => {
-    enviarEmailLembrete({
-      tipo: 'tarefa',
-      titulo: t.titulo,
-      responsavel: t.responsavel,
-      prazo: t.prazo,
-      id: t.id
-    });
+  // Todos os responsáveis com tarefa em aberto
+  const resps = [];
+  tarefasData.forEach(t => {
+    if(t.excluido) return;
+    if(t.status === 'Concluída' || t.status === 'Cancelada') return;
+    if(t.responsavel && resps.indexOf(t.responsavel) < 0) resps.push(t.responsavel);
   });
 
-  // Verificar reuniões agendadas para hoje ou amanhã
-  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
-  const amanhaStr = amanha.toISOString().split('T')[0];
-  const reunioes = atasData.filter(a => (a.data === hj || a.data === amanhaStr) && a.status === 'Agendada');
-  reunioes.forEach(a => {
-    enviarEmailLembrete({
-      tipo: 'reuniao',
-      titulo: a.titulo,
-      data: a.data,
-      hora: a.hora || '',
-      local: a.local || '',
-      participantes: a.participantes || []
-    });
+  let enviados = 0;
+  resps.forEach(resp => {
+    const chave = 'resumo-tarefas|' + resp + '|' + hj;
+    if(!forcar && _lembreteJaEnviado(chave)) return;      // 1x por dia
+
+    const g = montarResumoTarefas(resp, hj);
+    const total = g.afazer.length + g.andamento.length + g.atraso.length;
+    if(total === 0) return;                                // nada em aberto, não incomoda
+
+    const email = _emailDoUsuario(resp);
+    if(!email) {
+      console.warn('[Lembretes] "' + resp + '" sem e-mail cadastrado — resumo não enviado.');
+      return;
+    }
+
+    let m = 'Bom dia, ' + resp + '!\n\n';
+    m += 'Resumo das suas tarefas em ' + fmtData(hj) + ':\n\n';
+    m += '📌 A FAZER: ' + g.afazer.length + '\n';
+    m += '⚙️ EM ANDAMENTO: ' + g.andamento.length + '\n';
+    m += '⚠️ EM ATRASO: ' + g.atraso.length + '\n';
+    m += '\n────────────────────────\n';
+
+    if(g.atraso.length) {
+      m += '\n⚠️ EM ATRASO — resolver com urgência (' + g.atraso.length + ')\n';
+      g.atraso.sort((a,b) => (a.prazo||'').localeCompare(b.prazo||''));
+      g.atraso.forEach(t => { m += _linhaTarefa(t, hj) + '\n'; });
+    }
+    if(g.andamento.length) {
+      m += '\n⚙️ EM ANDAMENTO (' + g.andamento.length + ')\n';
+      g.andamento.forEach(t => { m += _linhaTarefa(t, hj) + '\n'; });
+    }
+    if(g.afazer.length) {
+      m += '\n📌 A FAZER (' + g.afazer.length + ')\n';
+      g.afazer.sort((a,b) => (a.prazo||'9999').localeCompare(b.prazo||'9999'));
+      g.afazer.forEach(t => { m += _linhaTarefa(t, hj) + '\n'; });
+    }
+    m += '\n────────────────────────\n';
+    m += 'Total em aberto: ' + total + '\n';
+    m += '\nGestCom · Comercial Três Vales';
+
+    const assunto = (g.atraso.length ? '⚠️ ' : '📋 ') + 'Suas tarefas de ' + fmtData(hj)
+                  + ' — ' + total + ' em aberto'
+                  + (g.atraso.length ? ' (' + g.atraso.length + ' em atraso)' : '');
+
+    _enviarEmail(email, resp, assunto, m);
+    _marcarLembreteEnviado(chave);
+    enviados++;
   });
+
+  return enviados;
 }
 
-function enviarEmailLembrete(dados) {
-  // Se EmailJS está configurado
-  const serviceId = configSistema.emailJSServiceId || '';
-  const templateId = configSistema.emailJSTemplateId || '';
-  const publicKey = configSistema.emailJSPublicKey || '';
+/* ═══════ 2) REUNIÕES — convite + D-1 + no dia ═══════ */
+function _blocoLocalReuniao(a) {
+  const loc = (a.local || '').trim();
+  if(!loc) return 'Local: a definir\n';
+  // Detecta link de videoconferência
+  if(/^https?:\/\//i.test(loc) || /(meet\.google|zoom\.us|teams\.microsoft|webex|whereby)/i.test(loc)) {
+    const link = loc.match(/https?:\/\/\S+/i);
+    return '💻 REUNIÃO ONLINE\nLink de acesso: ' + (link ? link[0] : loc) + '\n';
+  }
+  return '📍 PRESENCIAL\nLocal: ' + loc + '\n';
+}
 
-  if(serviceId && templateId && publicKey && typeof emailjs !== 'undefined') {
-    // Encontrar e-mails dos responsáveis/participantes
-    let emails = [];
-    if(dados.tipo === 'tarefa') {
-      const usr = usuarios.find(u=>u.nome===dados.responsavel);
-      if(usr?.email) emails.push(usr.email);
-    } else if(dados.tipo === 'reuniao' && dados.participantes) {
-      dados.participantes.forEach(p => {
-        const usr = usuarios.find(u=>u.nome===p);
-        if(usr?.email) emails.push(usr.email);
-      });
-    }
-    if(configSistema.emailAdmin) emails.push(configSistema.emailAdmin);
+function _corpoReuniao(a, cabecalho) {
+  let m = cabecalho + '\n\n';
+  m += '📅 ' + a.titulo + '\n';
+  m += 'Data: ' + fmtData(a.data) + (a.hora ? ' às ' + a.hora : '') + '\n';
+  m += _blocoLocalReuniao(a);
+  const v = _vinculoLabel(a);
+  if(v) m += 'Assunto referente a: ' + v + '\n';
+  if(a.participantes && a.participantes.length) m += 'Participantes: ' + a.participantes.join(', ') + '\n';
+  if(a.pauta && a.pauta.trim()) m += '\n📝 PAUTA:\n' + a.pauta.trim() + '\n';
+  m += '\nGestCom · Comercial Três Vales';
+  return m;
+}
 
-    emails.filter(Boolean).forEach(email => {
-      emailjs.send(serviceId, templateId, {
-        to_email: email,
-        subject: dados.tipo==='tarefa' ? `⏰ Lembrete de Tarefa: ${dados.titulo}` : `📅 Lembrete de Reunião: ${dados.titulo}`,
-        message: dados.tipo==='tarefa'
-          ? `Tarefa: ${dados.titulo}\nResponsável: ${dados.responsavel}\nPrazo: ${fmtData(dados.prazo)}\nStatus: Pendente`
-          : `Reunião: ${dados.titulo}\nData: ${fmtData(dados.data)} ${dados.hora}\nLocal: ${dados.local}`,
-      }, publicKey).catch(e => console.warn('[EmailJS]', e));
-    });
+/* fase: 'convite' | 'vespera' | 'hoje' */
+function enviarConviteReuniao(a, fase) {
+  if(!a || a.status !== 'Agendada') return 0;
+
+  let cabecalho, assunto;
+  if(fase === 'convite') {
+    cabecalho = 'Você foi convidado para uma reunião:';
+    assunto   = '📅 Convite de reunião: ' + a.titulo + ' — ' + fmtData(a.data);
+  } else if(fase === 'vespera') {
+    cabecalho = 'Lembrete: sua reunião é AMANHÃ.';
+    assunto   = '⏰ Amanhã: ' + a.titulo + ' — ' + fmtData(a.data) + (a.hora ? ' às ' + a.hora : '');
   } else {
-    // Fallback: mostrar notificação no sistema
-    if(dados.tipo === 'tarefa') {
-      toast(`⏰ Lembrete: ${dados.titulo} — Responsável: ${dados.responsavel}`, 'warning');
+    cabecalho = 'Lembrete: sua reunião é HOJE.';
+    assunto   = '🔔 HOJE: ' + a.titulo + (a.hora ? ' às ' + a.hora : '');
+  }
+
+  const corpo = _corpoReuniao(a, cabecalho);
+
+  // Destinatários = participantes com e-mail (+ admin, se configurado)
+  const destinos = [];
+  (a.participantes || []).forEach(p => {
+    const e = _emailDoUsuario(p);
+    if(e) destinos.push({ email: e, nome: p });
+    else console.warn('[Reunião] participante "' + p + '" sem e-mail cadastrado.');
+  });
+  if(configSistema.emailAdmin && !destinos.some(d => d.email === configSistema.emailAdmin)) {
+    destinos.push({ email: configSistema.emailAdmin, nome: 'Admin' });
+  }
+
+  if(!destinos.length) {
+    toast('⚠️ "' + a.titulo + '": nenhum participante com e-mail cadastrado.', 'warning');
+    return 0;
+  }
+
+  destinos.forEach(d => _enviarEmail(d.email, d.nome, assunto, corpo));
+  return destinos.length;
+}
+
+function verificarLembretesReunioes(forcar) {
+  if(!forcar && !configSistema.lembReuniaoAtivo) return 0;
+  if(!forcar && !_diaReuniaoOk()) return 0;          // dia da semana bloqueado
+
+  const hj = hoje(), amanha = _amanhaISO();
+  const agoraMin = _horaAgoraMin();
+  let n = 0;
+
+  atasData.forEach(a => {
+    if(a.excluido || a.status !== 'Agendada') return;
+
+    // ── Véspera: 1 dia antes, a partir da hora configurada ──
+    if(a.data === amanha && (forcar || configSistema.lembReuniaoVespera)) {
+      const k = 'reuniao-vespera|' + a.id + '|' + a.data;
+      const horaOk = forcar || agoraMin >= _hhmmParaMin(configSistema.lembReuniaoVesperaHora);
+      if(horaOk && (forcar || !_lembreteJaEnviado(k))) {
+        if(enviarConviteReuniao(a, 'vespera')) { _marcarLembreteEnviado(k); n++; }
+      }
     }
+
+    // ── No dia: X horas antes do horário da reunião ──
+    if(a.data === hj && (forcar || configSistema.lembReuniaoDia)) {
+      const k = 'reuniao-hoje|' + a.id + '|' + a.data;
+      let horaOk = true;
+      if(!forcar) {
+        const horas = parseFloat(configSistema.lembReuniaoHorasAntes);
+        const antecedencia = (isNaN(horas) ? 2 : horas) * 60;
+        if(a.hora) {
+          const inicio = _hhmmParaMin(a.hora);
+          // janela: abre X horas antes e fecha no horário da reunião
+          horaOk = (agoraMin >= inicio - antecedencia) && (agoraMin <= inicio);
+        }
+        // Sem horário definido na ata, avisa em qualquer momento do dia.
+      }
+      if(horaOk && (forcar || !_lembreteJaEnviado(k))) {
+        if(enviarConviteReuniao(a, 'hoje')) { _marcarLembreteEnviado(k); n++; }
+      }
+    }
+  });
+  return n;
+}
+
+/* Chamado no login e a cada 30 min */
+function verificarLembretesHoje() {
+  if(!_emailJSPronto()) return;
+  try { enviarResumoDiarioTarefas(false); } catch(e) { console.warn('[Lembretes] tarefas:', e); }
+  try { verificarLembretesReunioes(false); } catch(e) { console.warn('[Lembretes] reuniões:', e); }
+}
+
+/* Compat: chamado ao salvar tarefa. O resumo é diário, então salvar uma
+   tarefa não dispara e-mail — apenas garante o resumo do dia se ainda não saiu. */
+function agendarLembreteTarefa(tarefa) {
+  try { enviarResumoDiarioTarefas(false); } catch(e) { console.warn('[Lembretes]', e); }
+}
+
+/* Compat com chamadas antigas de enviarEmailLembrete() */
+function enviarEmailLembrete(dados) {
+  if(!dados) return;
+  if(dados.tipo === 'reuniao') {
+    const a = atasData.find(x => x.id === dados.id) || dados;
+    enviarConviteReuniao(a, 'convite');
+  } else {
+    enviarResumoDiarioTarefas(false);
   }
 }
 
@@ -19448,6 +19933,7 @@ function novaAta() {
   el('ata-deliberacoes').value = '';
   el('ata-proximos-passos').value = '';
   el('ata-cli').value = '';
+  if(el('ata-industria')) el('ata-industria').value = '';
   popularSelectAtaParticipantes();
   el('ata-participantes-list').innerHTML = '';
   _ataParticipantesSel = [];
@@ -19463,6 +19949,11 @@ function popularSelectAtaParticipantes() {
   if(selCli) {
     selCli.innerHTML = '<option value="">Sem cliente vinculado</option>' +
       clientes.filter(c=>c.status==='Ativo').map(c=>`<option value="${c.nome}">${esc(c.nome)}</option>`).join('');
+  }
+  const selInd = el('ata-industria');
+  if(selInd) {
+    selInd.innerHTML = '<option value="">Sem indústria vinculada</option>' +
+      industrias.filter(i=>!i.status || i.status==='Ativo').map(i=>`<option value="${esc(i.nome)}">${esc(i.nome)}</option>`).join('');
   }
 }
 
@@ -19498,7 +19989,7 @@ function salvarAta() {
   if(!titulo) { alert('Informe o título da reunião.'); return; }
 
   const obj = {
-    id: _ataEditId || ('ATA-' + String(atasData.length+1).padStart(4,'0')),
+    id: _ataEditId || _proximoIdAta(),
     titulo,
     data: el('ata-data')?.value || hoje(),
     hora: el('ata-hora')?.value || '',
@@ -19508,36 +19999,30 @@ function salvarAta() {
     deliberacoes: el('ata-deliberacoes')?.value || '',
     proximosPassos: el('ata-proximos-passos')?.value || '',
     cliente: el('ata-cli')?.value || '',
+    industria: el('ata-industria')?.value || '',
     participantes: [..._ataParticipantesSel],
     criadoPor: usuarioLogado?.nome || '—',
     criadoEm: _ataEditId ? (atasData.find(a=>a.id===_ataEditId)?.criadoEm||hoje()) : hoje()
   };
 
+  const ehNova = !_ataEditId;
   if(_ataEditId) {
     atasData = atasData.map(a => a.id===_ataEditId ? obj : a);
   } else {
     atasData.push(obj);
-    // Enviar convite/lembrete para participantes
-    if(obj.status === 'Agendada') {
-      obj.participantes.forEach(p => {
-        const usr = usuarios.find(u=>u.nome===p);
-        if(usr?.email) {
-          enviarEmailLembrete({
-            tipo: 'reuniao',
-            titulo: obj.titulo,
-            data: obj.data,
-            hora: obj.hora,
-            local: obj.local,
-            participantes: obj.participantes
-          });
-        }
-      });
-    }
   }
 
   syncAutoSaveHook();
   closeModal('modal-ata');
   renderAtas();
+
+  // FIX: o convite era disparado DENTRO do forEach dos participantes, e
+  // enviarEmailLembrete já manda para todos — 5 participantes = 25 e-mails.
+  // Agora é uma chamada só, e o convite sai assim que a ata é criada.
+  if(ehNova && obj.status === 'Agendada' && configSistema.lembReuniaoAtivo && configSistema.lembReuniaoConvite) {
+    enviarConviteReuniao(obj, 'convite');
+  }
+
   toast('Ata salva com sucesso!');
 }
 
@@ -19555,7 +20040,10 @@ function editarAta(id) {
   el('ata-deliberacoes').value = a.deliberacoes||'';
   el('ata-proximos-passos').value = a.proximosPassos||'';
   popularSelectAtaParticipantes();
-  setTimeout(()=>{ if(el('ata-cli')) el('ata-cli').value = a.cliente||''; }, 50);
+  setTimeout(()=>{
+    if(el('ata-cli')) el('ata-cli').value = a.cliente||'';
+    if(el('ata-industria')) el('ata-industria').value = a.industria||'';
+  }, 50);
   _ataParticipantesSel = [...(a.participantes||[])];
   renderAtaParticipantes();
   openModal('modal-ata');
@@ -19602,7 +20090,7 @@ function renderAtas() {
   const filtStatus = el('ata-filtro-status')?.value||'';
 
   const list = atasData.filter(a=>{
-    if(busca && !a.titulo.toLowerCase().includes(busca) && !(a.cliente||'').toLowerCase().includes(busca)) return false;
+    if(busca && !a.titulo.toLowerCase().includes(busca) && !(a.cliente||'').toLowerCase().includes(busca) && !(a.industria||'').toLowerCase().includes(busca)) return false;
     if(filtMes && !(a.data||'').startsWith(filtMes)) return false;
     if(filtStatus && a.status!==filtStatus) return false;
     return true;
@@ -19625,7 +20113,7 @@ function renderAtas() {
             <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">${esc(a.titulo)}</div>
             <div style="font-size:12px;color:#888;margin-top:4px">
               📅 ${fmtData(a.data)}${a.hora?' às '+a.hora:''} ${a.local?'· 📍 '+esc(a.local):''}
-              ${a.cliente?' · 👥 '+esc(a.cliente):''}
+              ${_vinculoLabel(a)?' · 🔗 '+esc(_vinculoLabel(a)):''}
             </div>
             ${(a.participantes||[]).length>0?`<div style="margin-top:6px">${a.participantes.map(p=>`<span style="display:inline-block;background:var(--cinza);border-radius:20px;padding:2px 8px;font-size:11px;margin:2px">👤 ${esc(p)}</span>`).join('')}</div>`:''}
           </div>
@@ -19699,6 +20187,7 @@ function converterPendenciasEmTarefas() {
       prioridade: prior,
       status: 'Pendente',
       cliente: a.cliente || '',
+      industria: a.industria || '',
       origemAta: a.id,
       notas: [], comentarios: [], anexos: [],
       historico: [{quando:new Date().toISOString(), quem:((usuarioLogado||{}).nome)||'—', o_que:'Criada a partir da ata "'+(a.titulo||'')+'"'}],
@@ -19708,16 +20197,24 @@ function converterPendenciasEmTarefas() {
     tarefasData.push(nova);
     criadas++;
     // avisa o responsável por e-mail
+    // FIX: chamava enviarEmailLembrete({to_email, subject, message}) — formato
+    // que aquela função não entende. Nunca enviava nada. Agora usa _enviarEmail.
     try {
-      var u = usuarios.find(function(x){ return x.nome===resp; });
-      if (u && u.email && typeof enviarEmailLembrete === 'function') {
-        enviarEmailLembrete({
-          to_email: u.email, to_name: u.nome,
-          subject: 'Nova tarefa da reunião: ' + (a.titulo||''),
-          message: 'Você recebeu uma tarefa da reunião "' + (a.titulo||'') + '":\n\n' + txt + (prazo ? '\n\nPrazo: ' + fmtData(prazo) : '')
-        });
+      var em = _emailDoUsuario(resp);
+      if (em) {
+        var vinc = _vinculoLabel(nova);
+        _enviarEmail(em, resp,
+          '📌 Nova tarefa da reunião: ' + (a.titulo||''),
+          'Você recebeu uma nova tarefa a partir da reunião "' + (a.titulo||'') + '":\n\n' +
+          '• ' + txt + '\n' +
+          (vinc ? 'Referente a: ' + vinc + '\n' : '') +
+          (prazo ? 'Prazo: ' + fmtData(prazo) + '\n' : '') +
+          'Prioridade: ' + prior + '\n\n' +
+          'Ela já aparece no seu resumo diário de tarefas.\n\nGestCom · Comercial Três Vales');
+      } else {
+        console.warn('[Ata→Tarefa] "' + resp + '" sem e-mail cadastrado.');
       }
-    } catch(e) {}
+    } catch(e) { console.warn('[Ata→Tarefa]', e); }
   }
   if (criadas === 0) { toast('Nenhuma pendência selecionada.', 'error'); return; }
   addAudit((usuarioLogado||{}).login||'?', criadas + ' tarefa(s) criada(s) da ata: ' + (a.titulo||''), '✅');
@@ -21686,6 +22183,34 @@ function _emailjsInit() {
   catch(e) { try { emailjs.init(pk); return true; } catch(e2) { console.warn('[EmailJS] init:', e2); return false; } }
 }
 
+/* Verificações manuais — forçam o envio agora, ignorando o "já enviado hoje". */
+function _checarEmailJSConfigurado() {
+  if(!configSistema.emailJSServiceId || !configSistema.emailJSTemplateId || !configSistema.emailJSPublicKey) {
+    toast('Configure e salve o EmailJS primeiro (Service ID, Template ID e Public Key).', 'error');
+    return false;
+  }
+  if(typeof emailjs === 'undefined') {
+    toast('Biblioteca do EmailJS ainda não carregou. Aguarde e tente de novo.', 'error');
+    return false;
+  }
+  try { _emailjsInit(); } catch(e) {}
+  return true;
+}
+
+function enviarResumoTarefasAgora() {
+  if(!_checarEmailJSConfigurado()) return;
+  var n = enviarResumoDiarioTarefas(true);   // forçar
+  toast(n > 0 ? ('Resumo enviado para ' + n + ' responsável(is).')
+              : 'Ninguém tem tarefa em aberto — nenhum resumo enviado.');
+}
+
+function verificarReunioesAgora() {
+  if(!_checarEmailJSConfigurado()) return;
+  var n = verificarLembretesReunioes(true);  // forçar
+  toast(n > 0 ? ('Disparados ' + n + ' lembrete(s) de reunião.')
+              : 'Nenhuma reunião agendada para hoje ou amanhã.');
+}
+
 function testarEmailJS() {
   var s = (el('cfg-emailjs-service')||{}).value || '';
   var t = (el('cfg-emailjs-template')||{}).value || '';
@@ -21721,6 +22246,7 @@ function testarEmailJS() {
   if (!dest) { toast('Seu usuário não tem e-mail cadastrado. Preencha em Usuários ou no E-mail do admin.', 'error'); return; }
   // salva antes de testar
   configSistema.emailJSServiceId = s; configSistema.emailJSTemplateId = t; configSistema.emailJSPublicKey = k;
+  try { _salvarLocal(); } catch(e) {}   // FIX: persistir de verdade
   _emailjsInit();
   toast('Enviando e-mail de teste...');
   emailjs.send(s, t, {
@@ -21788,6 +22314,7 @@ function _avisarTarefaConcluida(t) {
       message: 'A tarefa foi concluída.\n\n' +
                'Tarefa: ' + (t.titulo||'') + '\n' +
                'Responsável: ' + (t.responsavel||'—') + '\n' +
+               (_vinculoLabel(t) ? 'Referente a: ' + _vinculoLabel(t) + '\n' : '') +
                (t.prazo ? 'Prazo: ' + fmtData(t.prazo) + '\n' : '') +
                'Concluída em: ' + new Date().toLocaleString('pt-BR') + '\n' +
                (t.descricao ? '\nDescrição: ' + t.descricao : '')
@@ -22735,6 +23262,10 @@ function _avisarTarefaConcluida(t) {
       <div class="form-group full"><label>Descrição</label><textarea id="tar-desc" rows="2" placeholder="Detalhes adicionais..."></textarea></div>
       <div class="form-group"><label>Responsável *</label><select id="tar-resp"><option value="">Selecione...</option></select></div>
       <div class="form-group"><label>Cliente vinculado</label><select id="tar-cliente"><option value="">Sem cliente</option></select></div>
+      <div class="form-group"><label>Indústria vinculada</label><select id="tar-industria"><option value="">Sem indústria</option></select></div>
+      <div class="form-group full" id="tar-vinculo-hint" style="margin-top:-4px">
+        <div style="font-size:11px;color:#888">Deixe os dois vazios para assunto interno · preencha só um · ou combine <strong>Cliente + Indústria</strong> quando o assunto for dessa dupla.</div>
+      </div>
       <div class="form-group"><label>Prioridade</label>
         <select id="tar-prior"><option value="Alta">🔴 Alta</option><option value="Média" selected>🟡 Média</option><option value="Baixa">🟢 Baixa</option></select>
       </div>
@@ -22774,6 +23305,10 @@ function _avisarTarefaConcluida(t) {
         <select id="ata-status-campo"><option>Agendada</option><option>Realizada</option><option>Cancelada</option></select>
       </div>
       <div class="form-group"><label>Cliente / Empresa</label><select id="ata-cli"><option value="">Sem cliente</option></select></div>
+      <div class="form-group"><label>Indústria</label><select id="ata-industria"><option value="">Sem indústria</option></select></div>
+      <div class="form-group full" style="margin-top:-4px">
+        <div style="font-size:11px;color:#888">A reunião pode ser sobre um cliente, uma indústria, ou <strong>os dois juntos</strong>.</div>
+      </div>
     </div>
     <div style="margin-bottom:12px">
       <label style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Participantes</label>
