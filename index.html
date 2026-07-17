@@ -2486,7 +2486,18 @@ tr:last-child td{border-bottom:none;}
             <input type="email" id="cfg-email-admin" placeholder="admin@empresa.com">
           </div>
           <div class="form-group full" style="margin-top:10px"><label>⚙️ E-mail Automático (EmailJS)</label>
-            <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Para o <strong>resumo diário de tarefas</strong> e os <strong>convites/lembretes de reunião</strong> chegarem por e-mail, configure o <a href="https://www.emailjs.com" target="_blank">EmailJS</a>. Gratuito até 200 e-mails/mês.<br><span style="font-size:11px">Seu template no EmailJS precisa ter as variáveis <code>to_email</code>, <code>to_name</code>, <code>subject</code> e <code>message</code>.</span></div>
+            <div class="alert alert-info" style="margin-bottom:10px">ℹ️ Para o <strong>resumo diário de tarefas</strong> e os <strong>convites/lembretes de reunião</strong> chegarem por e-mail, configure o <a href="https://www.emailjs.com" target="_blank">EmailJS</a>. Gratuito até 200 e-mails/mês.</div>
+          <div class="alert alert-warning" style="margin-bottom:10px;font-size:11.5px">
+            <strong>⚠️ E-mail chegando VAZIO (só o assunto)?</strong> O problema é o <strong>template</strong>, não o sistema.<br><br>
+            Vá em <a href="https://dashboard.emailjs.com/admin/templates" target="_blank">emailjs.com → Email Templates</a>, abra o seu template e confira:<br>
+            <div style="background:#fff;border:1px solid #e5d5a0;border-radius:4px;padding:8px;margin:6px 0;font-family:monospace;font-size:11px">
+              <strong>Subject:</strong> {{subject}}<br>
+              <strong>Content:</strong> {{message}}
+            </div>
+            O campo <strong>Content</strong> precisa ter <code>{{message}}</code>. Se estiver vazio ou com outro nome, o corpo não chega.<br><br>
+            <strong>Barras virando <code>&amp;#x2F;</code> na data?</strong> No editor do template, use o modo
+            <strong>Text</strong> (não HTML) no Content — ou troque <code>{{message}}</code> por <code>{{{message}}}</code> (três chaves).
+          </div>
           </div>
           <div class="form-group"><label>EmailJS Service ID</label><input id="cfg-emailjs-service" placeholder="service_xxxxxxx"></div>
           <div class="form-group"><label>EmailJS Template ID</label><input id="cfg-emailjs-template" placeholder="template_xxxxxxx"></div>
@@ -2521,6 +2532,17 @@ tr:last-child td{border-bottom:none;}
               </label>
             </div>
             <div id="cfg-lemb-tar-bloco">
+              <div style="border-left:3px solid var(--verde,#3d9970);padding-left:10px;margin-bottom:12px">
+                <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;font-weight:600">
+                  <input type="checkbox" id="cfg-lemb-tar-nova" style="width:15px;height:15px;cursor:pointer">
+                  ⚡ Avisar na hora em que a tarefa é criada
+                </label>
+                <div style="font-size:11px;color:#888;margin-top:3px">
+                  O responsável recebe um e-mail imediato ao ganhar a tarefa (ou quando ela é repassada para ele).
+                  Editar uma tarefa já sua não dispara e-mail.
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:700;color:#666;margin-bottom:5px">📋 RESUMO DIÁRIO</div>
               <div style="font-size:11px;color:#666;margin-bottom:8px">
                 Um e-mail por responsável, uma vez por dia, com 📌 A Fazer · ⚙️ Em Andamento · ⚠️ Em Atraso.
               </div>
@@ -4042,6 +4064,7 @@ let configSistema = {
   lembTarefasAtivo:   true,
   lembTarefasDias:    [1,2,3,4,5],   // seg a sex
   lembTarefasHora:    '08:00',       // não envia antes disso
+  lembTarefaNova:     true,          // avisa na hora em que a tarefa é criada/repassada
   lembReuniaoAtivo:   true,
   lembReuniaoConvite: true,          // e-mail na hora em que a ata é criada
   lembReuniaoVespera: true,          // e-mail 1 dia antes
@@ -4269,6 +4292,7 @@ window._pushPendente = false;
 function _migrarConfigLembretes() {
   var padrao = {
     lembTarefasAtivo: true, lembTarefasDias: [1,2,3,4,5], lembTarefasHora: '08:00',
+    lembTarefaNova: true,
     lembReuniaoAtivo: true, lembReuniaoConvite: true,
     lembReuniaoVespera: true, lembReuniaoVesperaHora: '17:00',
     lembReuniaoDia: true, lembReuniaoHorasAntes: 2, lembReuniaoDias: [1,2,3,4,5]
@@ -12640,6 +12664,7 @@ function renderConfigLembretes() {
 
   // Switches on/off
   if(el('cfg-lemb-tar-ativo')) el('cfg-lemb-tar-ativo').checked = !!configSistema.lembTarefasAtivo;
+  if(el('cfg-lemb-tar-nova'))  el('cfg-lemb-tar-nova').checked  = !!configSistema.lembTarefaNova;
   if(el('cfg-lemb-reu-ativo')) el('cfg-lemb-reu-ativo').checked = !!configSistema.lembReuniaoAtivo;
 
   // Horários e antecedência
@@ -12693,6 +12718,7 @@ function toggleBlocoLembrete(qual) {
 /* Lê a agenda da tela para o configSistema */
 function _coletarConfigLembretes() {
   if(el('cfg-lemb-tar-ativo')) configSistema.lembTarefasAtivo = el('cfg-lemb-tar-ativo').checked;
+  if(el('cfg-lemb-tar-nova'))  configSistema.lembTarefaNova   = el('cfg-lemb-tar-nova').checked;
   if(el('cfg-lemb-reu-ativo')) configSistema.lembReuniaoAtivo = el('cfg-lemb-reu-ativo').checked;
   if(el('cfg-lemb-tar-hora') && el('cfg-lemb-tar-hora').value) configSistema.lembTarefasHora = el('cfg-lemb-tar-hora').value;
   if(el('cfg-lemb-reu-vespera-hora') && el('cfg-lemb-reu-vespera-hora').value) configSistema.lembReuniaoVesperaHora = el('cfg-lemb-reu-vespera-hora').value;
@@ -19238,6 +19264,11 @@ function salvarTarefa() {
   const resp = el('tar-resp')?.value || '';
   if(!resp) { alert('Selecione o responsável.'); return; }
 
+  // Guarda quem era o responsável ANTES, para detectar repasse.
+  // Precisa ser lido aqui: logo abaixo o objeto é reconstruído.
+  const _respAnterior = _tarEditId ? ((tarefasData.find(t=>t.id===_tarEditId)||{}).responsavel || '') : '';
+  const _ehNovaTarefa = !_tarEditId;
+
   const obj = {
     id: _tarEditId || _proximoIdTarefa(),
     titulo,
@@ -19279,9 +19310,14 @@ function salvarTarefa() {
   renderTarefas();
   atualizarBadgeTarefas();
 
-  // Enviar lembrete por e-mail se lembrete configurado
-  if(obj.lembrete && obj.lembrete >= hoje()) {
-    agendarLembreteTarefa(obj);
+  // ── Aviso imediato ──
+  // Sai quando a tarefa é criada, ou quando muda de responsável (repasse).
+  // Editar título/prazo/status de uma tarefa já sua NÃO dispara e-mail —
+  // senão cada ajuste viraria spam para a mesma pessoa.
+  if(_ehNovaTarefa) {
+    avisarTarefaAtribuida(obj, 'nova');
+  } else if(_respAnterior && _respAnterior !== obj.responsavel) {
+    avisarTarefaAtribuida(obj, 'repasse');
   }
 
   toast('Tarefa salva com sucesso!');
@@ -19647,6 +19683,17 @@ function _emailDoUsuario(nomeOuLogin) {
   return (u && u.email) ? u.email.trim() : '';
 }
 
+/* FIX: o campo Subject do EmailJS faz escape de HTML e não aceita a sintaxe
+   de três chaves. Resultado: a barra "/" da data virava "&#x2F;" no assunto
+   ("20&#x2F;07&#x2F;2026"). Como não dá para consertar do lado do template,
+   o assunto passa a usar data por extenso — sem barra, sem escape. */
+const _MESES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function fmtDataAssunto(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));
+  if(!m) return String(iso||'');
+  return parseInt(m[3],10) + ' ' + _MESES_ABREV[parseInt(m[2],10)-1] + ' ' + m[1];
+}
+
 /* Rótulo do vínculo Cliente / Indústria / ambos */
 function _vinculoLabel(o) {
   const c = (o && o.cliente) || '', i = (o && o.industria) || '';
@@ -19721,17 +19768,36 @@ function _emailJSPronto() {
 }
 
 /* Envio unitário — 1 destinatário, 1 e-mail */
+/* FIX: o corpo era mandado só como {{message}}. Se o template do EmailJS
+   usasse outro nome de variável, o e-mail chegava com o corpo VAZIO — e sem
+   erro nenhum, porque o EmailJS aceita e ignora parâmetros que não usa.
+   Agora o mesmo conteúdo vai em vários nomes comuns + uma versão HTML.
+   O template usa o que reconhecer; o resto é descartado silenciosamente. */
 function _enviarEmail(to_email, to_name, subject, message) {
   if(!_emailJSPronto()) { console.warn('[EmailJS] não configurado — e-mail não enviado:', subject); return Promise.resolve(false); }
   try { _emailjsInit(); } catch(e) {}
-  return emailjs.send(configSistema.emailJSServiceId, configSistema.emailJSTemplateId, {
+
+  // FIX: eu tinha inflado para 14 parâmetros (message/content/body/text/html/
+  // reply_to/...) para tentar adivinhar o nome usado no template. Isso passou a
+  // dar erro no envio — o EmailJS rejeita variáveis a mais / reply_to inválido.
+  // Agora que sabemos que o template usa {{subject}}, {{to_email}} e {{message}},
+  // manda só o essencial. Menos coisa, menos chance de o EmailJS recusar.
+  var params = {
     to_email: to_email,
     to_name:  to_name || 'Usuário',
     subject:  subject,
     message:  message
-  }, configSistema.emailJSPublicKey).then(
+  };
+
+  return emailjs.send(configSistema.emailJSServiceId, configSistema.emailJSTemplateId, params, configSistema.emailJSPublicKey).then(
     function(){ return true; },
-    function(err){ console.warn('[EmailJS] falha para ' + to_email + ':', (err && (err.text||err.message)) || err); return false; }
+    function(err){
+      // FIX: o motivo real do erro ficava só no console. Agora sobe para a tela.
+      var motivo = (err && (err.text || err.message)) || JSON.stringify(err||{});
+      console.warn('[EmailJS] falha para ' + to_email + ':', motivo, err);
+      window.__ultimoErroEmailJS = motivo;
+      return false;
+    }
   );
 }
 
@@ -19820,7 +19886,7 @@ function enviarResumoDiarioTarefas(forcar) {
     m += 'Total em aberto: ' + total + '\n';
     m += '\nGestCom · Comercial Três Vales';
 
-    const assunto = (g.atraso.length ? '⚠️ ' : '📋 ') + 'Suas tarefas de ' + fmtData(hj)
+    const assunto = (g.atraso.length ? '⚠️ ' : '📋 ') + 'Suas tarefas de ' + fmtDataAssunto(hj)
                   + ' — ' + total + ' em aberto'
                   + (g.atraso.length ? ' (' + g.atraso.length + ' em atraso)' : '');
 
@@ -19877,10 +19943,10 @@ function enviarConviteReuniao(a, fase, avisarNaTela) {
   let cabecalho, assunto;
   if(fase === 'convite') {
     cabecalho = 'Você foi convidado para uma reunião:';
-    assunto   = '📅 Convite de reunião: ' + a.titulo + ' — ' + fmtData(a.data);
+    assunto   = '📅 Convite de reunião: ' + a.titulo + ' — ' + fmtDataAssunto(a.data);
   } else if(fase === 'vespera') {
     cabecalho = 'Lembrete: sua reunião é AMANHÃ.';
-    assunto   = '⏰ Amanhã: ' + a.titulo + ' — ' + fmtData(a.data) + (a.hora ? ' às ' + a.hora : '');
+    assunto   = '⏰ Amanhã: ' + a.titulo + ' — ' + fmtDataAssunto(a.data) + (a.hora ? ' às ' + a.hora : '');
   } else {
     cabecalho = 'Lembrete: sua reunião é HOJE.';
     assunto   = '🔔 HOJE: ' + a.titulo + (a.hora ? ' às ' + a.hora : '');
@@ -19982,8 +20048,55 @@ function verificarLembretesHoje() {
   try { verificarLembretesReunioes(false); } catch(e) { console.warn('[Lembretes] reuniões:', e); }
 }
 
+/* ═══════ AVISO IMEDIATO DE TAREFA ═══════
+   Sai na hora em que a tarefa é criada (ou repassada para outra pessoa).
+   Independente do resumo diário: este avisa "você recebeu isto agora",
+   o resumo lembra "isto está em aberto". */
+function avisarTarefaAtribuida(t, motivo) {
+  if(!t) return 0;
+  if(!configSistema.lembTarefasAtivo) return 0;
+  if(!configSistema.lembTarefaNova) return 0;          // desligável na config
+  if(t.status === 'Concluída' || t.status === 'Cancelada') return 0;
+
+  const email = _emailDoUsuario(t.responsavel);
+  if(!email) {
+    toast('⚠️ Tarefa salva, mas "' + (t.responsavel||'—') + '" não tem e-mail cadastrado — aviso não enviado.', 'warning');
+    return 0;
+  }
+  if(!_emailJSPronto()) {
+    toast('⚠️ Tarefa salva. Aviso por e-mail não enviado: EmailJS não configurado.', 'warning');
+    return 0;
+  }
+
+  // Não avisa a si mesmo — quem criou já sabe
+  const meuEmail = (usuarioLogado && usuarioLogado.email) || '';
+  if(meuEmail && meuEmail.toLowerCase() === email.toLowerCase()) return 0;
+
+  const vinc = _vinculoLabel(t);
+  const prazoTxt = t.prazo ? fmtData(t.prazo) : 'sem prazo definido';
+  let m = (motivo === 'repasse' ? 'Uma tarefa foi repassada para você:' : 'Você recebeu uma nova tarefa:') + '\n\n';
+  m += '📌 ' + t.titulo + '\n';
+  if(t.descricao && t.descricao.trim()) m += '\n' + t.descricao.trim() + '\n';
+  m += '\nPrazo: ' + prazoTxt;
+  if(t.prazo === hoje()) m += ' (é HOJE)';
+  else if(t.prazo && t.prazo < hoje()) m += ' (JÁ VENCIDO)';
+  m += '\n';
+  m += 'Prioridade: ' + (t.prioridade || 'Média') + (t.prioridade === 'Alta' ? ' 🔴' : '') + '\n';
+  if(vinc) m += 'Referente a: ' + vinc + '\n';
+  m += 'Criada por: ' + (t.criadoPor || '—') + '\n';
+  m += '\nEla também vai aparecer no seu resumo diário de tarefas.\n';
+  m += '\nGestCom · Comercial Três Vales';
+
+  const assunto = (t.prioridade === 'Alta' ? '🔴 ' : '📌 ')
+                + (motivo === 'repasse' ? 'Tarefa repassada: ' : 'Nova tarefa: ') + t.titulo;
+
+  _enviarEmail(email, t.responsavel, assunto, m);
+  toast('✉️ Aviso enviado para ' + t.responsavel + '.');
+  return 1;
+}
+
 /* Compat: chamado ao salvar tarefa. O resumo é diário, então salvar uma
-   tarefa não dispara e-mail — apenas garante o resumo do dia se ainda não saiu. */
+   tarefa não dispara o resumo — apenas garante o do dia se ainda não saiu. */
 function agendarLembreteTarefa(tarefa) {
   try { enviarResumoDiarioTarefas(false); } catch(e) { console.warn('[Lembretes]', e); }
 }
@@ -22393,19 +22506,38 @@ function testarEmailJS() {
   try { _salvarLocal(); } catch(e) {}   // FIX: persistir de verdade
   _emailjsInit();
   toast('Enviando e-mail de teste...');
-  emailjs.send(s, t, {
-    to_email: dest,
-    to_name:  (usuarioLogado && usuarioLogado.nome) || 'Usuário',
-    subject:  'GestCom — e-mail de teste',
-    message:  'Este é um e-mail de teste do GestCom.\n\nSe você recebeu, os lembretes de tarefas e os convites de reunião vão funcionar.\n\nEnviado em ' + new Date().toLocaleString('pt-BR')
-  }, k).then(function(){
-    toast('E-mail de teste enviado para ' + dest + '. Confira a caixa de entrada.');
-    try { addAudit((usuarioLogado||{}).login||'?', 'Testou o envio de e-mail (EmailJS)', '✉️'); } catch(e) {}
-  }, function(err){
-    console.warn('[EmailJS teste]', err);
-    var msg = (err && (err.text || err.message)) || 'erro desconhecido';
-    toast('Falhou: ' + msg, 'error');
-  });
+
+  // FIX: o teste montava os próprios parâmetros, diferentes dos do envio real.
+  // Resultado: o teste passava e os convites chegavam vazios. Agora usa
+  // exatamente o mesmo caminho (_enviarEmail) que os convites e resumos.
+  var corpo = 'Este é um e-mail de teste do GestCom.\n\n' +
+    'Se você está lendo ESTE TEXTO, o template está correto e os convites de\n' +
+    'reunião e resumos de tarefas vão chegar completos.\n\n' +
+    'Se este e-mail chegou VAZIO (só com o assunto), o template do EmailJS não\n' +
+    'está usando a variável {{message}} no corpo. Edite o template em\n' +
+    'emailjs.com > Email Templates e coloque {{message}} no conteúdo.\n\n' +
+    'Link de teste: https://www.emailjs.com\n\n' +
+    'Enviado em ' + new Date().toLocaleString('pt-BR');
+
+  window.__ultimoErroEmailJS = '';
+  _enviarEmail(dest, (usuarioLogado && usuarioLogado.nome) || 'Usuário', 'GestCom — e-mail de teste', corpo)
+    .then(function(ok){
+      if(ok) {
+        toast('E-mail de teste enviado para ' + dest + '. Se chegar vazio, o problema é o template.');
+        try { addAudit((usuarioLogado||{}).login||'?', 'Testou o envio de e-mail (EmailJS)', '✉️'); } catch(e) {}
+      } else {
+        // FIX: mostra o motivo REAL na tela, em vez de mandar abrir o F12.
+        var m = window.__ultimoErroEmailJS || 'erro desconhecido';
+        var dica = '';
+        if(/recipient|address/i.test(m))        dica = '\n\n➜ O campo "To Email" do template deve estar {{to_email}}.';
+        else if(/template.*not found|invalid/i.test(m)) dica = '\n\n➜ Confira o Template ID e o Service ID.';
+        else if(/public key|user id/i.test(m))  dica = '\n\n➜ Confira a Public Key.';
+        else if(/variables|param/i.test(m))     dica = '\n\n➜ O template tem variável que o sistema não envia.';
+        else if(/quota|limit/i.test(m))         dica = '\n\n➜ Limite mensal do EmailJS atingido (200/mês no plano grátis).';
+        alert('Falha ao enviar o e-mail de teste.\n\nMotivo do EmailJS:\n' + m + dica);
+        toast('Falhou: ' + m, 'error');
+      }
+    });
 }
 
 /* Botão "+ Novo Lançamento" do Financeiro: abre o formulário da aba aberta.
