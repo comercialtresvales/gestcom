@@ -208,6 +208,74 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
 .spinner-light{border-color:rgba(255,255,255,.25);border-top-color:#fff;}
 
 ::-webkit-scrollbar{width:0;height:0;}
+
+/* ══════════ COMPONENTES DAS TELAS ESPECIAIS ══════════ */
+/* Barra de filtros (chips) */
+.app-filters{display:flex;gap:7px;overflow-x:auto;padding:12px 14px 4px;flex-shrink:0;-webkit-overflow-scrolling:touch;}
+.app-filters::-webkit-scrollbar{display:none;}
+.app-chip{white-space:nowrap;font-size:11.5px;font-weight:600;padding:9px 14px;border-radius:20px;background:#fff;color:#666;border:1px solid #e5e5e5;display:flex;align-items:center;gap:4px;transition:transform .1s;}
+.app-chip:active{transform:scale(.95);}
+.app-chip.on{background:var(--preto);color:#fff;border-color:var(--preto);}
+.app-chip.mes{background:var(--amarelo);color:#000;border-color:var(--amarelo);}
+
+/* KPIs */
+.app-kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:12px 14px;}
+.app-kpis.k3{grid-template-columns:1fr 1fr 1fr;}
+.app-kpi{background:#fff;border-radius:14px;padding:13px;border:1px solid #eee;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.app-kpi .l{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+.app-kpi .v{font-family:'Syne',sans-serif;font-weight:700;font-size:19px;margin-top:4px;line-height:1.1;}
+.app-kpi .v.sm{font-size:14.5px;}
+.app-kpi .s{font-size:9px;color:#aaa;margin-top:2px;}
+.app-kpi.hl{background:var(--preto);}
+.app-kpi.hl .l{color:#bbb;}.app-kpi.hl .v{color:var(--amarelo);}.app-kpi.hl .s{color:#888;}
+
+.cards-wrap{padding:0 14px;}
+.seclbl-app{font-size:10px;color:#999;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:16px 18px 10px;}
+
+/* Alertas */
+.app-alert{border-radius:12px;padding:11px 14px;font-size:12px;font-weight:600;margin:10px 14px;display:flex;align-items:center;gap:9px;}
+.app-alert.a-red{background:#fef2f2;border:1px solid #fecaca;color:var(--vermelho);}
+.app-alert.a-yellow{background:var(--amarelo-claro);border:1px solid #f0e0a0;color:#8a6d00;}
+.app-alert.big-alert{margin-top:12px;font-size:13px;}
+.alert-ok{text-align:center;color:var(--verde);padding:16px;font-size:12.5px;background:#fff;border-radius:12px;margin:0 14px;border:1px solid #eee;}
+
+/* Dashboard tabelas */
+.dtable{background:#fff;border-radius:14px;border:1px solid #eee;margin:0 14px 10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.dtable .dh{background:#faf9f6;padding:11px 14px;font-size:12.5px;font-weight:700;font-family:'Syne',sans-serif;border-bottom:1px solid #eee;}
+.drow{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid #f4f4f4;transition:background .1s;}
+.drow:last-child{border-bottom:none;}
+.drow:active{background:#faf9f6;}
+.drow .dc{font-size:13px;font-weight:600;}
+.drow .dm{font-size:10.5px;color:#999;margin-top:1px;}
+.drow .dv{font-family:'Syne',sans-serif;font-weight:700;color:var(--verde);font-size:13.5px;}
+.dz-empty{text-align:center;color:#aaa;padding:18px;font-size:12px;}
+
+/* Tabela faturamento mensal */
+.fatgrid-app{margin:6px 14px 4px;background:#fff;border-radius:13px;border:1px solid #eee;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.fatgrid-app::-webkit-scrollbar{height:0;}
+.fatgrid-app table{width:100%;border-collapse:collapse;font-size:11.5px;min-width:max-content;}
+.fatgrid-app th{background:var(--preto);color:#fff;font-weight:600;padding:9px 10px;text-align:right;font-size:10px;white-space:nowrap;position:sticky;top:0;}
+.fatgrid-app th:first-child{text-align:left;left:0;z-index:2;}
+.fatgrid-app td{padding:9px 10px;text-align:right;border-bottom:1px solid #f2f2f2;white-space:nowrap;}
+.fatgrid-app td:first-child{text-align:left;font-weight:600;background:#fff;position:sticky;left:0;}
+.fatgrid-app td.ind{color:var(--laranja);}
+.fatgrid-app tbody tr:last-child td{background:var(--amarelo-claro);font-weight:700;}
+.note-app{background:#fff;border:1px dashed #ddd;border-radius:11px;padding:11px 13px;margin:8px 14px 0;font-size:11px;color:#999;line-height:1.5;}
+
+/* Giro bar */
+.giro-app{margin:4px 14px 12px;background:#fff;border-radius:14px;border:1px solid #eee;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.giro-app .lbl{font-size:11px;color:#999;font-weight:600;margin-bottom:8px;}
+.giro-app .bar{height:10px;background:var(--cinza);border-radius:6px;overflow:hidden;}
+.giro-app .fill{height:100%;background:linear-gradient(90deg,var(--amarelo),var(--laranja));border-radius:6px;transition:width .4s;}
+.giro-app .pct{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-top:8px;text-align:right;}
+
+/* Sell in/out inline */
+.io-lbl{font-size:10px;color:#999;}
+.io-v{font-family:'Syne',sans-serif;font-size:13px;}
+
+/* Ajuste: cards dentro de cards-wrap sem margem lateral dupla */
+.cards-wrap .card{margin-bottom:9px;}
+.lista-contador{font-size:11px;color:#999;font-weight:600;padding:12px 18px 6px;}
 </style>
 </head>
 <body>
@@ -297,7 +365,7 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
       <div class="info-card">
         <div class="info-row"><span class="k">Manter conectado</span><span class="v" id="pf-remember">—</span></div>
         <div class="info-row"><span class="k">Biometria (digital / Face ID)</span><span class="v" id="pf-bio">—</span></div>
-        <div class="info-row"><span class="k">Versão do app</span><span class="v">1.1</span></div>
+        <div class="info-row"><span class="k">Versão do app</span><span class="v">2.0</span></div>
       </div>
       <button class="btn-full btn-dark" id="pf-bio-btn" onclick="toggleBiometriaPerfil()" style="display:none">Ativar biometria</button>
       <button class="btn-full btn-danger" onclick="logout()">Sair da conta</button>
@@ -389,7 +457,7 @@ const TODOS_MODULOS = [
   {key:'ctrlsaldo',      label:'Ctrl. Saldos',      icone:'🏦', cls:'i-blue'},
   {key:'comissoes',      label:'Comissão',          icone:'💰', cls:'i-green'},
   {key:'fatmensal',      label:'Fat. Mensal',       icone:'📅', cls:'i-green'},
-  {key:'sellinout',      label:'Sell In/Out',       icone:'↕️', cls:'i-purple'},
+  {key:'sellinout',      label:'Sell In / Out',     icone:'↕️', cls:'i-purple'},
   {key:'metas',          label:'Metas',             icone:'🎯', cls:'i-red'},
   {key:'relatorios',     label:'Relatórios',        icone:'📈', cls:'i-purple'},
   {key:'mix',            label:'Mix Produtos',      icone:'🧩', cls:'i-gray'},
@@ -400,22 +468,19 @@ const TODOS_MODULOS = [
   {key:'regras',         label:'Regras Com.',       icone:'⚙️', cls:'i-gray'},
 ];
 
-/* Ordem de exibição preferida na home (conforme pedido do cliente).
-   Sell In e Sell Out aparecem SEPARADOS (não o merge 'sellinout').
-   'clientes' representa o cadastro de clientes; 'crm' fica de fora da home
-   para não duplicar o mesmo ícone. */
-const ORDEM_HOME = ['orcamentos','pedidos','fatmensal','sellin','sellout','comissoes',
-  'clientes','industrias','tratativas','atas','financeiro','conta-corrente','relatorios',
-  'faturamento','saldo','ctrlsaldo','metas','mix','redes','produtos','regras','dashboard','nfcompare','logistica','tarefas'];
+/* Ordem de exibição na home. Dashboard primeiro (é o resumo do negócio).
+   Sell In/Out é UMA tela só (decisão do cliente), igual ao site.
+   'crm' fica fora da home pra não duplicar o ícone de clientes. */
+const ORDEM_HOME = ['dashboard','pedidos','orcamentos','faturamento','comissoes','logistica',
+  'fatmensal','sellinout','saldo','ctrlsaldo','metas','tratativas','nfcompare',
+  'clientes','industrias','produtos','mix','redes','relatorios',
+  'financeiro','conta-corrente','tarefas','atas','regras'];
 
 /* Módulos que NÃO aparecem como tile próprio na home (evita duplicação visual) */
-const OCULTAR_HOME = ['sellinout','crm'];
+const OCULTAR_HOME = ['crm'];
 
-/* Sell In / Sell Out aparecem separados na home mas mapeiam para sellinout nas permissões */
-const HOME_EXTRA = [
-  {key:'sellin',  label:'Sell In',  icone:'↗️', cls:'i-purple', permKey:'sellinout'},
-  {key:'sellout', label:'Sell Out', icone:'↘️', cls:'i-orange', permKey:'sellinout'},
-];
+/* Sem extras: Sell In/Out unificado como no site */
+const HOME_EXTRA = [];
 
 function defaultPerms(perfil){
   const allEdit = Object.fromEntries(TODOS_MODULOS.map(m=>[m.key,'editar']));
@@ -805,6 +870,10 @@ function abrirModulo(m){
   tools.innerHTML = html;
 
   document.getElementById('dt-search').value='';
+  resetFiltros();
+  // Dashboard e Fat. Mensal não precisam de busca por texto
+  const searchBox = document.querySelector('.detail-search');
+  if(searchBox) searchBox.style.display = (m.key==='dashboard'||m.key==='fatmensal') ? 'none' : '';
   renderModuleList();
   document.getElementById('detail').classList.add('open');
 }
@@ -1216,8 +1285,8 @@ function _placeholderRemovido(){
 }
 
 function fmtMoeda(v){
-  const n = Number(v)||0;
-  return 'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  // Mesmo formato do site: R$ 12.400,00 (com centavos)
+  return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 }
 function statusClasse(s){
   s=(s||'').toLowerCase();
@@ -1238,12 +1307,26 @@ function cardDoRegistro(key, r){
   const data = r.data || r.dataEmissao || r.dataPedido || r.criadoEm || r.mes || '';
   const itens = Array.isArray(r.itens) ? r.itens.length + ' itens' : (r.qtd? r.qtd+' un' : '');
 
-  let statusHtml = status ? `<div class="card-status ${statusClasse(status)}">${status}</div>` : '';
-  let metaLine = [industria, itens].filter(Boolean).join(' · ');
-  let valHtml = (valor!==null && valor!=='') ? `<div class="card-val">${fmtMoeda(valor)}</div>` : `<div class="card-val" style="color:#bbb">—</div>`;
+  // Módulos de cadastro: não têm valor monetário — mostram info de contato
+  const ehCadastro = ['clientes','crm','industrias','produtos','redes'].includes(key);
+  const contato = [r.cidade, r.uf].filter(Boolean).join('/') || r.telefone || r.email || r.cnpj || r.contato || '';
+  const extraCadastro = [industria, r.rede, contato].filter(Boolean).join(' · ');
 
+  let statusHtml = status ? `<div class="card-status ${statusClasse(status)}">${esc(status)}</div>` : '';
   const editavel = podeEditarModulo(key);
   const idAttr = esc(String(r.id ?? id));
+
+  if(ehCadastro){
+    // Card de cadastro: título + info, sem valor forçado
+    return `<div class="card" onclick="${editavel?`abrirEdicao('${key}','${idAttr}')`:`abrirVisualizacao('${key}','${idAttr}')`}">
+      <div class="card-r1"><div class="card-id">${esc(String(cliente))}${editavel?'<span class="card-edit-hint">✎</span>':'<span class="card-edit-hint">👁</span>'}</div>${statusHtml}</div>
+      ${extraCadastro?`<div class="card-meta" style="margin-top:4px">${esc(extraCadastro)}</div>`:''}
+      ${r.cnpj?`<div class="card-date" style="margin-top:6px">CNPJ: ${esc(String(r.cnpj))}</div>`:''}
+    </div>`;
+  }
+
+  let metaLine = [industria, itens].filter(Boolean).join(' · ');
+  let valHtml = (valor!==null && valor!=='') ? `<div class="card-val">${fmtMoeda(valor)}</div>` : `<div class="card-val" style="color:#bbb">—</div>`;
   return `<div class="card" onclick="${editavel?`abrirEdicao('${key}','${idAttr}')`:`abrirVisualizacao('${key}','${idAttr}')`}">
     <div class="card-r1"><div class="card-id">${esc(String(id))}${editavel?'<span class="card-edit-hint">✎</span>':'<span class="card-edit-hint">👁</span>'}</div>${statusHtml}</div>
     <div class="card-cli">${esc(String(cliente))}</div>
@@ -1254,24 +1337,774 @@ function cardDoRegistro(key, r){
 
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/* ════════════════════════════════════════════════
+   MOTOR DE CÁLCULO — espelha a lógica do site (fonte da verdade)
+   Regras iguais ao sistema web: valores já vêm calculados no
+   Firebase (ex.: p.nf.liquida), então só lemos, não recalculamos.
+════════════════════════════════════════════════ */
+const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MESES_LONGO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+/* Moeda idêntica ao site: R$ 12.400,00 (com centavos) */
+function fmtBRL(n){ return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+/* Versão compacta pra KPI apertado: R$ 284,5 mil / R$ 1,2 mi */
+function fmtCompacto(n){
+  n = Number(n||0);
+  const abs = Math.abs(n);
+  if(abs >= 1e6) return 'R$ '+(n/1e6).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' mi';
+  if(abs >= 1e3) return 'R$ '+(n/1e3).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:1})+' mil';
+  return fmtBRL(n);
+}
+
+/* Extrai chave AAAA-MM de uma data em qualquer formato (ISO ou dd/mm/aaaa) — igual ao site */
+function chaveMes(dataStr){
+  if(!dataStr) return null;
+  let ano, mes;
+  if(String(dataStr).includes('/')){ const pt=String(dataStr).split('/'); mes=pt[1]; ano=pt[2]; }
+  else if(String(dataStr).includes('-')){ const pt=String(dataStr).split('-'); ano=pt[0]; mes=pt[1]; }
+  if(ano && mes) return `${ano}-${String(mes).padStart(2,'0')}`;
+  return null;
+}
+/* Rótulo bonito de uma chave AAAA-MM → "Jul/26" */
+function rotuloMes(chave){
+  if(!chave) return '';
+  const [a,m] = chave.split('-');
+  return MESES_CURTO[parseInt(m,10)-1] + '/' + a.slice(2);
+}
+/* Chave do mês atual */
+function mesAtualChave(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+/* Converte "Jul/26" (mesPrevisao de comissões) → nada, mantém como está pra comparar */
+
+/* Agrupa filiais pela rede do cliente (igual normalizarGrupoSellOut do site) */
+function grupoCliente(nomeCliente){
+  if(!nomeCliente) return nomeCliente;
+  const cli = (DADOS.clientes||[]).find(c => c.nome === nomeCliente);
+  if(cli && cli.rede) return cli.rede;
+  const n = String(nomeCliente).toUpperCase();
+  if(n.includes('COELHO DINIZ')) return 'COELHO DINIZ';
+  if(n.includes('LOJAS REDE')) return 'LOJAS REDE';
+  return nomeCliente;
+}
+
+/* Pedidos válidos (não excluídos) */
+function pedidosValidos(){ return (DADOS.pedidos||[]).filter(p=>!p.excluido); }
+
+/* Lista os meses disponíveis nos dados de um campo de data, mais recentes primeiro */
+function mesesDisponiveis(registros, campoData){
+  const set = new Set();
+  (registros||[]).forEach(r=>{
+    const v = typeof campoData==='function' ? campoData(r) : r[campoData];
+    const k = chaveMes(v);
+    if(k) set.add(k);
+  });
+  return Array.from(set).sort().reverse();
+}
+function _logAtrasado(l){
+  if(!l.previsao) return false;
+  if(['Entregue','Finalizado','Cancelado'].includes(l.statusLog)) return false;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const prev = new Date(l.previsao + 'T00:00:00');
+  return prev < hoje;
+}
+
+/* Estado dos filtros da tela de detalhe */
+let FILTROS = { mes:'', status:'', ind:'', tipo:'', extra:'', ano:String(new Date().getFullYear()) };
+function resetFiltros(){ FILTROS = { mes:'', status:'', ind:'', tipo:'', extra:'', ano:String(new Date().getFullYear()) }; }
+
+/* Módulos que têm tela especial (KPIs + filtros). Os demais usam a lista simples. */
+const MODULOS_ESPECIAIS = ['dashboard','pedidos','orcamentos','faturamento','comissoes','logistica','fatmensal','sellinout','metas'];
+
 function renderModuleList(){
   if(!moduloAtual) return;
-  const key = moduloAtual.key==='sellin'||moduloAtual.key==='sellout' ? moduloAtual.key : moduloAtual.key;
+  const key = moduloAtual.key;
+  // Telas especiais (KPIs + filtro de mês) replicando o site
+  if(key==='dashboard')  return renderDashboardApp();
+  if(key==='pedidos')    return renderPedidosApp();
+  if(key==='orcamentos') return renderOrcamentosApp();
+  if(key==='faturamento')return renderFaturamentoApp();
+  if(key==='comissoes')  return renderComissoesApp();
+  if(key==='logistica')  return renderLogisticaApp();
+  if(key==='fatmensal')  return renderFatMensalApp();
+  if(key==='sellinout')  return renderSellInOutApp();
+  if(key==='metas')      return renderMetasApp();
+  return renderListaSimples();
+}
+
+/* Lista simples genérica (módulos sem tela especial) */
+function renderListaSimples(){
   let arr = dadosDoModulo(moduloAtual.key);
+  const totalReg = arr.length;
   const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
   const list = document.getElementById('dt-list');
-
-  if(q){
-    arr = arr.filter(r => JSON.stringify(r).toLowerCase().includes(q));
-  }
-
+  if(q) arr = arr.filter(r => JSON.stringify(r).toLowerCase().includes(q));
   if(!arr || arr.length===0){
     list.innerHTML = `<div class="list-empty"><div class="ic">📭</div>${q?'Nada encontrado para "'+esc(q)+'"':'Nenhum registro neste módulo ainda.'}</div>`;
     return;
   }
-  // Mostra os mais recentes primeiro; limita a 100 na tela pra fluidez
-  const show = arr.slice().reverse().slice(0,100);
-  list.innerHTML = show.map(r=>cardDoRegistro(moduloAtual.key, r)).join('');
+  const show = arr.slice().reverse().slice(0,150);
+  const contador = `<div class="lista-contador">${arr.length}${arr.length!==totalReg?' de '+totalReg:''} registro${arr.length!==1?'s':''}${show.length<arr.length?' · mostrando '+show.length:''}</div>`;
+  list.innerHTML = contador + `<div class="cards-wrap">` + show.map(r=>cardDoRegistro(moduloAtual.key, r)).join('') + `</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   COMPONENTES DE UI reutilizáveis (KPIs + barra de filtros)
+════════════════════════════════════════════════ */
+function kpiHTML(itens){
+  // itens: [{l, v, s, hl, cor}]
+  const cls = itens.length===3 ? 'app-kpis k3' : 'app-kpis';
+  return `<div class="${cls}">` + itens.map(k=>`
+    <div class="app-kpi ${k.hl?'hl':''}">
+      <div class="l">${esc(k.l)}</div>
+      <div class="v ${k.sm?'sm':''}" ${k.cor?`style="color:${k.cor}"`:''}>${k.v}</div>
+      ${k.s?`<div class="s">${esc(k.s)}</div>`:''}
+    </div>`).join('') + `</div>`;
+}
+/* Barra de chips de filtro. defs: [{id, label, value, mes, icon}]
+   As opções vêm de _filtroDefs[id] (já preenchido pela função de render). */
+function filtrosHTML(defs){
+  return `<div class="app-filters">` + defs.map(d=>{
+    if(d.type!=='select') return '';
+    const opts = (_filtroDefs[d.id] && _filtroDefs[d.id].options) || [];
+    const cur = opts.find(o=>String(o.v)===String(d.value));
+    const lbl = (d.value && cur) ? cur.label : d.label;
+    return `<div class="app-chip ${d.value?'on':''} ${d.mes?'mes':''}" onclick="abrirFiltro('${d.id}')">${d.icon||''} ${esc(lbl)} ▾</div>`;
+  }).join('') + `</div>`;
+}
+/* Abre um seletor simples (usa o bottom sheet existente) */
+let _filtroDefs = {};
+function abrirFiltro(id){
+  const def = _filtroDefs[id];
+  if(!def) return;
+  document.getElementById('sheet-title').textContent = def.titulo || 'Filtrar';
+  document.getElementById('sheet-body').innerHTML = def.options.map(o=>`
+    <div class="sheet-opt" onclick="aplicarFiltro('${def.campo}','${esc(String(o.v))}')">
+      <div class="so-ic ${o.v===def.value?'i-yellow':'i-gray'}">${o.v===def.value?'✓':'○'}</div>
+      <div class="so-tx"><div class="t">${esc(o.label)}</div></div>
+    </div>`).join('');
+  abrirSheet();
+}
+function aplicarFiltro(campo, valor){
+  FILTROS[campo] = valor;
+  closeSheet();
+  renderModuleList();
+}
+
+/* Card padrão de registro com valor destacado */
+function cardHTML({id, status, statusCls, titulo, meta, valor, valorCor, direita, borda, onclick}){
+  const stHtml = status ? `<div class="c-st ${statusCls||'st-gray'}">${esc(status)}</div>` : '';
+  const valHtml = valor!=null ? `<div class="c-val" ${valorCor?`style="color:${valorCor}"`:''}>${valor}</div>` : '';
+  return `<div class="card" ${borda?`style="border-color:${borda};background:#fffafa"`:''} ${onclick?`onclick="${onclick}"`:''}>
+    <div class="c-r1"><div class="c-id">${esc(id||'')}</div>${stHtml}</div>
+    ${titulo?`<div class="c-cli">${esc(titulo)}</div>`:''}
+    ${meta?`<div class="c-meta">${esc(meta)}</div>`:''}
+    <div class="c-r2">${valHtml}<div class="c-date">${direita||''}</div></div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════
+   1) DASHBOARD — resumo do negócio (espelha renderDashboard do site)
+════════════════════════════════════════════════ */
+function renderDashboardApp(){
+  const list = document.getElementById('dt-list');
+  const peds = pedidosValidos();
+  const prefix = mesAtualChave();
+  const agora = new Date();
+
+  const pedsMes = peds.filter(p => chaveMes(p.data)===prefix && (p.tipo||'venda')==='venda');
+  const fatLiq  = peds.filter(p => p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+(p.nf.liquida||0),0);
+  const nfCount = peds.filter(p => p.nf && (p.tipo||'venda')==='venda').length;
+  const comPrev = (DADOS.comissoes_data||[]).filter(c=>!c.excluido&&(c.status==='Prevista'||c.status==='Atrasada')).reduce((s,c)=>s+(c.valor||0),0);
+  const orcAbertos = (DADOS.orcamentos||[]).filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
+  const podeDinheiro = ['editar','ver'].includes(nivelDoModulo('faturamento')) || ['editar','ver'].includes(nivelDoModulo('comissoes'));
+
+  let kpis = [
+    {l:'Pedidos no mês', v:pedsMes.length, s:pedsMes.length===0?'Nenhum ainda':MESES_CURTO[agora.getMonth()]+'/'+String(agora.getFullYear()).slice(2)},
+  ];
+  if(podeDinheiro){
+    kpis.push({l:'Faturamento líq.', v:fmtCompacto(fatLiq), sm:true, hl:true, s:nfCount+(nfCount===1?' NF':' NFs')});
+    kpis.push({l:'Comissão prevista', v:fmtCompacto(comPrev), sm:true, cor:'var(--verde)', s:'A receber'});
+  }
+  kpis.push({l:'Orçamentos abertos', v:orcAbertos, s:orcAbertos===0?'Nenhum':'Aguardando'});
+
+  // Pedidos recentes
+  const recentes = [...peds].sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))).slice(0,5);
+  let recentesHTML = recentes.length===0
+    ? `<div class="dz-empty">Nenhum pedido cadastrado ainda</div>`
+    : recentes.map(p=>`<div class="drow" onclick="abrirDetalheRegistro('pedidos','${esc(String(p.id))}')">
+        <div><div class="dc">${esc(p.cliente||'—')}</div><div class="dm">${esc(p.industria||'')} · ${esc(rotuloMes(chaveMes(p.data))||'')}</div></div>
+        <div class="dv">${fmtBRL(p.total)}</div></div>`).join('');
+
+  // Comissões pendentes
+  let comHTML = '';
+  if(podeDinheiro){
+    const pend = (DADOS.comissoes_data||[]).filter(c=>!c.excluido&&c.status!=='Recebida').slice(0,5);
+    comHTML = `<div class="dtable"><div class="dh">Comissões pendentes</div>` + (pend.length===0
+      ? `<div class="dz-empty">Nenhuma comissão pendente</div>`
+      : pend.map(c=>`<div class="drow">
+          <div><div class="dc">${esc(c.industria||'—')}</div><div class="dm">${esc(c.cliente||'')}</div></div>
+          <div class="dv" style="color:var(--laranja)">${fmtBRL(c.valor)}</div></div>`).join('')) + `</div>`;
+  }
+
+  // Alertas
+  const alertas = [];
+  const atrasadasCom = (DADOS.comissoes_data||[]).filter(c=>!c.excluido&&c.status==='Atrasada').length;
+  const logAtras = montarLogistica().filter(_logAtrasado).length;
+  if(logAtras>0) alertas.push({t:`🚚 ${logAtras} entrega(s) atrasada(s)`, cls:'a-red'});
+  if(podeDinheiro && atrasadasCom>0) alertas.push({t:`💰 ${atrasadasCom} comissão(ões) em atraso`, cls:'a-red'});
+  const orcVenc = (DADOS.orcamentos||[]).filter(o=>o.validade && (chaveMes(o.validade)<=prefix) && !['Cancelado','Convertido em pedido'].includes(o.status)).length;
+  if(orcVenc>0) alertas.push({t:`⚠️ ${orcVenc} orçamento(s) com validade vencida`, cls:'a-yellow'});
+  let alertHTML = alertas.length===0
+    ? `<div class="alert-ok">✅ Nenhum alerta no momento</div>`
+    : alertas.map(a=>`<div class="app-alert ${a.cls}">${esc(a.t)}</div>`).join('');
+
+  list.innerHTML = `
+    ${kpiHTML(kpis)}
+    <div class="dtable"><div class="dh">Pedidos recentes</div>${recentesHTML}</div>
+    ${comHTML}
+    <div class="seclbl-app">Alertas do sistema</div>
+    ${alertHTML}
+  `;
+}
+/* helper: abre a tela de um módulo já com um registro em foco */
+function abrirDetalheRegistro(modKey, id){
+  const m = TODOS_MODULOS.find(x=>x.key===modKey);
+  if(!m) return;
+  const nivel = nivelDoModulo(modKey);
+  if(nivel==='editar') abrirEdicao(modKey, id);
+  else abrirVisualizacao(modKey, id);
+}
+
+/* ════════════════════════════════════════════════
+   2) PEDIDOS — filtro de mês/status/indústria/tipo + total
+════════════════════════════════════════════════ */
+function statusClsSite(s){
+  s=(s||'').toLowerCase();
+  if(s.includes('faturado total')||s.includes('entregue')||s.includes('aprovado')||s.includes('recebida')||s.includes('ativo')) return 'st-green';
+  if(s.includes('recebido')||s.includes('digitação')||s.includes('rascunho')||s.includes('prevista')||s.includes('agendado')) return 'st-yellow';
+  if(s.includes('separação')||s.includes('transporte')||s.includes('análise')||s.includes('enviado')||s.includes('implantado')||s.includes('parcial')) return 'st-blue';
+  if(s.includes('cancel')||s.includes('reprovado')||s.includes('atrasada')||s.includes('excluído')) return 'st-red';
+  if(s.includes('expedido')||s.includes('faturado')) return 'st-orange';
+  return 'st-gray';
+}
+function renderPedidosApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let peds = pedidosValidos();
+
+  // Opções de filtro
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(peds,'data').map(m=>({v:m,label:rotuloMes(m)})));
+  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Recebido','Em digitação','Implantado','Faturado parcial','Faturado total','Expedido','Agendado','Entregue','Cancelado'].map(s=>({v:s,label:s})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(peds.map(p=>p.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  const tipoOpt = [{v:'',label:'Todos os tipos'},{v:'venda',label:'🛒 Venda'},{v:'bonificacao',label:'🎁 Bonificação'}];
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Filtrar por status'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+    ftipo:{campo:'tipo',value:FILTROS.tipo,options:tipoOpt,titulo:'Filtrar por tipo'},
+  };
+
+  // Aplica filtros
+  if(FILTROS.mes)    peds = peds.filter(p=>chaveMes(p.data)===FILTROS.mes);
+  if(FILTROS.status) peds = peds.filter(p=>p.status===FILTROS.status);
+  if(FILTROS.ind)    peds = peds.filter(p=>p.industria===FILTROS.ind);
+  if(FILTROS.tipo)   peds = peds.filter(p=>(p.tipo||'venda')===FILTROS.tipo);
+  if(q) peds = peds.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
+
+  const total   = peds.reduce((s,p)=>s+(p.total||0),0);
+  const fatLiq  = peds.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0),0);
+  const podeDinheiro = ['editar','ver'].includes(nivelDoModulo('faturamento'));
+
+  let kpis = [{l:'Pedidos', v:peds.length}];
+  if(podeDinheiro){
+    kpis.push({l:'Total', v:fmtCompacto(total), sm:true, hl:true});
+    kpis.push({l:'Faturado', v:fmtCompacto(fatLiq), sm:true, cor:'var(--verde)'});
+  }
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'fstatus',label:'Status',value:FILTROS.status},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+    {type:'select',id:'ftipo',label:'Tipo',value:FILTROS.tipo},
+  ]);
+
+  const cards = peds.length===0
+    ? `<div class="list-empty"><div class="ic">📭</div>Nenhum pedido com esses filtros.</div>`
+    : [...peds].sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))).slice(0,150).map(p=>{
+        const editavel = podeEditarModulo('pedidos');
+        const nItens = Array.isArray(p.itens)?p.itens.length:0;
+        const tipoIco = (p.tipo==='bonificacao')?'🎁 ':'';
+        return cardHTML({
+          id: p.id, status: p.status, statusCls: statusClsSite(p.status),
+          titulo: tipoIco+(p.cliente||'—'),
+          meta: [p.industria, nItens?nItens+' itens':'', rotuloMes(chaveMes(p.data))].filter(Boolean).join(' · '),
+          valor: podeDinheiro?fmtBRL(p.total):null,
+          direita: p.numPedidoCliente?('Nº cliente: '+esc(p.numPedidoCliente)):'',
+          onclick: editavel?`abrirEdicao('pedidos','${esc(String(p.id))}')`:`abrirVisualizacao('pedidos','${esc(String(p.id))}')`
+        });
+      }).join('');
+
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   3) ORÇAMENTOS — filtro de mês/status/indústria
+════════════════════════════════════════════════ */
+function renderOrcamentosApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let arr = (DADOS.orcamentos||[]).slice();
+
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(arr,'data').map(m=>({v:m,label:rotuloMes(m)})));
+  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Rascunho','Em análise','Enviado','Aprovado','Reprovado','Cancelado','Convertido em pedido'].map(s=>({v:s,label:s})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(o=>o.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Filtrar por status'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+  if(FILTROS.mes)    arr = arr.filter(o=>chaveMes(o.data)===FILTROS.mes);
+  if(FILTROS.status) arr = arr.filter(o=>o.status===FILTROS.status);
+  if(FILTROS.ind)    arr = arr.filter(o=>o.industria===FILTROS.ind);
+  if(q) arr = arr.filter(o=>JSON.stringify(o).toLowerCase().includes(q));
+
+  const total = arr.reduce((s,o)=>s+(o.total||0),0);
+  const abertos = arr.filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'fstatus',label:'Status',value:FILTROS.status},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+  const kpis = [
+    {l:'Orçamentos', v:arr.length},
+    {l:'Abertos', v:abertos, hl:true},
+    {l:'Valor total', v:fmtCompacto(total), sm:true, cor:'var(--verde)'},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">📭</div>Nenhum orçamento com esses filtros.</div>`
+    : [...arr].sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))).slice(0,150).map(o=>{
+        const editavel = podeEditarModulo('orcamentos');
+        const nItens = Array.isArray(o.itens)?o.itens.length:0;
+        return cardHTML({
+          id:o.id, status:o.status, statusCls:statusClsSite(o.status),
+          titulo:o.cliente||'—',
+          meta:[o.industria, nItens?nItens+' itens':'', rotuloMes(chaveMes(o.data))].filter(Boolean).join(' · '),
+          valor:fmtBRL(o.total),
+          direita:o.validade?('Val: '+esc(rotuloMes(chaveMes(o.validade))||o.validade)):'',
+          onclick: editavel?`abrirEdicao('orcamentos','${esc(String(o.id))}')`:`abrirVisualizacao('orcamentos','${esc(String(o.id))}')`
+        });
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   4) FATURAMENTO / NF — lista de NFs com valor líquido
+════════════════════════════════════════════════ */
+function renderFaturamentoApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  // Só pedidos que têm NF
+  let arr = pedidosValidos().filter(p=>p.nf);
+
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(arr,p=>p.nf&&p.nf.data).map(m=>({v:m,label:rotuloMes(m)})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(p=>p.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+  if(FILTROS.mes) arr = arr.filter(p=>chaveMes(p.nf.data)===FILTROS.mes);
+  if(FILTROS.ind) arr = arr.filter(p=>p.industria===FILTROS.ind);
+  if(q) arr = arr.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
+
+  const totLiq = arr.reduce((s,p)=>s+(p.nf.liquida||0),0);
+  const totBruto = arr.reduce((s,p)=>s+(p.nf.valorNF||0),0);
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+  const kpis = [
+    {l:'NFs', v:arr.length},
+    {l:'NF Líquida', v:fmtCompacto(totLiq), sm:true, hl:true, s:'Base comissão'},
+    {l:'NF Bruta', v:fmtCompacto(totBruto), sm:true},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">🧾</div>Nenhuma NF com esses filtros.</div>`
+    : [...arr].sort((a,b)=>String(b.nf.data||'').localeCompare(String(a.nf.data||''))).slice(0,150).map(p=>{
+        const n=p.nf;
+        const temAbat = (n.abatimentos||0)+(n.devolucoes||0)+(n.descFin||0)+(n.nfd||0)+(n.bonif||0) > 0;
+        return cardHTML({
+          id:'NF '+(n.numero||'—'), status: temAbat?'C/ abatimento':'Sem abatimento', statusCls: temAbat?'st-yellow':'st-green',
+          titulo:p.cliente||'—',
+          meta:[p.industria, 'Ped '+p.id, rotuloMes(chaveMes(n.data))].filter(Boolean).join(' · '),
+          valor:fmtBRL(n.liquida),
+          direita: n.valorNF?('Bruto '+fmtBRL(n.valorNF)):'',
+          onclick:`abrirVisualizacao('faturamento','${esc(String(p.id))}')`
+        });
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   5) COMISSÕES — 4 KPIs (Previsto/Recebido/A Receber/Diferença) + filtro mês previsão
+════════════════════════════════════════════════ */
+function _recNoMes(c, mes){
+  const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
+  if(mes) return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+  if(reais.length) return reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+  return c.valorRecebido||0;
+}
+function renderComissoesApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let arr = (DADOS.comissoes_data||[]).filter(c=>!c.excluido);
+
+  // Meses de previsão disponíveis (formato "Jul/26")
+  const mesesSet = new Set();
+  arr.forEach(c=>{ if(c.mesPrevisao) mesesSet.add(c.mesPrevisao); (c.parcelas||[]).forEach(p=>{if(p.mes)mesesSet.add(p.mes);}); });
+  const ordenarMesPt = (a,b)=>{ const pa=a.split('/'),pb=b.split('/'); const va=parseInt(pa[1])*12+MESES_CURTO.indexOf(pa[0]); const vb=parseInt(pb[1])*12+MESES_CURTO.indexOf(pb[0]); return vb-va; };
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(Array.from(mesesSet).sort(ordenarMesPt).map(m=>({v:m,label:m})));
+  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Prevista','Parcial','Recebida','Atrasada'].map(s=>({v:s,label:s})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(c=>c.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Mês de previsão'},
+    fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Filtrar por status'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+  if(FILTROS.status) arr = arr.filter(c=>c.status===FILTROS.status);
+  if(FILTROS.ind)    arr = arr.filter(c=>c.industria===FILTROS.ind);
+  if(FILTROS.mes)    arr = arr.filter(c=>{
+    const temParc = (c.parcelas||[]).some(p=>(parseFloat(p.valor)||0)>0 && p.mes===FILTROS.mes);
+    return c.mesPrevisao===FILTROS.mes || temParc;
+  });
+  if(q) arr = arr.filter(c=>JSON.stringify(c).toLowerCase().includes(q));
+
+  const totPrev = arr.reduce((s,c)=>s+(c.valor||0),0);
+  const totRec  = arr.reduce((s,c)=>s+_recNoMes(c,FILTROS.mes),0);
+  const totRecAcum = arr.reduce((s,c)=>s+_recNoMes(c,''),0);
+  const totDif  = totPrev - totRecAcum;
+  const totRest = arr.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+((c.valor||0)-_recNoMes(c,'')),0);
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês prev.',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'fstatus',label:'Status',value:FILTROS.status},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+  const kpis = [
+    {l:'Total previsto', v:fmtCompacto(totPrev), sm:true},
+    {l:'Total recebido', v:fmtCompacto(totRec), sm:true, cor:'var(--verde)'},
+    {l:'A receber', v:fmtCompacto(Math.max(0,totRest)), sm:true, hl:true},
+    {l:'Diferença', v:(totDif<0?'+':'')+fmtCompacto(Math.abs(totDif)), sm:true, cor: totDif>0.01?'var(--vermelho)':'var(--verde)'},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">💰</div>Nenhuma comissão com esses filtros.</div>`
+    : arr.slice(0,150).map(c=>{
+        const editavel = podeEditarModulo('comissoes');
+        return cardHTML({
+          id:c.industria||'—', status:c.status, statusCls:statusClsSite(c.status),
+          titulo:c.cliente||'—',
+          meta:[c.nf?('NF '+c.nf):(c.pedido?('Ped '+c.pedido):''), c.percentual?('base '+fmtBRL(c.base||0)+' · '+c.percentual+'%'):''].filter(Boolean).join(' · '),
+          valor:fmtBRL(c.valor),
+          direita:c.mesPrevisao?('Prev: '+esc(c.mesPrevisao)):'',
+          onclick: editavel?`abrirEdicao('comissoes','${esc(String(c.id))}')`:`abrirVisualizacao('comissoes','${esc(String(c.id))}')`
+        });
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   6) LOGÍSTICA — banner de atrasados + filtros + KPIs
+════════════════════════════════════════════════ */
+function montarLogistica(){
+  const peds = pedidosValidos();
+  const logs = DADOS.logisticaData||[];
+  return peds.map(p=>{
+    const l = logs.find(x=>x.pedId===p.id) || {};
+    return {
+      pedId:p.id, numPedidoCliente:p.numPedidoCliente||'', nfNumero:p.nf?.numero||'',
+      cliente:p.cliente, industria:p.industria, data:p.data,
+      transportadora:l.transportadora||'', previsao:l.previsao||'', dataEntrega:l.dataEntrega||'',
+      statusLog:l.statusLog||(p.nf?'Faturado':'Pedido Digitado'), obs:l.obs||''
+    };
+  });
+}
+function renderLogisticaApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let arr = montarLogistica();
+
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(arr,'data').map(m=>({v:m,label:rotuloMes(m)})));
+  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Pedido Digitado','Pedido Enviado','Em Separação','Faturado','Aguardando Coleta','Em Transporte','Entregue','Finalizado','Cancelado'].map(s=>({v:s,label:s})));
+  const alertaOpt = [{v:'',label:'Todas as situações'},{v:'atrasado',label:'⚠️ Só atrasados'},{v:'sem-previsao',label:'❓ Sem previsão'},{v:'hoje',label:'📅 Entrega hoje'}];
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Filtrar por status'},
+    fextra:{campo:'extra',value:FILTROS.extra,options:alertaOpt,titulo:'Situação'},
+  };
+
+  // KPIs (antes de filtrar, visão geral)
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const totAtivos = arr.filter(l=>!['Entregue','Finalizado','Cancelado'].includes(l.statusLog)).length;
+  const atrasadosAll = arr.filter(_logAtrasado);
+  const totSemPrev = arr.filter(l=>!l.previsao&&!['Entregue','Finalizado','Cancelado'].includes(l.statusLog)).length;
+  const totEntreg = arr.filter(l=>['Entregue','Finalizado'].includes(l.statusLog)).length;
+
+  // Aplica filtros
+  if(FILTROS.mes) arr = arr.filter(l=>chaveMes(l.data)===FILTROS.mes);
+  if(FILTROS.status) arr = arr.filter(l=>l.statusLog===FILTROS.status);
+  if(FILTROS.extra==='atrasado') arr = arr.filter(_logAtrasado);
+  if(FILTROS.extra==='sem-previsao') arr = arr.filter(l=>!l.previsao&&!['Entregue','Finalizado','Cancelado'].includes(l.statusLog));
+  if(FILTROS.extra==='hoje') arr = arr.filter(l=>{ if(!l.previsao||['Entregue','Finalizado','Cancelado'].includes(l.statusLog))return false; const pv=new Date(l.previsao+'T00:00:00'); return pv.getTime()===hoje.getTime(); });
+  if(q) arr = arr.filter(l=>JSON.stringify(l).toLowerCase().includes(q));
+
+  const banner = atrasadosAll.length>0
+    ? `<div class="app-alert a-red big-alert"><span style="font-size:20px">🚨</span> ${atrasadosAll.length} entrega(s) atrasada(s)</div>`
+    : '';
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'fstatus',label:'Status',value:FILTROS.status},
+    {type:'select',id:'fextra',label:'Situação',value:FILTROS.extra},
+  ]);
+  const kpis = [
+    {l:'Em andamento', v:totAtivos},
+    {l:'⚠️ Atrasados', v:atrasadosAll.length, hl:true, cor: atrasadosAll.length>0?'var(--vermelho)':''},
+    {l:'Sem previsão', v:totSemPrev},
+    {l:'Entregues', v:totEntreg, cor:'var(--verde)'},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">🚚</div>Nenhum pedido com esses filtros.</div>`
+    : arr.slice(0,150).map(l=>{
+        const atrasado = _logAtrasado(l);
+        let direita, valor, valorCor;
+        if(atrasado){
+          const dias = Math.floor((hoje - new Date(l.previsao+'T00:00:00'))/86400000);
+          valor = 'Venceu '+esc(rotuloDataCurta(l.previsao)); valorCor='var(--vermelho)'; direita=dias+' dia(s)';
+        } else if(l.previsao){
+          valor = 'Prev: '+esc(rotuloDataCurta(l.previsao)); valorCor='var(--azul)'; direita=l.dataEntrega?'Entregue':'No prazo';
+        } else {
+          valor='Sem previsão'; valorCor='#aaa'; direita='';
+        }
+        const editavel = podeEditarModulo('logistica');
+        return cardHTML({
+          id:l.pedId, status:l.statusLog, statusCls:statusClsSite(l.statusLog),
+          titulo:l.cliente||'—',
+          meta:[l.industria, l.transportadora?('Transp: '+l.transportadora):'Sem transportadora'].filter(Boolean).join(' · '),
+          valor, valorCor, direita,
+          borda: atrasado?'#fecaca':null,
+          onclick: editavel?`abrirEdicao('logistica','${esc(String(l.pedId))}')`:`abrirVisualizacao('logistica','${esc(String(l.pedId))}')`
+        });
+      }).join('');
+  list.innerHTML = banner + filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+function rotuloDataCurta(d){
+  const k = chaveMes(d); if(!k) return d;
+  let dia='';
+  if(String(d).includes('-')) dia=String(d).split('-')[2];
+  else if(String(d).includes('/')) dia=String(d).split('/')[0];
+  return (dia?dia+'/':'')+k.split('-')[1];
+}
+
+/* ════════════════════════════════════════════════
+   7) FAT. MENSAL POR INDÚSTRIA — matriz mês a mês
+════════════════════════════════════════════════ */
+function renderFatMensalApp(){
+  const list = document.getElementById('dt-list');
+  const ano = FILTROS.ano || String(new Date().getFullYear());
+  const peds = pedidosValidos().filter(p=>p.nf);
+
+  const anosOpt = [...new Set(peds.map(p=>{ const k=chaveMes(p.nf.data); return k?k.split('-')[0]:null; }).filter(Boolean))].sort().reverse();
+  if(anosOpt.length===0) anosOpt.push(ano);
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(peds.map(p=>p.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  _filtroDefs = {
+    fano:{campo:'ano',value:ano,options:anosOpt.map(a=>({v:a,label:a})),titulo:'Ano'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+
+  const INDS_ALL = [...new Set([...(DADOS.industrias||[]).map(i=>i.nome), ...peds.map(p=>p.industria)])].filter(Boolean).sort();
+  const INDS = FILTROS.ind ? [FILTROS.ind] : INDS_ALL;
+  const CORES = ['#F5C500','#1a5fa8','#2d7a3a','#c0392b','#6c3db5','#d97706'];
+
+  // Matriz ind → mesIdx → valor
+  const matrix = {};
+  INDS.forEach(ind=>{
+    matrix[ind] = MESES_CURTO.map((_,i)=>{
+      const prefix = `${ano}-${String(i+1).padStart(2,'0')}`;
+      return peds.filter(p=>p.industria===ind && chaveMes(p.nf.data)===prefix).reduce((s,p)=>s+(p.nf.liquida||0),0);
+    });
+  });
+  const totPorMes = MESES_CURTO.map((_,i)=>INDS.reduce((s,ind)=>s+(matrix[ind][i]||0),0));
+  const totalGeral = totPorMes.reduce((s,v)=>s+v,0);
+  // Só meses com algum valor pra não poluir
+  const mesesComDado = MESES_CURTO.map((m,i)=>({m,i})).filter(x=>totPorMes[x.i]>0);
+  const mesesMostrar = mesesComDado.length?mesesComDado:MESES_CURTO.map((m,i)=>({m,i})).slice(0, new Date().getMonth()+1);
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fano',label:ano,value:ano,mes:true,icon:'📅'},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+
+  // Tabela rolável
+  const thMeses = mesesMostrar.map(x=>`<th>${x.m}</th>`).join('');
+  const rows = INDS.filter(ind=>matrix[ind].some(v=>v>0)).map((ind,ci)=>{
+    const cells = mesesMostrar.map(x=>{ const v=matrix[ind][x.i]; return `<td>${v>0?fmtCompacto(v).replace('R$ ',''):'—'}</td>`; }).join('');
+    return `<tr><td class="ind">${esc(ind)}</td>${cells}</tr>`;
+  }).join('');
+  const totRow = `<tr><td>TOTAL</td>${mesesMostrar.map(x=>`<td>${fmtCompacto(totPorMes[x.i]).replace('R$ ','')}</td>`).join('')}</tr>`;
+
+  const tabela = rows
+    ? `<div class="note-app">Deslize a tabela para o lado ▸. Valores em R$ (mil).</div>
+       <div class="fatgrid-app"><table><thead><tr><th>Indústria</th>${thMeses}</tr></thead><tbody>${rows}${totRow}</tbody></table></div>`
+    : `<div class="list-empty"><div class="ic">📅</div>Sem faturamento em ${ano}.</div>`;
+
+  // Cards por indústria (mês atual do ano selecionado ou último com dado)
+  const ultimoMesIdx = mesesMostrar.length?mesesMostrar[mesesMostrar.length-1].i:new Date().getMonth();
+  const cards = INDS.filter(ind=>matrix[ind][ultimoMesIdx]>0).map(ind=>{
+    const atual = matrix[ind][ultimoMesIdx];
+    const anterior = ultimoMesIdx>0?matrix[ind][ultimoMesIdx-1]:0;
+    const varPct = anterior>0?(((atual-anterior)/anterior)*100):null;
+    const nNfs = peds.filter(p=>p.industria===ind && chaveMes(p.nf.data)===`${ano}-${String(ultimoMesIdx+1).padStart(2,'0')}`).length;
+    return cardHTML({
+      id:'🏭 '+ind,
+      status: varPct!=null?((varPct>=0?'▲ ':'▼ ')+Math.abs(varPct).toFixed(1)+'%'):'—',
+      statusCls: varPct>=0?'st-green':'st-red',
+      titulo:null,
+      meta:MESES_CURTO[ultimoMesIdx]+'/'+ano.slice(2)+' · '+nNfs+' NFs',
+      valor:fmtBRL(atual),
+      direita: anterior>0?(MESES_CURTO[ultimoMesIdx-1]+': '+fmtCompacto(anterior)):''
+    });
+  }).join('');
+
+  const kpis = [
+    {l:'Total '+ano, v:fmtCompacto(totalGeral), sm:true, hl:true},
+    {l:'Indústrias', v:INDS.filter(ind=>matrix[ind].some(v=>v>0)).length},
+  ];
+
+  list.innerHTML = filtros + kpiHTML(kpis) + tabela +
+    (cards?`<div class="seclbl-app">Por indústria — ${MESES_LONGO[ultimoMesIdx]}/${ano.slice(2)}</div><div class="cards-wrap">${cards}</div>`:'');
+}
+
+/* ════════════════════════════════════════════════
+   8) SELL IN / OUT — tela única (Sell In, Sell Out, Giro)
+════════════════════════════════════════════════ */
+function renderSellInOutApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  const fats = pedidosValidos().filter(p=>p.nf);
+  const sellOut = DADOS.sellOutData||[];
+
+  // Constrói combinações grupo × indústria × mês (mês no formato "Jul/26")
+  const nfMesRotulo = (d)=>{ const k=chaveMes(d); return k?rotuloMes(k):null; };
+  const linhasMap = {}; // chave "grupo|ind|mes"
+  fats.forEach(p=>{
+    const grupo=grupoCliente(p.cliente), ind=p.industria, mes=nfMesRotulo(p.nf.data);
+    if(!mes) return;
+    const k=`${grupo}|${ind}|${mes}`;
+    if(!linhasMap[k]) linhasMap[k]={grupo,ind,mes,sellIn:0,sellOut:0,positivacao:0};
+    linhasMap[k].sellIn += (p.nf.liquida||0);
+  });
+  sellOut.forEach(s=>{
+    const grupo=grupoCliente(s.cliente), ind=s.industria, mes=s.mes;
+    const k=`${grupo}|${ind}|${mes}`;
+    if(!linhasMap[k]) linhasMap[k]={grupo,ind,mes,sellIn:0,sellOut:0,positivacao:0};
+    linhasMap[k].sellOut += (s.valor||0);
+    linhasMap[k].positivacao += (s.positivacao||0);
+  });
+  let linhas = Object.values(linhasMap);
+
+  // Filtros
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat([...new Set(linhas.map(l=>l.mes))].sort((a,b)=>{const pa=a.split('/'),pb=b.split('/');return (parseInt(pb[1])*12+MESES_CURTO.indexOf(pb[0]))-(parseInt(pa[1])*12+MESES_CURTO.indexOf(pa[0]));}).map(m=>({v:m,label:m})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(linhas.map(l=>l.ind).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+  if(FILTROS.mes) linhas = linhas.filter(l=>l.mes===FILTROS.mes);
+  if(FILTROS.ind) linhas = linhas.filter(l=>l.ind===FILTROS.ind);
+  if(q) linhas = linhas.filter(l=>JSON.stringify(l).toLowerCase().includes(q));
+
+  const totIn = linhas.reduce((s,l)=>s+l.sellIn,0);
+  const totOut = linhas.reduce((s,l)=>s+l.sellOut,0);
+  const giro = totIn>0?((totOut/totIn)*100):0;
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+  const kpis = [
+    {l:'Sell In', v:fmtCompacto(totIn), sm:true, s:'Faturado'},
+    {l:'Sell Out', v:fmtCompacto(totOut), sm:true, cor:'var(--roxo)', s:'Manual'},
+    {l:'Giro', v:giro.toFixed(0)+'%', hl:true, s:'Out/In'},
+  ];
+  const giroBar = `<div class="giro-app">
+    <div class="lbl">Giro médio (Sell Out ÷ Sell In)</div>
+    <div class="bar"><div class="fill" style="width:${Math.min(100,giro).toFixed(0)}%"></div></div>
+    <div class="pct">${giro.toFixed(0)}%</div>
+  </div>`;
+
+  const cards = linhas.length===0
+    ? `<div class="list-empty"><div class="ic">↕️</div>Sem dados de Sell In/Out com esses filtros.</div>`
+    : linhas.sort((a,b)=>b.sellIn-a.sellIn).slice(0,150).map(l=>{
+        const g = l.sellIn>0?((l.sellOut/l.sellIn)*100):0;
+        return `<div class="card">
+          <div class="c-r1"><div class="c-id">${esc(l.grupo)}</div><div class="c-st ${g>=80?'st-green':(g>=50?'st-yellow':'st-red')}">GIRO ${g.toFixed(0)}%</div></div>
+          <div class="c-meta">${esc(l.ind)} · ${esc(l.mes)}${l.positivacao?(' · '+l.positivacao+' lojas'):''}</div>
+          <div class="c-r2">
+            <div><span class="io-lbl">In</span> <b class="io-v">${fmtCompacto(l.sellIn)}</b> &nbsp; <span class="io-lbl">Out</span> <b class="io-v" style="color:var(--roxo)">${fmtCompacto(l.sellOut)}</b></div>
+          </div>
+        </div>`;
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + giroBar + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   9) METAS — meta vs realizado por mês
+════════════════════════════════════════════════ */
+function renderMetasApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let arr = (DADOS.metasData||[]).slice();
+
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat([...new Set(arr.map(m=>m.mes).filter(Boolean))].sort().reverse().map(m=>({v:m,label:m})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(m=>m.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+  if(FILTROS.mes) arr = arr.filter(m=>m.mes===FILTROS.mes);
+  if(FILTROS.ind) arr = arr.filter(m=>m.industria===FILTROS.ind);
+  if(q) arr = arr.filter(m=>JSON.stringify(m).toLowerCase().includes(q));
+
+  const totMeta = arr.reduce((s,m)=>s+(Number(m.meta)||0),0);
+  const totReal = arr.reduce((s,m)=>s+(Number(m.realizado)||0),0);
+  const pct = totMeta>0?((totReal/totMeta)*100):0;
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+  const kpis = [
+    {l:'Meta total', v:fmtCompacto(totMeta), sm:true},
+    {l:'Realizado', v:fmtCompacto(totReal), sm:true, cor:'var(--verde)'},
+    {l:'% Atingido', v:pct.toFixed(0)+'%', hl:true},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">🎯</div>Nenhuma meta com esses filtros.</div>`
+    : arr.slice(0,150).map(m=>{
+        const meta=Number(m.meta)||0, real=Number(m.realizado)||0;
+        const p = meta>0?((real/meta)*100):0;
+        const editavel = podeEditarModulo('metas');
+        return cardHTML({
+          id:'🎯 '+(m.industria||'—'), status:p.toFixed(0)+'%', statusCls:p>=100?'st-green':(p>=70?'st-yellow':'st-red'),
+          titulo:null, meta:(m.mes||'')+(m.tipo?(' · '+m.tipo):''),
+          valor:fmtBRL(real)+' / '+fmtBRL(meta),
+          direita:'',
+          onclick: editavel?`abrirEdicao('metas','${esc(String(m.id))}')`:`abrirVisualizacao('metas','${esc(String(m.id))}')`
+        });
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
 }
 
 /* ════════════════════════════════════════════════
