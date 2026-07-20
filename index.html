@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4005,7 +4004,36 @@ let PRODUTOS_CAT = {};
 
 let orcamentos = [];
 
+/* ══════════════════════════════════════════════════════════
+   EXCLUSÃO DEFINITIVA DE ORÇAMENTOS (tombstones)
+   Guarda os IDs excluídos permanentemente. Qualquer dado que
+   chegue do localStorage, da nuvem ou de outra aba é filtrado
+   por esta lista — então um orçamento excluído NUNCA volta,
+   independente de conexão, recarga, timing ou aba aberta.
+   ══════════════════════════════════════════════════════════ */
+let orcamentosExcluidos = [];
+try {
+  const _oe = localStorage.getItem('gestcom_orc_excluidos');
+  if(_oe) orcamentosExcluidos = JSON.parse(_oe) || [];
+} catch(e) { orcamentosExcluidos = []; }
+
+// Remove da lista de orçamentos qualquer ID que esteja marcado como excluído.
+// Retorna true se removeu algo (para sabermos se precisa re-render/re-save).
+function purgarOrcamentosExcluidos() {
+  if(!Array.isArray(orcamentosExcluidos) || !orcamentosExcluidos.length) return false;
+  if(!Array.isArray(orcamentos)) return false;
+  const antes = orcamentos.length;
+  const banidos = new Set(orcamentosExcluidos);
+  orcamentos = orcamentos.filter(o => o && !banidos.has(o.id));
+  return orcamentos.length !== antes;
+}
+
+function _salvarOrcamentosExcluidos() {
+  try { localStorage.setItem('gestcom_orc_excluidos', JSON.stringify(orcamentosExcluidos)); } catch(e) {}
+}
+
 let pedidos = [];
+
 
 // let faturamentos = []; // REMOVIDO — variável morta. Use pedidos.filter(p => p.nf)
 
@@ -4282,6 +4310,39 @@ function _mergeLimpo(destino, origem) {
 var _pushPendente = false;
 window._pushPendente = false;
 
+/* FIX #3 — Exclusões precisam ir para a nuvem IMEDIATAMENTE.
+   O auto-save normal espera 1500ms (debounce). Se o usuário recarregar
+   a página nesse intervalo, a exclusão nunca é enviada e o
+   autoConectarFirebase (que aplica a nuvem com forcado=true) traz o
+   registro de volta. Esta função salva local e envia na hora, sem debounce. */
+async function salvarExclusaoImediata() {
+  _salvarLocal(); // garante persistência local antes de qualquer coisa
+  // Reconecta silenciosamente se houver credenciais salvas (mesmo padrão do syncAutoSaveHook)
+  if(!configSync.conectado) {
+    try {
+      const saved = localStorage.getItem('gestcom_rtdb');
+      if(saved) {
+        const {dbUrl, apiKey} = JSON.parse(saved);
+        if(dbUrl) { configSync.dbUrl = dbUrl.replace(/\/$/,''); configSync.apiKey = apiKey||''; configSync.conectado = true; }
+      }
+    } catch(e) {}
+  }
+  if(configSync.conectado && configSync.dbUrl) {
+    // Cancela qualquer auto-save em voo para não sobrescrever com dados intermediários
+    clearTimeout(window._syncDebounce);
+    _pushPendente = true; window._pushPendente = true;
+    _mostrarIndicadorSalvando(true);
+    try {
+      await syncPush(true); // envia AGORA — a nuvem passa a refletir a exclusão
+    } catch(e) {
+      console.warn('[GestCom] Falha ao enviar exclusão (dados salvos localmente):', e.message);
+    } finally {
+      _pushPendente = false; window._pushPendente = false;
+      _mostrarIndicadorSalvando(false);
+    }
+  }
+}
+
 /* ──────────────────────────────────────
    PERSISTÊNCIA LOCAL — fallback offline
    Salva em localStorage a cada alteração.
@@ -4310,7 +4371,7 @@ function _migrarConfigLembretes() {
 function _salvarLocal() {
   try {
     const payload = JSON.stringify({
-      pedidos, orcamentos, clientes, industrias, redes, comissoes_data,
+      pedidos, orcamentos, orcamentosExcluidos, clientes, industrias, redes, comissoes_data,
       logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
       PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms,
       configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
@@ -4334,6 +4395,12 @@ function _carregarLocal() {
     const d = JSON.parse(raw);
     if(Array.isArray(d.pedidos))          pedidos          = d.pedidos;
     if(Array.isArray(d.orcamentos))       orcamentos       = d.orcamentos;
+    // Une a lista de excluídos do cache (nunca encolhe: exclusão é permanente)
+    if(Array.isArray(d.orcamentosExcluidos)) {
+      d.orcamentosExcluidos.forEach(id => { if(!orcamentosExcluidos.includes(id)) orcamentosExcluidos.push(id); });
+      _salvarOrcamentosExcluidos();
+    }
+    purgarOrcamentosExcluidos(); // remove orçamentos excluídos que ainda estejam no cache local
     if(Array.isArray(d.clientes))         clientes         = d.clientes;
     if(Array.isArray(d.industrias))       industrias       = d.industrias;
     if(Array.isArray(d.redes))            redes            = d.redes;
@@ -4544,6 +4611,7 @@ document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',fun
    ORÇAMENTOS
 ══════════════════════════ */
 function renderOrcamentos() {
+  purgarOrcamentosExcluidos(); // rede de segurança: nunca exibe orçamento excluído
   const busca = (el('orc-busca')||{}).value?.toLowerCase()||'';
   const filtSt = (el('orc-filtro-status')||{}).value||'';
   const filtInd = (el('orc-filtro-ind')||{}).value||'';
@@ -4610,11 +4678,17 @@ function renderOrcamentos() {
 function excluirOrcamento(id) {
   const o = orcamentos.find(x=>x.id===id); if(!o) return;
   if(!confirm(`Excluir PERMANENTEMENTE o orçamento "${o.id}" — ${o.cliente}?\n\nEsta ação não pode ser desfeita.`)) return;
+  // 1) Marca o ID como excluído permanentemente (tombstone) e grava na hora.
+  //    Assim, mesmo que a nuvem ou outra aba tente trazê-lo de volta, ele é
+  //    filtrado e removido automaticamente em qualquer carregamento.
+  if(!orcamentosExcluidos.includes(id)) orcamentosExcluidos.push(id);
+  _salvarOrcamentosExcluidos();
+  // 2) Remove da lista atual.
   orcamentos = orcamentos.filter(x=>x.id!==id);
   addAudit(usuarioLogado?.login||'admin', `Orçamento excluído permanentemente: ${o.id} — ${o.cliente}`, '🗑️');
   renderOrcamentos();
   renderDashboard();
-  syncAutoSaveHook();
+  salvarExclusaoImediata(); // envia a exclusão à nuvem NA HORA (evita ressurreição em recarga)
   toast('Orçamento excluído com sucesso.');
 }
 
@@ -9089,6 +9163,7 @@ const IMPORT_COLS = {
   clientes: [
     {key:'nome',     label:'Nome / Razão Social', req:true},
     {key:'cnpj',     label:'CNPJ',                req:false},
+    {key:'ie',       label:'Inscrição Estadual',  req:false, hint:'IE — ou ISENTO'},
     {key:'segmento', label:'Segmento',            req:false, hint:'Varejo / Distribuidor / Atacado'},
     {key:'cidade',   label:'Cidade / UF',         req:false},
     {key:'prazo',    label:'Prazo Pgto',          req:false, hint:'Ex: 28D, 30/60D'},
@@ -9159,7 +9234,7 @@ const IMPORT_COLS = {
 
 // ── Mapas de importação separados por contexto (sem colisão de chaves) ──
 const _HMB = {'status':'status','situacao':'status','obs':'obs','observacoes':'obs','observacao':'obs','notas':'obs','email':'email','e-mail':'email','telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone','contato':'contato','responsavel':'contato'};
-const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome','cnpj':'cnpj','cpf/cnpj':'cnpj','segmento':'segmento','perfil':'segmento','tipo cliente':'segmento','cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade','prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','rede':'rede','grupo':'rede'});
+const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome','cnpj':'cnpj','cpf/cnpj':'cnpj','ie':'ie','inscricao estadual':'ie','inscricao':'ie','insc estadual':'ie','insc. estadual':'ie','rg estadual':'ie','segmento':'segmento','perfil':'segmento','tipo cliente':'segmento','cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade','prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','rede':'rede','grupo':'rede'});
 const _HMI = Object.assign({},_HMB,{'nome':'nome','marca':'nome','laboratorio':'nome','fabricante':'nome','razao social':'razao','razao social completa':'razao','cnpj':'cnpj','% comissao':'pct','comissao %':'pct','pct':'pct','percentual':'pct','comissao':'pct','tipo comissao':'tipoCom','tipo com':'tipoCom'});
 const _HMP = Object.assign({},_HMB,{'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod','codigo produto':'cod','ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind','preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco','unidade':'unid','unid':'unid','un':'unid','categoria':'cat','cat':'cat','preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor','preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado','preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo','codigo mg':'codigoMG','cod mg':'codigoMG','codigo sp':'codigoSP','cod sp':'codigoSP','codigo ba':'codigoBA','cod ba':'codigoBA','codigo go':'codigoGO','cod go':'codigoGO','codigo rj':'codigoRJ','cod rj':'codigoRJ','codigo pr':'codigoPR','cod pr':'codigoPR','codigo sc':'codigoSC','cod sc':'codigoSC','codigo rs':'codigoRS','cod rs':'codigoRS','ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG','ean sp':'eanSP','ean sao paulo':'eanSP','ean ba':'eanBA','ean bahia':'eanBA','ean go':'eanGO','ean rj':'eanRJ','ean pr':'eanPR','ean sc':'eanSC','ean rs':'eanRS','canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais'});
 const _HMD = Object.assign({},_HMB,{'cliente':'cliente','razao social':'cliente','industria':'industria','nome industria':'industria','tipo':'tipo','tipo pedido':'tipo','data':'data','data pedido':'data','data emissao':'data','condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond','condicao pagamento':'cond','grupo':'grupo','pedido':'grupo','num pedido':'grupo','numero pedido':'grupo','id pedido':'grupo','codigo':'cod','cod':'cod','cod produto':'cod','cod. produto':'cod','codigo produto':'cod','sku':'cod','ref':'cod','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','qtd':'qtd','quantidade':'qtd','quant':'qtd','qty':'qtd','desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct','desconto %':'descPct','preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit','preco':'precoUnit','total item':'total','total':'total','valor total':'total','subtotal':'total','valor':'total','status':'status','situacao':'status','% comissao':'pct','comissao %':'pct','pct comissao':'pct','percentual comissao':'pct','taxa comissao':'pct','nf':'nf_numero','numero nf':'nf_numero','num nf':'nf_numero','nota fiscal':'nf_numero','nf numero':'nf_numero','numero da nf':'nf_numero','valor nf':'nf_valor','valor faturado':'nf_valor','valor nota':'nf_valor','valor nota fiscal':'nf_valor','vl nf':'nf_valor','nf valor':'nf_valor','data nf':'nf_data','data faturamento':'nf_data','data nota':'nf_data','data nota fiscal':'nf_data','dia faturado':'nf_data','dt nf':'nf_data','nf data':'nf_data','emissao nf':'nf_data'});
@@ -9950,6 +10025,7 @@ function confirmarImport() {
         id: existente ? existente.id : ('CLI-' + String(Date.now()+adicionados).slice(-5)),
         nome,
         cnpj:     row.cnpj     || (existente?.cnpj||''),
+        ie:       row.ie       || (existente?.ie||''),
         segmento: row.segmento || (existente?.segmento||''),
         cidade:   row.cidade   || (existente?.cidade||''),
         prazo:    row.prazo    || (existente?.prazo||''),
@@ -10338,7 +10414,7 @@ function baixarModeloImport() {
   const wb = XLSX.utils.book_new();
   const header = cols.map(c => c.label + (c.req?' *':''));
   const exemplo = {
-    clientes: ['Farmácia Central', '12.345.678/0001-90', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
+    clientes: ['Farmácia Central', '12.345.678/0001-90', '123.456.789.012', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
     produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', '7891234560013', '7891234560012', '7891234560011', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
     pedido: [
@@ -13944,6 +14020,7 @@ function coletarDadosParaSync() {
   return {
     pedidos:        JSON.parse(JSON.stringify(pedidos)),
     orcamentos:     JSON.parse(JSON.stringify(orcamentos)),
+    orcamentosExcluidos: JSON.parse(JSON.stringify(orcamentosExcluidos||[])),
     clientes:       JSON.parse(JSON.stringify(clientes)),
     industrias:     JSON.parse(JSON.stringify(industrias)),
     redes:          JSON.parse(JSON.stringify(redes)),
@@ -13989,6 +14066,12 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   _rtdbLastTs = dados._ts || Date.now();
   if(Array.isArray(dados.pedidos)) pedidos = dados.pedidos;
   if(Array.isArray(dados.orcamentos)) orcamentos = dados.orcamentos;
+  // Une a lista de excluídos vinda da nuvem (exclusão feita em qualquer aparelho vale para todos)
+  if(Array.isArray(dados.orcamentosExcluidos)) {
+    dados.orcamentosExcluidos.forEach(id => { if(!orcamentosExcluidos.includes(id)) orcamentosExcluidos.push(id); });
+    _salvarOrcamentosExcluidos();
+  }
+  purgarOrcamentosExcluidos(); // a nuvem NÃO pode ressuscitar orçamentos excluídos permanentemente
   if(Array.isArray(dados.clientes)) clientes = dados.clientes;
   if(Array.isArray(dados.industrias)) industrias = dados.industrias;
   if(Array.isArray(dados.redes)) redes = dados.redes;
@@ -14109,12 +14192,34 @@ try{popularSelectsDinamicos();}catch(e){}
     if (res.ok) {
       const dados = await res.json();
       if (dados) {
-        // Aguarda um tick para garantir que _carregarLocal() já rodou antes de aplicar a nuvem
-        // Isso garante que os dados da nuvem sempre prevalecem sobre os dados locais
+        // Aguarda um tick para garantir que _carregarLocal() já rodou antes de aplicar a nuvem.
         setTimeout(() => {
-          aplicarDadosDaNuvem(dados, true, true);
-          _rtdbLastTs = dados._ts || Date.now();
-          try { renderOrcamentos(); renderDashboard(); renderPedidos(); } catch(e) {}
+          // FIX #3 — NÃO aplicar a nuvem cegamente. Se a cópia local for MAIS
+          // recente que a da nuvem (ex.: uma exclusão que chegou ao localStorage
+          // mas cujo push falhou/ficou pendente), aplicar a nuvem aqui traria o
+          // registro excluído de volta. Comparamos os timestamps e, se o local
+          // for mais novo, mantemos o local e reenviamos para a nuvem.
+          let tsLocal = 0;
+          try { const _rl = JSON.parse(localStorage.getItem('gestcom_dados')||'{}'); tsLocal = _rl._ts || 0; } catch(e) {}
+          const tsNuvem = dados._ts || 0;
+          if (tsLocal && tsNuvem && tsLocal > tsNuvem) {
+            // Local vence: não sobrescreve os registros. Mas ainda assim absorve a
+            // lista de exclusões da nuvem (uma exclusão feita em outro aparelho
+            // continua valendo) e purga antes de reenviar.
+            if(Array.isArray(dados.orcamentosExcluidos)) {
+              dados.orcamentosExcluidos.forEach(id => { if(!orcamentosExcluidos.includes(id)) orcamentosExcluidos.push(id); });
+              _salvarOrcamentosExcluidos();
+            }
+            purgarOrcamentosExcluidos();
+            _rtdbLastTs = tsLocal;
+            try { renderOrcamentos(); renderDashboard(); renderPedidos(); } catch(e) {}
+            try { syncPush(true); } catch(e) {}
+          } else {
+            // Nuvem é igual ou mais recente: aplica normalmente.
+            aplicarDadosDaNuvem(dados, true, true);
+            _rtdbLastTs = tsNuvem || Date.now();
+            try { renderOrcamentos(); renderDashboard(); renderPedidos(); } catch(e) {}
+          }
         }, 300);
       }
       configSync.conectado = true;
