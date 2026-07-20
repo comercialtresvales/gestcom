@@ -9162,10 +9162,14 @@ function exportarProdutosExcel() {
 const IMPORT_COLS = {
   clientes: [
     {key:'nome',     label:'Nome / Razão Social', req:true},
+    {key:'fantasia', label:'Nome Fantasia',        req:false},
     {key:'cnpj',     label:'CNPJ',                req:false},
     {key:'ie',       label:'Inscrição Estadual',  req:false, hint:'IE — ou ISENTO'},
     {key:'segmento', label:'Segmento',            req:false, hint:'Varejo / Distribuidor / Atacado'},
+    {key:'endereco', label:'Endereço',            req:false, hint:'Rua, número, complemento'},
+    {key:'bairro',   label:'Bairro',              req:false},
     {key:'cidade',   label:'Cidade / UF',         req:false},
+    {key:'cep',      label:'CEP',                 req:false, hint:'Ex: 00000-000'},
     {key:'prazo',    label:'Prazo Pgto',          req:false, hint:'Ex: 28D, 30/60D'},
     {key:'contato',  label:'Contato',             req:false},
     {key:'email',    label:'E-mail',              req:false},
@@ -9233,8 +9237,8 @@ const IMPORT_COLS = {
 };
 
 // ── Mapas de importação separados por contexto (sem colisão de chaves) ──
-const _HMB = {'status':'status','situacao':'status','obs':'obs','observacoes':'obs','observacao':'obs','notas':'obs','email':'email','e-mail':'email','telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone','contato':'contato','responsavel':'contato'};
-const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','empresa':'nome','cliente':'nome','cnpj':'cnpj','cpf/cnpj':'cnpj','ie':'ie','inscricao estadual':'ie','inscricao':'ie','insc estadual':'ie','insc. estadual':'ie','rg estadual':'ie','segmento':'segmento','perfil':'segmento','tipo cliente':'segmento','cidade':'cidade','cidade/uf':'cidade','localidade':'cidade','estado':'cidade','prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','rede':'rede','grupo':'rede'});
+const _HMB = {'status':'status','situacao':'status','obs':'obs','observacoes':'obs','observacao':'obs','notas':'obs','email':'email','e-mail':'email','e mail':'email','telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone','contato':'contato','responsavel':'contato'};
+const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','nome / razao social':'nome','empresa':'nome','cliente':'nome','nome fantasia':'fantasia','fantasia':'fantasia','cnpj':'cnpj','cpf/cnpj':'cnpj','ie':'ie','inscricao estadual':'ie','inscricao':'ie','insc estadual':'ie','insc. estadual':'ie','rg estadual':'ie','segmento':'segmento','perfil':'segmento','tipo cliente':'segmento','endereco':'endereco','endereco completo':'endereco','logradouro':'endereco','rua':'endereco','rua numero':'endereco','rua/numero':'endereco','endereco rua numero complemento':'endereco','bairro':'bairro','cidade':'cidade','cidade/uf':'cidade','cidade / uf':'cidade','localidade':'cidade','estado':'cidade','municipio':'cidade','cep':'cep','codigo postal':'cep','prazo':'prazo','prazo pgto':'prazo','prazo pagamento':'prazo','prazo de pagamento':'prazo','rede':'rede','grupo':'rede'});
 const _HMI = Object.assign({},_HMB,{'nome':'nome','marca':'nome','laboratorio':'nome','fabricante':'nome','razao social':'razao','razao social completa':'razao','cnpj':'cnpj','% comissao':'pct','comissao %':'pct','pct':'pct','percentual':'pct','comissao':'pct','tipo comissao':'tipoCom','tipo com':'tipoCom'});
 const _HMP = Object.assign({},_HMB,{'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod','codigo produto':'cod','ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind','preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco','unidade':'unid','unid':'unid','un':'unid','categoria':'cat','cat':'cat','preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor','preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado','preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo','codigo mg':'codigoMG','cod mg':'codigoMG','codigo sp':'codigoSP','cod sp':'codigoSP','codigo ba':'codigoBA','cod ba':'codigoBA','codigo go':'codigoGO','cod go':'codigoGO','codigo rj':'codigoRJ','cod rj':'codigoRJ','codigo pr':'codigoPR','cod pr':'codigoPR','codigo sc':'codigoSC','cod sc':'codigoSC','codigo rs':'codigoRS','cod rs':'codigoRS','ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG','ean sp':'eanSP','ean sao paulo':'eanSP','ean ba':'eanBA','ean bahia':'eanBA','ean go':'eanGO','ean rj':'eanRJ','ean pr':'eanPR','ean sc':'eanSC','ean rs':'eanRS','canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais'});
 const _HMD = Object.assign({},_HMB,{'cliente':'cliente','razao social':'cliente','industria':'industria','nome industria':'industria','tipo':'tipo','tipo pedido':'tipo','data':'data','data pedido':'data','data emissao':'data','condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond','condicao pagamento':'cond','grupo':'grupo','pedido':'grupo','num pedido':'grupo','numero pedido':'grupo','id pedido':'grupo','codigo':'cod','cod':'cod','cod produto':'cod','cod. produto':'cod','codigo produto':'cod','sku':'cod','ref':'cod','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','qtd':'qtd','quantidade':'qtd','quant':'qtd','qty':'qtd','desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct','desconto %':'descPct','preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit','preco':'precoUnit','total item':'total','total':'total','valor total':'total','subtotal':'total','valor':'total','status':'status','situacao':'status','% comissao':'pct','comissao %':'pct','pct comissao':'pct','percentual comissao':'pct','taxa comissao':'pct','nf':'nf_numero','numero nf':'nf_numero','num nf':'nf_numero','nota fiscal':'nf_numero','nf numero':'nf_numero','numero da nf':'nf_numero','valor nf':'nf_valor','valor faturado':'nf_valor','valor nota':'nf_valor','valor nota fiscal':'nf_valor','vl nf':'nf_valor','nf valor':'nf_valor','data nf':'nf_data','data faturamento':'nf_data','data nota':'nf_data','data nota fiscal':'nf_data','dia faturado':'nf_data','dt nf':'nf_data','nf data':'nf_data','emissao nf':'nf_data'});
@@ -10022,12 +10026,17 @@ function confirmarImport() {
       const existente = clientes.find(c => c.nome.toLowerCase() === nome.toLowerCase() ||
         (row.cnpj && c.cnpj && row.cnpj.replace(/\D/g,'') === c.cnpj.replace(/\D/g,'')));
       const obj = {
+        ...(existente || {}), // preserva campos não presentes na planilha (ccGrupo, contatos, setores, histórico...)
         id: existente ? existente.id : ('CLI-' + String(Date.now()+adicionados).slice(-5)),
         nome,
+        fantasia: row.fantasia || (existente?.fantasia||''),
         cnpj:     row.cnpj     || (existente?.cnpj||''),
         ie:       row.ie       || (existente?.ie||''),
         segmento: row.segmento || (existente?.segmento||''),
+        endereco: row.endereco || (existente?.endereco||''),
+        bairro:   row.bairro   || (existente?.bairro||''),
         cidade:   row.cidade   || (existente?.cidade||''),
+        cep:      row.cep      || (existente?.cep||''),
         prazo:    row.prazo    || (existente?.prazo||''),
         contato:  row.contato  || (existente?.contato||''),
         email:    row.email    || (existente?.email||''),
@@ -10414,7 +10423,7 @@ function baixarModeloImport() {
   const wb = XLSX.utils.book_new();
   const header = cols.map(c => c.label + (c.req?' *':''));
   const exemplo = {
-    clientes: ['Farmácia Central', '12.345.678/0001-90', '123.456.789.012', 'Varejo', 'São Paulo, SP', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
+    clientes: ['Farmácia Central', 'Farmácia Central', '12.345.678/0001-90', '123.456.789.012', 'Varejo', 'Rua Exemplo, 123 - Sala 4', 'Centro', 'São Paulo, SP', '01000-000', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
     produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', '7891234560013', '7891234560012', '7891234560011', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
     pedido: [
