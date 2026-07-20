@@ -570,6 +570,24 @@ function carregarCache(){
   return false;
 }
 
+// ECONOMIA DE BANDA: só baixa a base inteira se a nuvem mudou.
+// Checa o nó _ts (poucos bytes); se não for mais novo que o cache local, usa o cache.
+async function puxarSeMudou(){
+  if(!RTDB) throw new Error('Sistema não configurado neste aparelho');
+  let tsLocal = 0;
+  try{ const c = JSON.parse(localStorage.getItem('gestcom_cache')||'{}'); tsLocal = c._ts||0; }catch(e){}
+  let tsRemoto = null;
+  try{
+    const rt = await fetch(rtdbUrl('gestcom/dados/_ts'));
+    if(rt.ok) tsRemoto = await rt.json();
+  }catch(e){ /* sem rede: cai no cache abaixo */ }
+  if(tsRemoto && tsRemoto > tsLocal){
+    return await puxarDados();           // nuvem mais nova → baixa tudo (1x)
+  }
+  if(carregarCache()) return DADOS;      // cache já está atualizado → zero download da base
+  return await puxarDados();             // sem cache → baixa
+}
+
 /* ════════════════════════════════════════════════
    LOGIN
 ════════════════════════════════════════════════ */
@@ -598,7 +616,7 @@ async function fazerLogin(){
     if(!RTDB) carregarRTDB();
     if(RTDB){
       try{
-        await puxarDados();
+        await puxarSeMudou();
       }catch(netErr){
         // Sem internet? Usa o último cache salvo neste aparelho.
         if(!carregarCache()) throw (RTDB ? new Error('sem-internet') : new Error('sem-config'));
@@ -734,7 +752,7 @@ async function loginBiometria(){
     // Biometria confirmada pelo aparelho → carrega dados e entra
     status.textContent = '⏳ Entrando…';
     if(!RTDB) carregarRTDB();
-    try{ if(RTDB) await puxarDados(); else carregarCache(); }
+    try{ if(RTDB) await puxarSeMudou(); else carregarCache(); }
     catch(e){ carregarCache(); }
 
     const usuarios = DADOS?.usuarios || [];
@@ -2599,8 +2617,8 @@ async function boot(){
     try{
       const s = JSON.parse(sess);
       document.getElementById('login-status').textContent='⏳ Reconectando…';
-      // tenta atualizar da nuvem, senão usa cache
-      try{ if(RTDB) await puxarDados(); else carregarCache(); }
+      // tenta atualizar da nuvem (só baixa tudo se mudou), senão usa cache
+      try{ if(RTDB) await puxarSeMudou(); else carregarCache(); }
       catch(e){ carregarCache(); }
 
       const usuarios = DADOS?.usuarios||[];
