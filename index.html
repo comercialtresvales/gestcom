@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -11594,18 +11595,26 @@ function fazerLogin() {
       } catch(e) {}
     };
 
-    // Se conectado à nuvem, faz um pull forçado antes de entrar para garantir dados atualizados
+    // ECONOMIA DE BANDA: NÃO baixa a base inteira de novo aqui.
+    // autoConectarFirebase() (no carregamento da página) já trouxe a nuvem.
+    // Em vez de re-baixar ~5MB a cada login, checamos só o _ts (poucos bytes);
+    // se a nuvem estiver mais nova que o que já temos, aí sim baixamos.
     if(configSync.conectado && configSync.dbUrl) {
       const btnEl = document.getElementById('btn-entrar');
       const stEl  = document.getElementById('login-sync-status');
       if(btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Verificando…'; }
-      if(stEl)  { stEl.textContent = '⏳ Sincronizando dados da nuvem…'; stEl.style.display = 'block'; }
-      // Força download direto do Firebase, ignorando cache local
-      _rtdbLastTs = 0;
-      fetch(configSync.dbUrl.replace(/\/$/, '') + '/gestcom/dados.json' + (configSync.apiKey ? '?auth=' + configSync.apiKey : ''))
+      if(stEl)  { stEl.textContent = '⏳ Verificando dados da nuvem…'; stEl.style.display = 'block'; }
+      fetch(configSync.dbUrl.replace(/\/$/, '') + '/gestcom/dados/_ts.json' + (configSync.apiKey ? '?auth=' + configSync.apiKey : ''))
         .then(r => r.ok ? r.json() : null)
-        .then(dados => {
-          if(dados) { aplicarDadosDaNuvem(dados, true, true); _rtdbLastTs = dados._ts || Date.now(); }
+        .then(tsRemoto => {
+          if(tsRemoto && tsRemoto > (_rtdbLastTs||0)) {
+            // Só nesse caso vale baixar a base completa
+            return fetch(configSync.dbUrl.replace(/\/$/, '') + '/gestcom/dados.json' + (configSync.apiKey ? '?auth=' + configSync.apiKey : ''))
+              .then(r => r.ok ? r.json() : null)
+              .then(dados => { if(dados){ aplicarDadosDaNuvem(dados, true, true); _rtdbLastTs = dados._ts || Date.now(); } });
+          }
+        })
+        .then(() => {
           if(btnEl) { btnEl.disabled = false; btnEl.textContent = 'Entrar'; }
           if(stEl)  stEl.style.display = 'none';
           _tentarEntrar();
@@ -14125,9 +14134,26 @@ const _loginAtual = usuarioLogado?.login;
     ].forEach(fn=>{try{window[fn]&&window[fn]();}catch(e){}});
   }
 }
+// Guarda a assinatura do último envio bem-sucedido (conteúdo, ignorando _ts).
+// Se nada mudou de verdade, não reenviamos a base inteira — economia direta de banda.
+var _rtdbLastPushSig = null;
 async function syncPush(silencioso=false){
   if(!configSync.conectado||!configSync.dbUrl) return;
-  try{const dados=coletarDadosParaSync();const res=await fetch(rtdbUrl('gestcom/dados'),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});if(!res.ok)throw new Error('HTTP '+res.status);_rtdbLastTs=dados._ts;if(!silencioso){syncLog('✅ Enviado','success');feedbackFb('Sincronizado!','success');}}catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
+  try{
+    const dados=coletarDadosParaSync();
+    // Assinatura do conteúdo, ignorando campos voláteis (_ts muda sempre).
+    const _sig = JSON.stringify(dados, (k,v)=> (k==='_ts'||k==='_usuario')?undefined:v);
+    if(_sig === _rtdbLastPushSig){
+      // Nada mudou de verdade — não reenvia a base. Economia direta de banda.
+      if(!silencioso){syncLog('Sem alterações — envio dispensado','info');feedbackFb('Já sincronizado','info');}
+      return;
+    }
+    const res=await fetch(rtdbUrl('gestcom/dados'),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    _rtdbLastPushSig = _sig;
+    _rtdbLastTs=dados._ts;
+    if(!silencioso){syncLog('✅ Enviado','success');feedbackFb('Sincronizado!','success');}
+  }catch(e){if(!silencioso){syncLog('❌ '+e.message,'error');feedbackFb('Erro: '+e.message,'danger');}}
 }
 async function syncPull(silencioso){
   if(!configSync.conectado||!configSync.dbUrl) return;
