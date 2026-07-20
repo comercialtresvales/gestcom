@@ -10,26 +10,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>GestCom — Comercial Três Vales</title>
-<!-- Bibliotecas: tenta o arquivo local (offline); se falhar, busca da internet -->
-<script src="xlsx.min.js" onerror="carregarCDN('xlsx')"></script>
-<script src="jspdf.min.js" onerror="carregarCDN('jspdf')"></script>
-<script>
-/* Fallback: se o arquivo local não existir/não carregar, baixa da internet.
-   Assim o app funciona offline (com os .js na pasta) E online (sem eles). */
-function carregarCDN(qual){
-  var s = document.createElement('script');
-  if(qual === 'xlsx'){
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  } else {
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  }
-  s.onerror = function(){
-    console.error('Não foi possível carregar a biblioteca "'+qual+'" (nem local nem internet).');
-  };
-  document.head.appendChild(s);
-  console.warn('Arquivo local de "'+qual+'" não carregou; buscando da internet…');
-}
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>window.XLSX||document.write('<script src="xlsx.min.js"><\/script>');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>window.jspdf||document.write('<script src="jspdf.min.js"><\/script>');</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -2360,7 +2344,7 @@ function exportarModulo(){
   closeSheet();
   const key = sheetContext || (moduloAtual&&moduloAtual.key);
   if(!key){ toast('Abra um módulo para exportar','err'); return; }
-  if(typeof XLSX==='undefined'){ toast('Biblioteca do Excel não carregou. Verifique se o arquivo "xlsx.min.js" está na mesma pasta, ou conecte à internet e tente de novo.','err'); return; }
+  if(typeof XLSX==='undefined'){ toast('Recurso de Excel ainda carregando. Tente de novo em instantes.','err'); return; }
   const arr = dadosDoModulo(key);
   if(!arr || !arr.length){ toast('Nada para exportar neste módulo','err'); return; }
   try{
@@ -2404,13 +2388,24 @@ function _baixarLink(blob, nomeArquivo){
 }
 
 function achatarRegistro(r){
+  const LIM=32760; // limite do Excel por célula (32767) com margem
+  const corta=(s)=>{ s=String(s); return s.length>LIM ? s.slice(0,LIM-1)+'…' : s; };
   const out={};
   for(const k in r){
     const v=r[k];
     if(v===null||v===undefined){ out[k]=''; }
-    else if(Array.isArray(v)){ out[k]=v.length+' itens'; }
-    else if(typeof v==='object'){ out[k]=JSON.stringify(v); }
-    else out[k]=v;
+    else if(k==='itens' && Array.isArray(v)){
+      // Resume os itens de forma legível (produto xqtd), sem despejar JSON gigante
+      out['itens_qtd']=v.length;
+      out['itens']=corta(v.map(it=>{
+        const nm=it.produto||it.desc||it.descricao||it.nome||it.cod||it.codigo||'item';
+        const q=it.qtd??it.quantidade??it.qtde;
+        return q!=null ? `${nm} x${q}` : String(nm);
+      }).join(' | '));
+    }
+    else if(Array.isArray(v)){ out[k]=corta(v.length+' itens'); }
+    else if(typeof v==='object'){ out[k]=corta(JSON.stringify(v)); }
+    else out[k]=corta(v);
   }
   return out;
 }
@@ -2442,13 +2437,11 @@ function importarArquivo(){
 function gerarPDF(){
   closeSheet();
   const key = sheetContext || (moduloAtual&&moduloAtual.key);
-  // A biblioteca pode se expor como window.jspdf (novas versões) ou window.jsPDF (antigas)
-  const jspdfNS = window.jspdf || window.jsPDF;
-  if(!jspdfNS){ toast('Biblioteca do PDF não carregou. Verifique se o arquivo "jspdf.min.js" está na mesma pasta, ou conecte à internet e tente de novo.','err'); return; }
+  if(!window.jspdf){ toast('Recurso de PDF ainda carregando. Tente de novo em instantes.','err'); return; }
   const arr = dadosDoModulo(key);
   if(!arr || !arr.length){ toast('Nada para gerar PDF','err'); return; }
   try{
-    const jsPDF = jspdfNS.jsPDF || jspdfNS;
+    const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(16); doc.text('GestCom — '+(moduloAtual?moduloAtual.label:key), 14, 18);
     doc.setFontSize(9); doc.setTextColor(120);
@@ -2621,7 +2614,16 @@ async function boot(){
 
 // Registra service worker (PWA offline)
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.update();
+      // Se um novo SW assumir o controle, recarrega para pegar a versão nova
+      let recarregou=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(recarregou) return; recarregou=true; location.reload();
+      });
+    }).catch(()=>{});
+  });
 }
 
 boot();
