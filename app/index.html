@@ -10,8 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>GestCom — Comercial Três Vales</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="xlsx.min.js"></script>
+<script src="jspdf.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -276,6 +276,10 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
 /* Ajuste: cards dentro de cards-wrap sem margem lateral dupla */
 .cards-wrap .card{margin-bottom:9px;}
 .lista-contador{font-size:11px;color:#999;font-weight:600;padding:12px 18px 6px;}
+.saldo-linhas{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px dashed #eee;gap:8px;}
+.saldo-linhas>div{display:flex;flex-direction:column;gap:2px;flex:1;}
+.saldo-linhas .sl-l{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.3px;}
+.saldo-linhas .sl-v{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -365,7 +369,7 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
       <div class="info-card">
         <div class="info-row"><span class="k">Manter conectado</span><span class="v" id="pf-remember">—</span></div>
         <div class="info-row"><span class="k">Biometria (digital / Face ID)</span><span class="v" id="pf-bio">—</span></div>
-        <div class="info-row"><span class="k">Versão do app</span><span class="v">2.0</span></div>
+        <div class="info-row"><span class="k">Versão do app</span><span class="v">2.2</span></div>
       </div>
       <button class="btn-full btn-dark" id="pf-bio-btn" onclick="toggleBiometriaPerfil()" style="display:none">Ativar biometria</button>
       <button class="btn-full btn-danger" onclick="logout()">Sair da conta</button>
@@ -450,11 +454,9 @@ const TODOS_MODULOS = [
   {key:'orcamentos',     label:'Orçamento',         icone:'📝', cls:'i-yellow'},
   {key:'pedidos',        label:'Pedido',            icone:'📋', cls:'i-blue'},
   {key:'faturamento',    label:'Faturamento',       icone:'🧾', cls:'i-green'},
-  {key:'nfcompare',      label:'Pedido × NF',       icone:'⚖️', cls:'i-gray'},
   {key:'logistica',      label:'Logística',         icone:'🚚', cls:'i-orange'},
   {key:'tratativas',     label:'Tratativas',        icone:'🔗', cls:'i-gray'},
   {key:'saldo',          label:'Saldo Cli×Ind',     icone:'📊', cls:'i-purple'},
-  {key:'ctrlsaldo',      label:'Ctrl. Saldos',      icone:'🏦', cls:'i-blue'},
   {key:'comissoes',      label:'Comissão',          icone:'💰', cls:'i-green'},
   {key:'fatmensal',      label:'Fat. Mensal',       icone:'📅', cls:'i-green'},
   {key:'sellinout',      label:'Sell In / Out',     icone:'↕️', cls:'i-purple'},
@@ -472,7 +474,7 @@ const TODOS_MODULOS = [
    Sell In/Out é UMA tela só (decisão do cliente), igual ao site.
    'crm' fica fora da home pra não duplicar o ícone de clientes. */
 const ORDEM_HOME = ['dashboard','pedidos','orcamentos','faturamento','comissoes','logistica',
-  'fatmensal','sellinout','saldo','ctrlsaldo','metas','tratativas','nfcompare',
+  'fatmensal','sellinout','saldo','metas','tratativas',
   'clientes','industrias','produtos','mix','redes','relatorios',
   'financeiro','conta-corrente','tarefas','atas','regras'];
 
@@ -765,13 +767,24 @@ function desativarBiometria(){
 /* ════════════════════════════════════════════════
    ENTRAR / MONTAR APP
 ════════════════════════════════════════════════ */
+function ehGestor(){
+  return usuarioLogado && (usuarioLogado.perfil==='diretoria' || usuarioLogado.perfil==='admin');
+}
+function ajustarNavPorPerfil(){
+  // Painel e Sync só para diretoria/admin
+  const gestor = ehGestor();
+  document.querySelectorAll('.bn-item[data-tab="painel"], .bn-item[data-tab="sync"]').forEach(el=>{
+    el.style.display = gestor ? '' : 'none';
+  });
+}
 function entrarNoApp(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='flex';
+  ajustarNavPorPerfil();
   montarHome();
   atualizarPerfil();
-  atualizarSync();
-  montarPainel();
+  if(ehGestor()){ atualizarSync(); montarPainel(); }
+  switchTab('home');
 }
 
 function iniciais(nome){
@@ -883,21 +896,23 @@ function closeDetail(){ document.getElementById('detail').classList.remove('open
 /* Mapeia cada módulo → array de dados + como renderizar cada card */
 function dadosDoModulo(key){
   if(!DADOS) return [];
+  // PRODUTOS_CAT é um OBJETO {codigo:{...}} no site — converte pra array preservando o código
+  const produtosArr = (DADOS.PRODUTOS_CAT && typeof DADOS.PRODUTOS_CAT==='object' && !Array.isArray(DADOS.PRODUTOS_CAT))
+    ? Object.entries(DADOS.PRODUTOS_CAT).map(([cod,p])=>({codigo:cod, cod, ...(p||{})}))
+    : (Array.isArray(DADOS.PRODUTOS_CAT)?DADOS.PRODUTOS_CAT:[]);
   const map = {
     orcamentos: DADOS.orcamentos,
     pedidos: DADOS.pedidos,
     faturamento: DADOS.pedidos, // NFs vinculadas
     comissoes: DADOS.comissoes_data,
     clientes: DADOS.clientes,
-    crm: DADOS.clientes,
+    crm: DADOS.crmData || DADOS.clientes,
     industrias: DADOS.industrias,
     redes: DADOS.redes,
     sellinout: DADOS.sellOutData,
-    sellin: DADOS.orcamentos,
-    sellout: DADOS.sellOutData,
     metas: DADOS.metasData,
     tratativas: DADOS.tratativas,
-    produtos: DADOS.PRODUTOS_CAT,
+    produtos: produtosArr,
     mix: DADOS.mixProdutos,
     logistica: DADOS.logisticaData,
     regras: DADOS.regrasComerciais,
@@ -907,6 +922,7 @@ function dadosDoModulo(key){
     'conta-corrente': DADOS.contaCorrenteData,
     financeiro: DADOS.finCRData,
     relatorios: DADOS.pedidos,
+    bonificacoes: DADOS.bonificacoesData,
   };
   const arr = map[key];
   return Array.isArray(arr) ? arr : [];
@@ -1300,21 +1316,35 @@ function statusClasse(s){
 function cardDoRegistro(key, r){
   // Extrai campos de forma tolerante (o schema varia por módulo)
   const id = r.id || r.numero || r.codigo || r.cod || r.nf || '—';
-  const cliente = r.cliente || r.nome || r.razaoSocial || r.fantasia || r.descricao || r.titulo || '—';
-  const industria = r.industria || r.fornecedor || r.categoria || r.grupo || '';
-  const valor = r.valorLiquido ?? r.valor ?? r.total ?? r.valorTotal ?? r.comissao ?? r.meta ?? null;
-  const status = r.status || r.situacao || '';
-  const data = r.data || r.dataEmissao || r.dataPedido || r.criadoEm || r.mes || '';
+  // Descrição: produtos/mix usam 'desc'; outros usam nome/cliente/etc.
+  const cliente = r.cliente || r.nome || r.razaoSocial || r.fantasia || r.desc || r.descricao || r.titulo || r.produto || '—';
+  const industria = r.industria || r.ind || r.fornecedor || r.categoria || r.grupo || '';
+  const valor = r.valorLiquido ?? r.valor ?? r.total ?? r.valorTotal ?? r.comissao ?? r.meta ?? r.preco ?? r.tabela ?? null;
+  const status = r.status || r.situacao || (r.ativo===true?'Ativo':(r.ativo===false?'Inativo':''));
+  const data = r.data || r.dataEmissao || r.dataPedido || r.criadoEm || r.mes || r.ultima || '';
   const itens = Array.isArray(r.itens) ? r.itens.length + ' itens' : (r.qtd? r.qtd+' un' : '');
 
   // Módulos de cadastro: não têm valor monetário — mostram info de contato
-  const ehCadastro = ['clientes','crm','industrias','produtos','redes'].includes(key);
+  const ehCadastro = ['clientes','crm','industrias','redes'].includes(key);
+  // Produtos e mix: mostram código + indústria + preço
+  const ehProduto = ['produtos','mix'].includes(key);
   const contato = [r.cidade, r.uf].filter(Boolean).join('/') || r.telefone || r.email || r.cnpj || r.contato || '';
   const extraCadastro = [industria, r.rede, contato].filter(Boolean).join(' · ');
 
   let statusHtml = status ? `<div class="card-status ${statusClasse(status)}">${esc(status)}</div>` : '';
   const editavel = podeEditarModulo(key);
   const idAttr = esc(String(r.id ?? id));
+
+  if(ehProduto){
+    const cod = r.cod || r.codigo || '';
+    const preco = (r.preco ?? r.tabela);
+    const descPct = r.desc_pct ? ` · ${r.desc_pct}% desc` : '';
+    return `<div class="card" onclick="${editavel?`abrirEdicao('${key}','${idAttr}')`:`abrirVisualizacao('${key}','${idAttr}')`}">
+      <div class="card-r1"><div class="card-id">${esc(String(cliente))}${editavel?'<span class="card-edit-hint">✎</span>':'<span class="card-edit-hint">👁</span>'}</div>${statusHtml}</div>
+      <div class="card-meta" style="margin-top:4px">${[cod?('Cód '+cod):'', industria].filter(Boolean).join(' · ')}${descPct}</div>
+      ${preco!=null?`<div class="card-r2" style="margin-top:8px"><div class="card-val">${fmtMoeda(preco)}</div><div class="card-date">${esc(String(r.curva?('Curva '+r.curva):''))}</div></div>`:''}
+    </div>`;
+  }
 
   if(ehCadastro){
     // Card de cadastro: título + info, sem valor forçado
@@ -1415,7 +1445,7 @@ let FILTROS = { mes:'', status:'', ind:'', tipo:'', extra:'', ano:String(new Dat
 function resetFiltros(){ FILTROS = { mes:'', status:'', ind:'', tipo:'', extra:'', ano:String(new Date().getFullYear()) }; }
 
 /* Módulos que têm tela especial (KPIs + filtros). Os demais usam a lista simples. */
-const MODULOS_ESPECIAIS = ['dashboard','pedidos','orcamentos','faturamento','comissoes','logistica','fatmensal','sellinout','metas'];
+const MODULOS_ESPECIAIS = ['dashboard','pedidos','orcamentos','faturamento','comissoes','logistica','fatmensal','sellinout','metas','saldo','produtos','mix'];
 
 function renderModuleList(){
   if(!moduloAtual) return;
@@ -1430,6 +1460,9 @@ function renderModuleList(){
   if(key==='fatmensal')  return renderFatMensalApp();
   if(key==='sellinout')  return renderSellInOutApp();
   if(key==='metas')      return renderMetasApp();
+  if(key==='saldo')      return renderSaldoApp();
+  if(key==='produtos')   return renderProdutosApp();
+  if(key==='mix')        return renderMixApp();
   return renderListaSimples();
 }
 
@@ -2108,9 +2141,161 @@ function renderMetasApp(){
 }
 
 /* ════════════════════════════════════════════════
-   IMPORTAR / EXPORTAR
+   10) SALDO CLI × IND — calculado (Total Pedido − Total NF)
 ════════════════════════════════════════════════ */
-let sheetContext = null;
+function renderSaldoApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  const peds = pedidosValidos();
+
+  const clientesNomes = [...new Set([...(DADOS.clientes||[]).map(c=>c.nome), ...peds.map(p=>p.cliente)])].filter(Boolean);
+  const indNomes = [...new Set([...(DADOS.industrias||[]).map(i=>i.nome), ...peds.map(p=>p.industria)])].filter(Boolean).sort();
+
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat(indNomes.map(i=>({v:i,label:i})));
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(peds,p=>(p.nf&&p.nf.data)?p.nf.data:p.data).map(m=>({v:m,label:rotuloMes(m)})));
+  _filtroDefs = {
+    fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+  };
+
+  // Monta linhas cliente×indústria com saldo
+  let linhas = [];
+  let totalPed=0, totalNF=0, totalLiq=0, totalSaldo=0;
+  clientesNomes.forEach(cli=>{
+    if(FILTROS.ind && !indNomes.includes(FILTROS.ind)) return;
+    const indsUsar = FILTROS.ind ? [FILTROS.ind] : indNomes;
+    indsUsar.forEach(ind=>{
+      let pedsInd = peds.filter(p=>p.cliente===cli && p.industria===ind);
+      if(FILTROS.mes) pedsInd = pedsInd.filter(p=>{ const ref=(p.nf&&p.nf.data)?p.nf.data:p.data; return chaveMes(ref)===FILTROS.mes; });
+      if(pedsInd.length===0) return;
+      const pTot = pedsInd.reduce((s,p)=>s+(p.total||0),0);
+      const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.valorNF||0),0);
+      const liq = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0),0);
+      const saldo = parseFloat((pTot-nfTot).toFixed(2));
+      const semNF = pedsInd.filter(p=>!p.nf).length;
+      linhas.push({cli, ind, pTot, nfTot, liq, saldo, semNF, nPed:pedsInd.length});
+      totalPed+=pTot; totalNF+=nfTot; totalLiq+=liq; totalSaldo+=saldo;
+    });
+  });
+  if(q) linhas = linhas.filter(l=>(l.cli+' '+l.ind).toLowerCase().includes(q));
+  linhas.sort((a,b)=>Math.abs(b.saldo)-Math.abs(a.saldo));
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+  ]);
+  const kpis = [
+    {l:'Total pedidos', v:fmtCompacto(totalPed), sm:true},
+    {l:'Total NF', v:fmtCompacto(totalNF), sm:true},
+    {l:'Saldo aberto', v:fmtCompacto(totalSaldo), sm:true, hl:true},
+  ];
+  const cards = linhas.length===0
+    ? `<div class="list-empty"><div class="ic">📊</div>Nenhum saldo com esses filtros.</div>`
+    : linhas.slice(0,150).map(l=>{
+        const zerado = Math.abs(l.saldo)<0.01;
+        const cor = zerado?'#aaa':(l.saldo>0?'var(--laranja)':'var(--verde)');
+        return `<div class="card">
+          <div class="c-r1"><div class="c-id">${esc(l.cli)}</div><div class="c-st ${zerado?'st-gray':(l.saldo>0?'st-yellow':'st-green')}">${zerado?'Zerado':(l.saldo>0?'Em aberto':'NF > Ped')}</div></div>
+          <div class="c-meta">${esc(l.ind)} · ${l.nPed} pedido(s)${l.semNF?(' · '+l.semNF+' sem NF'):''}</div>
+          <div class="saldo-linhas">
+            <div><span class="sl-l">Pedidos</span><span class="sl-v">${fmtBRL(l.pTot)}</span></div>
+            <div><span class="sl-l">NF</span><span class="sl-v">${fmtBRL(l.nfTot)}</span></div>
+            <div><span class="sl-l">Saldo</span><span class="sl-v" style="color:${cor};font-weight:700">${fmtBRL(l.saldo)}</span></div>
+          </div>
+        </div>`;
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   11) PRODUTOS — filtro de indústria + status + busca
+════════════════════════════════════════════════ */
+function renderProdutosApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let arr = dadosDoModulo('produtos'); // já convertido de objeto pra array
+
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(p=>p.ind||p.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  const statusOpt = [{v:'',label:'Todos'},{v:'Ativo',label:'Apenas ativos'},{v:'Inativo',label:'Apenas inativos'}];
+  _filtroDefs = {
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+    fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Status'},
+  };
+  if(FILTROS.ind) arr = arr.filter(p=>(p.ind||p.industria)===FILTROS.ind);
+  if(FILTROS.status) arr = arr.filter(p=>(p.status||'Ativo')===FILTROS.status);
+  if(q) arr = arr.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
+
+  const ativos = arr.filter(p=>(p.status||'Ativo')==='Ativo').length;
+  const filtros = filtrosHTML([
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+    {type:'select',id:'fstatus',label:'Status',value:FILTROS.status},
+  ]);
+  const kpis = [
+    {l:'Produtos', v:arr.length},
+    {l:'Ativos', v:ativos, hl:true, cor:'var(--verde)'},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">📦</div>Nenhum produto com esses filtros.</div>`
+    : arr.slice(0,200).map(p=>cardDoRegistro('produtos', p)).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   12) MIX DE PRODUTOS — filtro por cliente/rede e indústria
+════════════════════════════════════════════════ */
+function renderMixApp(){
+  const list = document.getElementById('dt-list');
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  let arr = (DADOS.mixProdutos||[]).slice();
+
+  // Cada item do mix pertence a uma rede OU a um cliente específico
+  const donos = [...new Set(arr.map(m=>m.rede||m.clienteEspecifico).filter(Boolean))].sort();
+  const clienteOpt = [{v:'',label:'Todos os clientes/redes'}].concat(donos.map(d=>({v:d,label:d})));
+  const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(m=>m.ind||m.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  const statusOpt = [{v:'',label:'Ativo + Inativo'},{v:'ativo',label:'Apenas ativos'},{v:'inativo',label:'Apenas inativos'}];
+  _filtroDefs = {
+    fextra:{campo:'extra',value:FILTROS.extra,options:clienteOpt,titulo:'Cliente / Rede'},
+    find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+    fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Status'},
+  };
+  if(FILTROS.extra) arr = arr.filter(m=>(m.rede||m.clienteEspecifico)===FILTROS.extra);
+  if(FILTROS.ind)   arr = arr.filter(m=>(m.ind||m.industria)===FILTROS.ind);
+  if(FILTROS.status==='ativo')   arr = arr.filter(m=>m.ativo!==false);
+  if(FILTROS.status==='inativo') arr = arr.filter(m=>m.ativo===false);
+  if(q) arr = arr.filter(m=>JSON.stringify(m).toLowerCase().includes(q));
+
+  const ativos = arr.filter(m=>m.ativo!==false).length;
+  const comDesc = arr.filter(m=>(m.desc_pct||0)>0).length;
+
+  const filtros = filtrosHTML([
+    {type:'select',id:'fextra',label:'Cliente/Rede',value:FILTROS.extra,mes:true,icon:'👥'},
+    {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+    {type:'select',id:'fstatus',label:'Status',value:FILTROS.status},
+  ]);
+  const kpis = [
+    {l:'Produtos no mix', v:arr.length},
+    {l:'Ativos', v:ativos, hl:true, cor:'var(--verde)'},
+    {l:'Com desconto', v:comDesc},
+  ];
+  const cards = arr.length===0
+    ? `<div class="list-empty"><div class="ic">🧩</div>${donos.length===0?'Nenhum mix cadastrado ainda.':'Nenhum produto com esses filtros.'}</div>`
+    : arr.slice(0,200).map(m=>{
+        const dono = m.rede ? ('🔗 '+m.rede) : (m.clienteEspecifico||'—');
+        const preco = m.tabela ?? m.preco;
+        const precoNeg = preco!=null && m.desc_pct ? preco*(1-m.desc_pct/100) : null;
+        return `<div class="card">
+          <div class="c-r1"><div class="c-id">${esc(m.desc||m.cod||'—')}</div><div class="c-st ${m.ativo!==false?'st-green':'st-gray'}">${m.ativo!==false?'Ativo':'Inativo'}</div></div>
+          <div class="c-meta">${[m.cod?('Cód '+m.cod):'', m.ind||m.industria, dono].filter(Boolean).join(' · ')}</div>
+          <div class="saldo-linhas">
+            <div><span class="sl-l">Tabela</span><span class="sl-v">${preco!=null?fmtBRL(preco):'—'}</span></div>
+            <div><span class="sl-l">Desc.</span><span class="sl-v" style="color:var(--laranja)">${m.desc_pct||0}%</span></div>
+            <div><span class="sl-l">Negociado</span><span class="sl-v" style="color:var(--verde);font-weight:700">${precoNeg!=null?fmtBRL(precoNeg):'—'}</span></div>
+          </div>
+          ${m.curva?`<div class="card-date" style="margin-top:6px">Curva ${esc(m.curva)}</div>`:''}
+        </div>`;
+      }).join('');
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+}
 
 function openSheet(modKey){
   sheetContext = modKey;
@@ -2157,15 +2342,47 @@ function exportarModulo(){
   closeSheet();
   const key = sheetContext || (moduloAtual&&moduloAtual.key);
   if(!key){ toast('Abra um módulo para exportar','err'); return; }
+  if(typeof XLSX==='undefined'){ toast('Recurso de Excel ainda carregando. Tente de novo em instantes.','err'); return; }
   const arr = dadosDoModulo(key);
-  if(!arr.length){ toast('Nada para exportar neste módulo','err'); return; }
+  if(!arr || !arr.length){ toast('Nada para exportar neste módulo','err'); return; }
   try{
     const ws = XLSX.utils.json_to_sheet(arr.map(achatarRegistro));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, key.slice(0,28));
-    XLSX.writeFile(wb, `gestcom_${key}_${hoje()}.xlsx`);
-    toast('Excel exportado ✓','ok');
+    baixarXLSX(wb, `gestcom_${key}_${hoje()}.xlsx`);
   }catch(e){ toast('Erro ao exportar: '+e.message,'err'); }
+}
+
+/* Download de XLSX compatível com mobile/PWA.
+   XLSX.writeFile pode falhar em WebView/iOS; geramos Blob + link explícito. */
+function baixarXLSX(wb, nomeArquivo){
+  try{
+    const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+    const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    baixarBlob(blob, nomeArquivo);
+    toast('Excel gerado ✓','ok');
+  }catch(e){
+    // Último recurso: método padrão da biblioteca
+    try{ XLSX.writeFile(wb, nomeArquivo); toast('Excel gerado ✓','ok'); }
+    catch(e2){ toast('Erro ao gerar Excel: '+e2.message,'err'); }
+  }
+}
+function baixarBlob(blob, nomeArquivo){
+  // Se o aparelho suporta compartilhamento de arquivos (celular), usa o menu nativo
+  const arquivo = new File([blob], nomeArquivo, {type:blob.type});
+  if(navigator.canShare && navigator.canShare({files:[arquivo]})){
+    navigator.share({files:[arquivo], title:nomeArquivo}).catch(()=>_baixarLink(blob, nomeArquivo));
+    return;
+  }
+  _baixarLink(blob, nomeArquivo);
+}
+function _baixarLink(blob, nomeArquivo){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
 }
 
 function achatarRegistro(r){
@@ -2207,6 +2424,7 @@ function importarArquivo(){
 function gerarPDF(){
   closeSheet();
   const key = sheetContext || (moduloAtual&&moduloAtual.key);
+  if(!window.jspdf){ toast('Recurso de PDF ainda carregando. Tente de novo em instantes.','err'); return; }
   const arr = dadosDoModulo(key);
   if(!arr || !arr.length){ toast('Nada para gerar PDF','err'); return; }
   try{
@@ -2217,13 +2435,15 @@ function gerarPDF(){
     doc.text('Comercial Três Vales · '+hoje(), 14, 25);
     let y=36; doc.setTextColor(0); doc.setFontSize(10);
     arr.slice(0,40).forEach((r,i)=>{
-      const id=r.id||r.numero||r.codigo||'—';
-      const cli=r.cliente||r.nome||r.descricao||'—';
-      const val=r.valor??r.valorLiquido??r.total??'';
+      const id=r.id||r.numero||r.codigo||r.cod||'—';
+      const cli=r.cliente||r.nome||r.desc||r.descricao||'—';
+      const val=r.valor??r.valorLiquido??r.total??r.preco??'';
       doc.text(`${i+1}. ${String(id).slice(0,14)}  ${String(cli).slice(0,32)}  ${val?fmtMoeda(val):''}`, 14, y);
       y+=7; if(y>280){ doc.addPage(); y=20; }
     });
-    doc.save(`gestcom_${key}_${hoje()}.pdf`);
+    // Download compatível com mobile
+    const blob = doc.output('blob');
+    baixarBlob(blob, `gestcom_${key}_${hoje()}.pdf`);
     toast('PDF gerado ✓','ok');
   }catch(e){ toast('Erro no PDF: '+e.message,'err'); }
 }
@@ -2234,14 +2454,16 @@ function hoje(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMo
    NAV / TABS
 ════════════════════════════════════════════════ */
 function switchTab(tab){
+  // Painel e Sync são restritos a diretoria/admin
+  if((tab==='painel'||tab==='sync') && !ehGestor()){ tab='home'; }
   ['home','painel','sync','perfil'].forEach(t=>{
     document.getElementById('screen-'+t).classList.toggle('hidden', t!==tab);
   });
   document.querySelectorAll('.bn-item').forEach(el=>{
     el.classList.toggle('active', el.dataset.tab===tab);
   });
-  if(tab==='sync') atualizarSync();
-  if(tab==='painel') montarPainel();
+  if(tab==='sync' && ehGestor()) atualizarSync();
+  if(tab==='painel' && ehGestor()) montarPainel();
 }
 
 /* ════════════════════════════════════════════════
