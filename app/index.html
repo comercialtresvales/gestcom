@@ -354,8 +354,8 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
    Caso não exista, usa o fallback abaixo (edite se preciso).
 ════════════════════════════════════════════════ */
 const FALLBACK_DB = {
-  dbUrl: '',   // ← se o sistema web nunca rodou neste aparelho, cole aqui a URL do seu Realtime Database
-  apiKey: ''
+  dbUrl: 'https://sistematresvales-default-rtdb.firebaseio.com',   // Firebase da Comercial Três Vales
+  apiKey: ''   // banco com regras abertas (.read/.write: true) — sem chave
 };
 
 let RTDB = null;        // {dbUrl, apiKey}
