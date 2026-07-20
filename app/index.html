@@ -1,1 +1,1430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GestCom">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>GestCom — Comercial Três Vales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+:root{
+  --preto:#1a1a1a;--amarelo:#F5C500;--amarelo-claro:#FFF3B0;
+  --cinza:#f4f3ef;--cinza-medio:#e8e6e0;--cinza-escuro:#888;--branco:#fff;
+  --verde:#2d7a3a;--vermelho:#c0392b;--azul:#1a5fa8;--roxo:#6c3db5;--laranja:#d97706;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
+html,body{height:100%;overscroll-behavior:none;}
+body{font-family:'DM Sans',sans-serif;background:var(--cinza);color:var(--preto);font-size:14px;-webkit-font-smoothing:antialiased;}
+input,button,select,textarea{font-family:inherit;font-size:16px;outline:none;}
+button{cursor:pointer;border:none;background:none;}
+.hidden{display:none !important;}
 
+/* ══════════ LOGIN ══════════ */
+#login{position:fixed;inset:0;background:var(--preto);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;z-index:1000;padding-top:calc(28px + var(--safe-top));}
+.login-logo{text-align:center;margin-bottom:34px;}
+.login-logo .comercial{font-size:10px;color:#888;letter-spacing:2.5px;text-transform:uppercase;}
+.login-logo .tv{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;color:#fff;line-height:1.05;}
+.login-logo .tv span{color:var(--amarelo);}
+.login-logo .version{font-size:9px;color:#666;margin-top:5px;letter-spacing:1.5px;}
+.login-form{width:100%;max-width:360px;}
+.login-err{background:#2a1a1a;border:1px solid #5a2a2a;color:#ff9b8f;font-size:12.5px;padding:11px 14px;border-radius:10px;margin-bottom:14px;display:none;text-align:center;}
+.login-field{margin-bottom:14px;}
+.login-field label{display:block;font-size:10px;color:#aaa;margin-bottom:7px;font-weight:600;letter-spacing:.8px;}
+.login-input{width:100%;background:#2a2a2a;border:1px solid #3a3a3a;border-radius:11px;padding:14px 15px;font-size:15px;color:#fff;transition:border .15s;}
+.login-input:focus{border-color:var(--amarelo);}
+.login-input::placeholder{color:#666;}
+.remember{display:flex;align-items:center;gap:10px;margin:4px 0 22px;cursor:pointer;user-select:none;}
+.chkbox{width:22px;height:22px;border-radius:6px;background:#2a2a2a;border:1px solid #3a3a3a;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:transparent;flex-shrink:0;transition:all .15s;}
+.chkbox.on{background:var(--amarelo);border-color:var(--amarelo);color:#000;}
+.remember span{font-size:13px;color:#ccc;}
+.btn-login{width:100%;background:var(--amarelo);color:#000;font-weight:700;font-size:15px;padding:15px;border-radius:11px;font-family:'Syne',sans-serif;letter-spacing:.3px;transition:transform .1s,opacity .2s;}
+.btn-login:active{transform:scale(.98);}
+.btn-login:disabled{opacity:.6;}
+.login-status{text-align:center;margin-top:14px;font-size:11.5px;color:var(--amarelo);min-height:16px;}
+.login-bio{margin-top:26px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;}
+.bio-ring{width:52px;height:52px;border-radius:50%;border:2px solid #3a3a3a;display:flex;align-items:center;justify-content:center;font-size:24px;transition:border .15s;}
+.login-bio:active .bio-ring{border-color:var(--amarelo);}
+.bio-txt{font-size:11px;color:#777;}
+
+/* ══════════ APP SHELL ══════════ */
+#app{display:none;flex-direction:column;height:100%;}
+.screen{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* HOME */
+.home-header{background:var(--preto);padding:calc(10px + var(--safe-top)) 20px 18px;border-radius:0 0 24px 24px;flex-shrink:0;}
+.hh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;}
+.hh-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:#fff;}
+.hh-logo span{color:var(--amarelo);}
+.hh-avatar{width:36px;height:36px;border-radius:50%;background:var(--amarelo);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:#000;}
+.hh-greet{color:#fff;font-size:19px;font-weight:700;font-family:'Syne',sans-serif;}
+.hh-role{display:inline-block;margin-top:7px;background:rgba(245,197,0,.15);color:var(--amarelo);font-size:9px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.6px;text-transform:uppercase;}
+.hh-role.limited{background:rgba(255,255,255,.12);color:#ccc;}
+
+.home-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 15px calc(100px + var(--safe-bot));}
+.grid-label{font-size:10px;color:#999;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin:2px 5px 13px;}
+.mod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;}
+.mod{background:#fff;border-radius:16px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:9px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid #eee;position:relative;transition:transform .1s;}
+.mod:active{transform:scale(.95);}
+.mod-ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.mod-nm{font-size:10.5px;font-weight:600;text-align:center;color:#333;line-height:1.2;}
+.mod-badge{position:absolute;top:9px;right:9px;background:var(--vermelho);color:#fff;font-size:8px;font-weight:700;min-width:16px;height:16px;padding:0 4px;border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.mod.locked{opacity:.4;}
+.mod.locked .mod-ic{filter:grayscale(1);}
+.lock-i{position:absolute;top:9px;right:9px;font-size:11px;}
+.i-yellow{background:var(--amarelo-claro);}.i-green{background:#e8f5e9;}.i-blue{background:#e3f2fd;}
+.i-purple{background:#f3e8ff;}.i-orange{background:#fff7ed;}.i-gray{background:var(--cinza);}.i-red{background:#fef2f2;}
+
+.empty-note{margin-top:16px;background:#fff;border-radius:14px;padding:18px;font-size:12px;color:#999;text-align:center;border:1px dashed #ddd;line-height:1.6;}
+
+/* BOTTOM NAV */
+.bottomnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;display:flex;justify-content:space-around;padding:9px 0 calc(11px + var(--safe-bot));box-shadow:0 -4px 20px rgba(0,0,0,.06);z-index:100;}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:#bbb;font-size:9px;font-weight:600;flex:1;transition:color .15s;}
+.bn-item.active{color:var(--preto);}
+.bn-ic{font-size:20px;}
+.bn-fab{width:46px;height:46px;background:var(--amarelo);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;color:#000;margin-top:-24px;box-shadow:0 6px 16px rgba(245,197,0,.5);font-weight:300;transition:transform .1s;}
+.bn-fab:active{transform:scale(.92);}
+
+/* ══════════ MODULE DETAIL ══════════ */
+#detail{position:fixed;inset:0;background:var(--cinza);display:flex;flex-direction:column;z-index:200;transform:translateX(100%);transition:transform .25s ease;}
+#detail.open{transform:translateX(0);}
+.detail-top{background:var(--preto);padding:calc(8px + var(--safe-top)) 16px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.dt-back{color:#fff;font-size:24px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:rgba(255,255,255,.1);}
+.dt-title{color:#fff;font-size:17px;font-weight:700;font-family:'Syne',sans-serif;flex:1;}
+.dt-badge{font-size:9px;font-weight:700;padding:4px 9px;border-radius:6px;}
+.dt-badge.edit{background:var(--amarelo);color:#000;}
+.dt-badge.view{background:#3a3a3a;color:#ccc;}
+.detail-tools{background:#fff;padding:11px 14px;display:flex;gap:8px;border-bottom:1px solid #eee;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;}
+.detail-tools::-webkit-scrollbar{display:none;}
+.tool-btn{white-space:nowrap;font-size:11.5px;font-weight:600;padding:9px 14px;border-radius:9px;display:flex;align-items:center;gap:5px;transition:transform .1s;}
+.tool-btn:active{transform:scale(.95);}
+.tb-primary{background:var(--amarelo);color:#000;}
+.tb-out{background:var(--cinza);color:#555;}
+.detail-search{padding:12px 14px 4px;flex-shrink:0;}
+.ds-box{width:100%;background:#fff;border:1px solid #e5e5e5;border-radius:11px;padding:12px 14px;font-size:14px;color:#333;}
+.ds-box::placeholder{color:#aaa;}
+.detail-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px calc(24px + var(--safe-bot));}
+
+.card{background:#fff;border-radius:14px;padding:15px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.04);border:1px solid #f0f0f0;}
+.card-r1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
+.card-id{font-family:'Syne',sans-serif;font-weight:700;font-size:13.5px;}
+.card-status{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.st-green{background:#e8f5e9;color:var(--verde);}.st-yellow{background:var(--amarelo-claro);color:#8a6d00;}
+.st-blue{background:#e3f2fd;color:var(--azul);}.st-red{background:#fef2f2;color:var(--vermelho);}.st-gray{background:var(--cinza);color:#777;}
+.card-cli{font-size:14px;font-weight:600;margin-bottom:2px;}
+.card-meta{font-size:11.5px;color:#999;margin-bottom:11px;}
+.card-r2{display:flex;justify-content:space-between;align-items:center;padding-top:11px;border-top:1px dashed #eee;}
+.card-val{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--verde);}
+.card-date{font-size:10px;color:#aaa;}
+
+.list-empty{text-align:center;color:#aaa;padding:50px 20px;font-size:13px;line-height:1.6;}
+.list-empty .ic{font-size:40px;margin-bottom:12px;opacity:.4;}
+
+/* ══════════ BOTTOM SHEET ══════════ */
+#sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s;}
+#sheet-backdrop.open{opacity:1;pointer-events:auto;}
+#sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:8px 20px calc(28px + var(--safe-bot));box-shadow:0 -10px 40px rgba(0,0,0,.2);z-index:301;transform:translateY(100%);transition:transform .28s ease;}
+#sheet.open{transform:translateY(0);}
+.sheet-handle{width:40px;height:4px;background:#ddd;border-radius:4px;margin:6px auto 18px;}
+.sheet-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:16px;text-align:center;}
+.sheet-opt{display:flex;align-items:center;gap:14px;padding:15px;border-radius:14px;background:var(--cinza);margin-bottom:10px;transition:transform .1s;}
+.sheet-opt:active{transform:scale(.98);}
+.so-ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
+.so-tx .t{font-size:14px;font-weight:600;}
+.so-tx .s{font-size:11px;color:#999;margin-top:1px;}
+
+/* PROFILE / PANEL screens */
+.simple-screen{flex:1;overflow-y:auto;padding:calc(20px + var(--safe-top)) 18px calc(100px + var(--safe-bot));}
+.ss-header{margin-bottom:20px;}
+.ss-title{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;}
+.ss-sub{font-size:12px;color:#999;margin-top:3px;}
+.info-card{background:#fff;border-radius:16px;padding:18px;margin-bottom:12px;border:1px solid #eee;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.info-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f2f2f2;font-size:13px;}
+.info-row:last-child{border:none;}
+.info-row .k{color:#999;}
+.info-row .v{font-weight:600;}
+.btn-full{width:100%;padding:14px;border-radius:12px;font-weight:700;font-size:14px;font-family:'Syne',sans-serif;margin-top:8px;}
+.btn-danger{background:#fef2f2;color:var(--vermelho);border:1px solid #fecaca;}
+.btn-dark{background:var(--preto);color:#fff;}
+.sync-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:7px;}
+.sync-on{background:var(--verde);}.sync-off{background:#ccc;}
+
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px;}
+.kpi{background:#fff;border-radius:15px;padding:15px;border:1px solid #eee;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.kpi-lbl{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.kpi-val{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-top:5px;}
+.kpi-sub{font-size:10px;color:#aaa;margin-top:2px;}
+
+/* ══════════ EDITOR (criar/editar registro) ══════════ */
+#editor{position:fixed;inset:0;background:var(--cinza);display:flex;flex-direction:column;z-index:400;transform:translateY(100%);transition:transform .28s ease;}
+#editor.open{transform:translateY(0);}
+.ed-top{background:var(--preto);padding:calc(10px + var(--safe-top)) 16px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.ed-cancel{color:#ccc;font-size:14px;font-weight:600;padding:8px 4px;}
+.ed-title{color:#fff;font-size:16px;font-weight:700;font-family:'Syne',sans-serif;flex:1;text-align:center;}
+.ed-save{background:var(--amarelo);color:#000;font-size:13px;font-weight:700;padding:9px 16px;border-radius:9px;font-family:'Syne',sans-serif;}
+.ed-save:disabled{opacity:.5;}
+.ed-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(30px + var(--safe-bot));}
+.ed-field{margin-bottom:16px;}
+.ed-field label{display:block;font-size:11px;color:#777;font-weight:600;margin-bottom:7px;letter-spacing:.3px;}
+.ed-field label .req{color:var(--vermelho);}
+.ed-input{width:100%;background:#fff;border:1px solid #e0e0e0;border-radius:11px;padding:13px 14px;font-size:15px;color:var(--preto);transition:border .15s;}
+.ed-input:focus{border-color:var(--amarelo);}
+.ed-input::placeholder{color:#bbb;}
+textarea.ed-input{min-height:80px;resize:vertical;font-family:inherit;}
+select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+.ed-section-lbl{font-size:10px;color:#999;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:22px 2px 12px;}
+.ed-hint{font-size:11px;color:#aaa;margin-top:-8px;margin-bottom:14px;line-height:1.4;}
+.ed-items{background:#fff;border:1px solid #eee;border-radius:12px;padding:6px 12px;margin-bottom:16px;}
+.ed-item-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f2f2f2;font-size:13px;}
+.ed-item-row:last-child{border:none;}
+.ed-item-del{color:var(--vermelho);font-size:18px;padding:0 4px;}
+.ed-add-item{color:var(--azul);font-size:13px;font-weight:600;padding:10px 0;text-align:center;}
+
+/* card: torna clicável para editar */
+.card{cursor:pointer;transition:transform .1s,box-shadow .1s;}
+.card:active{transform:scale(.99);}
+.card-edit-hint{font-size:10px;color:#ccc;margin-left:6px;}
+
+/* botão salvar flutuante no editor com spinner */
+.ed-saving{display:inline-flex;align-items:center;gap:6px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:calc(90px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);background:var(--preto);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:500;opacity:0;pointer-events:none;transition:all .3s;max-width:85%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{background:var(--verde);}
+#toast.err{background:var(--vermelho);}
+
+/* spinner */
+.spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner-light{border-color:rgba(255,255,255,.25);border-top-color:#fff;}
+
+::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="login">
+  <div class="login-logo">
+    <div class="comercial">COMERCIAL</div>
+    <div class="tv">TRÊS<span>VALES</span></div>
+    <div class="version">GESTCOM · APP</div>
+  </div>
+  <div class="login-form">
+    <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
+    <div class="login-field">
+      <label>USUÁRIO</label>
+      <input class="login-input" id="in-user" type="text" placeholder="seu.usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="login-field">
+      <label>SENHA</label>
+      <input class="login-input" id="in-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="remember" onclick="toggleRemember()">
+      <div class="chkbox on" id="chk-remember">✓</div>
+      <span>Manter conectado neste celular</span>
+    </div>
+    <button class="btn-login" id="btn-entrar" onclick="fazerLogin()">ENTRAR</button>
+    <div class="login-status" id="login-status"></div>
+  </div>
+  <div class="login-bio" id="bio-btn" onclick="loginBiometria()" style="display:none">
+    <div class="bio-ring">🔑</div>
+    <div class="bio-txt">Entrar com biometria</div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app">
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home">
+    <div class="home-header">
+      <div class="hh-top">
+        <div class="hh-logo">TRÊS<span>VALES</span></div>
+        <div class="hh-avatar" id="home-avatar">--</div>
+      </div>
+      <div class="hh-greet" id="home-greet">Olá 👋</div>
+      <div class="hh-role" id="home-role">—</div>
+    </div>
+    <div class="home-scroll">
+      <div class="grid-label" id="home-grid-label">Acesso rápido</div>
+      <div class="mod-grid" id="mod-grid"></div>
+      <div class="empty-note" id="home-empty" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- PAINEL (dashboard resumido) -->
+  <div class="screen hidden" id="screen-painel">
+    <div class="simple-screen">
+      <div class="ss-header"><div class="ss-title">Painel</div><div class="ss-sub">Resumo geral do negócio</div></div>
+      <div class="kpi-row" id="painel-kpis"></div>
+      <div class="info-card" id="painel-extra"></div>
+    </div>
+  </div>
+
+  <!-- SYNC -->
+  <div class="screen hidden" id="screen-sync">
+    <div class="simple-screen">
+      <div class="ss-header"><div class="ss-title">Sincronização</div><div class="ss-sub">Dados na nuvem (Firebase)</div></div>
+      <div class="info-card">
+        <div class="info-row"><span class="k">Status</span><span class="v" id="sync-status-v"><span class="sync-dot sync-off"></span>Verificando…</span></div>
+        <div class="info-row"><span class="k">Última atualização</span><span class="v" id="sync-last">—</span></div>
+        <div class="info-row"><span class="k">Registros carregados</span><span class="v" id="sync-count">—</span></div>
+      </div>
+      <button class="btn-full btn-dark" onclick="sincronizarAgora()" id="btn-sync-now">🔄 Atualizar da nuvem</button>
+    </div>
+  </div>
+
+  <!-- PERFIL -->
+  <div class="screen hidden" id="screen-perfil">
+    <div class="simple-screen">
+      <div class="ss-header"><div class="ss-title">Meu Perfil</div><div class="ss-sub">Conta e preferências</div></div>
+      <div class="info-card">
+        <div class="info-row"><span class="k">Nome</span><span class="v" id="pf-nome">—</span></div>
+        <div class="info-row"><span class="k">Usuário</span><span class="v" id="pf-user">—</span></div>
+        <div class="info-row"><span class="k">Perfil</span><span class="v" id="pf-perfil">—</span></div>
+        <div class="info-row"><span class="k">E-mail</span><span class="v" id="pf-email">—</span></div>
+      </div>
+      <div class="info-card">
+        <div class="info-row"><span class="k">Manter conectado</span><span class="v" id="pf-remember">—</span></div>
+        <div class="info-row"><span class="k">Versão do app</span><span class="v">1.0</span></div>
+      </div>
+      <button class="btn-full btn-danger" onclick="logout()">Sair da conta</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav">
+    <div class="bn-item active" data-tab="home" onclick="switchTab('home')"><div class="bn-ic">▦</div>Início</div>
+    <div class="bn-item" data-tab="painel" onclick="switchTab('painel')"><div class="bn-ic">📊</div>Painel</div>
+    <div class="bn-fab" onclick="openSheetGlobal()">+</div>
+    <div class="bn-item" data-tab="sync" onclick="switchTab('sync')"><div class="bn-ic">🔄</div>Sync</div>
+    <div class="bn-item" data-tab="perfil" onclick="switchTab('perfil')"><div class="bn-ic">👤</div>Perfil</div>
+  </div>
+</div>
+
+<!-- ══════════ MODULE DETAIL ══════════ -->
+<div id="detail">
+  <div class="detail-top">
+    <div class="dt-back" onclick="closeDetail()">‹</div>
+    <div class="dt-title" id="dt-title">Módulo</div>
+    <div class="dt-badge edit" id="dt-badge">EDITAR</div>
+  </div>
+  <div class="detail-tools" id="dt-tools"></div>
+  <div class="detail-search"><input class="ds-box" id="dt-search" placeholder="🔍 Buscar..." oninput="renderModuleList()"></div>
+  <div class="detail-list" id="dt-list"></div>
+</div>
+
+<!-- ══════════ SHEET (import/export) ══════════ -->
+<div id="sheet-backdrop" onclick="closeSheet()"></div>
+<div id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="sheet-title">Importar / Exportar</div>
+  <div id="sheet-body"></div>
+</div>
+
+<input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+
+<!-- ══════════ EDITOR (criar/editar) ══════════ -->
+<div id="editor">
+  <div class="ed-top">
+    <div class="ed-cancel" onclick="closeEditor()">Cancelar</div>
+    <div class="ed-title" id="ed-title">Novo registro</div>
+    <button class="ed-save" id="ed-save" onclick="salvarRegistro()">Salvar</button>
+  </div>
+  <div class="ed-body" id="ed-body"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   CONFIG — mesma base do sistema web (Firebase RTDB)
+   O app tenta reaproveitar a conexão já salva pelo
+   sistema web em localStorage['gestcom_rtdb'].
+   Caso não exista, usa o fallback abaixo (edite se preciso).
+════════════════════════════════════════════════ */
+const FALLBACK_DB = {
+  dbUrl: '',   // ← se o sistema web nunca rodou neste aparelho, cole aqui a URL do seu Realtime Database
+  apiKey: ''
+};
+
+let RTDB = null;        // {dbUrl, apiKey}
+let DADOS = null;       // payload completo vindo da nuvem (gestcom/dados)
+let usuarioLogado = null;
+let USERPERMS = {};     // userId -> {modKey:'editar'|'ver'|'nenhum'}
+let moduloAtual = null;
+
+/* ── Espelho da matriz de permissões do sistema web ── */
+const perfilLabels = {
+  diretoria:'Diretoria', admin:'Administrador', financeiro:'Financeiro',
+  comercial:'Comercial', logistica:'Logística', representante:'Representante'
+};
+
+const TODOS_MODULOS = [
+  {key:'financeiro',     label:'Financeiro',        icone:'💵', cls:'i-green'},
+  {key:'conta-corrente', label:'Conta Corrente',    icone:'🏦', cls:'i-blue'},
+  {key:'crm',            label:'Clientes',          icone:'👥', cls:'i-blue'},
+  {key:'tarefas',        label:'Tarefas',           icone:'✅', cls:'i-yellow'},
+  {key:'atas',           label:'Atas',              icone:'📝', cls:'i-yellow'},
+  {key:'dashboard',      label:'Dashboard',         icone:'◈',  cls:'i-gray'},
+  {key:'orcamentos',     label:'Orçamento',         icone:'📝', cls:'i-yellow'},
+  {key:'pedidos',        label:'Pedido',            icone:'📋', cls:'i-blue'},
+  {key:'faturamento',    label:'Faturamento',       icone:'🧾', cls:'i-green'},
+  {key:'nfcompare',      label:'Pedido × NF',       icone:'⚖️', cls:'i-gray'},
+  {key:'logistica',      label:'Logística',         icone:'🚚', cls:'i-orange'},
+  {key:'tratativas',     label:'Tratativas',        icone:'🔗', cls:'i-gray'},
+  {key:'saldo',          label:'Saldo Cli×Ind',     icone:'📊', cls:'i-purple'},
+  {key:'ctrlsaldo',      label:'Ctrl. Saldos',      icone:'🏦', cls:'i-blue'},
+  {key:'comissoes',      label:'Comissão',          icone:'💰', cls:'i-green'},
+  {key:'fatmensal',      label:'Fat. Mensal',       icone:'📅', cls:'i-green'},
+  {key:'sellinout',      label:'Sell In/Out',       icone:'↕️', cls:'i-purple'},
+  {key:'metas',          label:'Metas',             icone:'🎯', cls:'i-red'},
+  {key:'relatorios',     label:'Relatórios',        icone:'📈', cls:'i-purple'},
+  {key:'mix',            label:'Mix Produtos',      icone:'🧩', cls:'i-gray'},
+  {key:'redes',          label:'Redes/Grupos',      icone:'🔗', cls:'i-gray'},
+  {key:'clientes',       label:'Clientes',          icone:'👥', cls:'i-blue'},
+  {key:'industrias',     label:'Indústrias',        icone:'🏭', cls:'i-orange'},
+  {key:'produtos',       label:'Produtos',          icone:'📦', cls:'i-gray'},
+  {key:'regras',         label:'Regras Com.',       icone:'⚙️', cls:'i-gray'},
+];
+
+/* Ordem de exibição preferida na home (conforme pedido do cliente).
+   Sell In e Sell Out aparecem SEPARADOS (não o merge 'sellinout').
+   'clientes' representa o cadastro de clientes; 'crm' fica de fora da home
+   para não duplicar o mesmo ícone. */
+const ORDEM_HOME = ['orcamentos','pedidos','fatmensal','sellin','sellout','comissoes',
+  'clientes','industrias','tratativas','atas','financeiro','conta-corrente','relatorios',
+  'faturamento','saldo','ctrlsaldo','metas','mix','redes','produtos','regras','dashboard','nfcompare','logistica','tarefas'];
+
+/* Módulos que NÃO aparecem como tile próprio na home (evita duplicação visual) */
+const OCULTAR_HOME = ['sellinout','crm'];
+
+/* Sell In / Sell Out aparecem separados na home mas mapeiam para sellinout nas permissões */
+const HOME_EXTRA = [
+  {key:'sellin',  label:'Sell In',  icone:'↗️', cls:'i-purple', permKey:'sellinout'},
+  {key:'sellout', label:'Sell Out', icone:'↘️', cls:'i-orange', permKey:'sellinout'},
+];
+
+function defaultPerms(perfil){
+  const allEdit = Object.fromEntries(TODOS_MODULOS.map(m=>[m.key,'editar']));
+  const map = {
+    diretoria: {...allEdit},
+    admin:     {...allEdit},
+    financeiro: {
+      'financeiro':'editar','conta-corrente':'ver','tarefas':'editar','atas':'ver',
+      dashboard:'ver',faturamento:'editar',nfcompare:'ver',saldo:'ver',comissoes:'editar',
+      fatmensal:'ver',tratativas:'editar',metas:'ver',relatorios:'ver',clientes:'ver',
+      orcamentos:'nenhum',pedidos:'ver',logistica:'nenhum',sellinout:'nenhum',mix:'nenhum',
+      industrias:'nenhum',produtos:'nenhum',regras:'nenhum',
+    },
+    comercial: {
+      'tarefas':'editar','atas':'editar','crm':'editar',
+      dashboard:'ver',orcamentos:'editar',pedidos:'editar',faturamento:'ver',nfcompare:'ver',
+      fatmensal:'ver',sellinout:'editar',metas:'ver',relatorios:'ver',mix:'editar',clientes:'ver',
+      industrias:'ver',produtos:'ver',logistica:'nenhum',tratativas:'ver',saldo:'nenhum',
+      comissoes:'nenhum',regras:'nenhum',
+    },
+    logistica: {
+      'tarefas':'editar','atas':'ver',
+      dashboard:'ver',pedidos:'ver',logistica:'editar',
+      orcamentos:'nenhum',faturamento:'nenhum',nfcompare:'nenhum',fatmensal:'nenhum',
+      sellinout:'nenhum',metas:'nenhum',relatorios:'nenhum',mix:'nenhum',clientes:'nenhum',
+      industrias:'nenhum',produtos:'nenhum',tratativas:'nenhum',saldo:'nenhum',comissoes:'nenhum',regras:'nenhum',
+    },
+    representante: {
+      'tarefas':'editar','atas':'ver',
+      dashboard:'ver',orcamentos:'editar',pedidos:'ver',sellinout:'ver',mix:'ver',clientes:'ver',
+      faturamento:'nenhum',nfcompare:'nenhum',logistica:'nenhum',tratativas:'nenhum',fatmensal:'nenhum',
+      saldo:'nenhum',comissoes:'nenhum',metas:'nenhum',relatorios:'nenhum',industrias:'nenhum',
+      produtos:'nenhum',regras:'nenhum',
+    },
+  };
+  const base = map[perfil] || {};
+  return Object.fromEntries(TODOS_MODULOS.map(m=>[m.key, base[m.key]||'nenhum']));
+}
+
+function getPerms(userId){
+  // Prioriza permissões granulares salvas na nuvem (userPerms), senão usa padrão do perfil
+  if(USERPERMS[userId]) return USERPERMS[userId];
+  const u = (DADOS?.usuarios||[]).find(x=>x.id===userId);
+  return defaultPerms(u?.perfil || 'representante');
+}
+function nivelDoModulo(permKey){
+  if(!usuarioLogado) return 'nenhum';
+  const perms = getPerms(usuarioLogado.id);
+  return perms[permKey] || 'nenhum';
+}
+
+/* ════════════════════════════════════════════════
+   FIREBASE — leitura da mesma base do sistema web
+════════════════════════════════════════════════ */
+function carregarRTDB(){
+  try{
+    const saved = localStorage.getItem('gestcom_rtdb');
+    if(saved){
+      const o = JSON.parse(saved);
+      if(o.dbUrl){ RTDB = {dbUrl:o.dbUrl.replace(/\/$/,''), apiKey:o.apiKey||''}; return true; }
+    }
+  }catch(e){}
+  if(FALLBACK_DB.dbUrl){ RTDB = {dbUrl:FALLBACK_DB.dbUrl.replace(/\/$/,''), apiKey:FALLBACK_DB.apiKey||''}; return true; }
+  return false;
+}
+function rtdbUrl(path){
+  const auth = RTDB.apiKey ? `?auth=${RTDB.apiKey}` : '';
+  return `${RTDB.dbUrl}/${path}.json${auth}`;
+}
+async function puxarDados(){
+  if(!RTDB) throw new Error('Sistema não configurado neste aparelho');
+  const res = await fetch(rtdbUrl('gestcom/dados'));
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const d = await res.json();
+  if(!d) throw new Error('Nuvem vazia');
+  DADOS = d;
+  USERPERMS = d.userPerms || {};
+  try{ localStorage.setItem('gestcom_cache', JSON.stringify(d)); }catch(e){}
+  return d;
+}
+function carregarCache(){
+  try{ const c = localStorage.getItem('gestcom_cache'); if(c){ DADOS = JSON.parse(c); USERPERMS = DADOS.userPerms||{}; return true; } }catch(e){}
+  return false;
+}
+
+/* ════════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════════ */
+let rememberOn = true;
+function toggleRemember(){
+  rememberOn = !rememberOn;
+  document.getElementById('chk-remember').classList.toggle('on', rememberOn);
+  document.getElementById('chk-remember').textContent = rememberOn ? '✓' : '';
+}
+
+async function fazerLogin(){
+  const user = document.getElementById('in-user').value.trim().toLowerCase();
+  const pass = document.getElementById('in-pass').value;
+  const err = document.getElementById('login-err');
+  const status = document.getElementById('login-status');
+  const btn = document.getElementById('btn-entrar');
+  err.style.display = 'none';
+
+  if(!user || !pass){ err.textContent='Preencha usuário e senha.'; err.style.display='block'; return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  status.textContent = '⏳ Carregando dados da nuvem…';
+
+  try{
+    if(!RTDB) carregarRTDB();
+    if(RTDB){
+      try{
+        await puxarDados();
+      }catch(netErr){
+        // Sem internet? Usa o último cache salvo neste aparelho.
+        if(!carregarCache()) throw (RTDB ? new Error('sem-internet') : new Error('sem-config'));
+        status.textContent = '📴 Offline — usando dados salvos';
+      }
+    } else if(!carregarCache()){
+      throw new Error('sem-config');
+    }
+
+    const usuarios = DADOS?.usuarios || [];
+    const found = usuarios.find(u =>
+      (u.login||'').toLowerCase() === user &&
+      String(u.senha) === String(pass) &&
+      (u.status||'ativo') === 'ativo'
+    );
+
+    if(!found){
+      err.textContent = 'Usuário ou senha incorretos.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent='ENTRAR'; status.textContent='';
+      return;
+    }
+
+    usuarioLogado = found;
+
+    // Grava sessão (manter conectado)
+    if(rememberOn){
+      try{ localStorage.setItem('gestcom_sessao', JSON.stringify({id:found.id, login:found.login, ts:Date.now()})); }catch(e){}
+      try{ localStorage.setItem('gestcom_bio', JSON.stringify({login:found.login})); }catch(e){}
+    } else {
+      try{ sessionStorage.setItem('gestcom_sessao', JSON.stringify({id:found.id, login:found.login})); }catch(e){}
+      localStorage.removeItem('gestcom_sessao');
+    }
+
+    entrarNoApp();
+  }catch(e){
+    if(e.message==='sem-config'){
+      err.innerHTML = 'Este aparelho ainda não tem os dados.<br>Abra o sistema web uma vez neste celular, ou peça ao administrador o link de configuração.';
+    } else if(e.message==='sem-internet'){
+      err.innerHTML = 'Sem internet e sem dados salvos ainda.<br>Conecte à internet para o primeiro acesso.';
+    } else {
+      err.textContent = '⚠️ ' + e.message + '. Verifique a internet.';
+    }
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent='ENTRAR'; status.textContent='';
+  }
+}
+
+function loginBiometria(){
+  // Reautenticação rápida: reabre a última sessão salva
+  const sess = localStorage.getItem('gestcom_sessao');
+  if(!sess){ toast('Faça login uma vez antes de usar biometria','err'); return; }
+  try{
+    const s = JSON.parse(sess);
+    document.getElementById('in-user').value = s.login;
+    document.getElementById('in-pass').focus();
+    toast('Digite sua senha para confirmar');
+  }catch(e){}
+}
+
+/* ════════════════════════════════════════════════
+   ENTRAR / MONTAR APP
+════════════════════════════════════════════════ */
+function entrarNoApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='flex';
+  montarHome();
+  atualizarPerfil();
+  atualizarSync();
+  montarPainel();
+}
+
+function iniciais(nome){
+  return (nome||'?').split(' ').filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase() || '?';
+}
+
+function montarHome(){
+  const u = usuarioLogado;
+  document.getElementById('home-avatar').textContent = iniciais(u.nome);
+  document.getElementById('home-greet').innerHTML = 'Olá, ' + (u.nome||'').split(' ')[0] + ' 👋';
+  const roleEl = document.getElementById('home-role');
+  const isDir = u.perfil==='diretoria' || u.perfil==='admin';
+  roleEl.textContent = (perfilLabels[u.perfil]||u.perfil) + (isDir ? ' · Acesso total' : '');
+  roleEl.classList.toggle('limited', !isDir);
+
+  // Monta grade conforme permissões
+  const grid = document.getElementById('mod-grid');
+  const emptyNote = document.getElementById('home-empty');
+  grid.innerHTML='';
+
+  // Constrói lista completa (módulos + extras sell in/out) e ordena pela ORDEM_HOME
+  const todosComExtra = [...TODOS_MODULOS];
+  const extras = HOME_EXTRA.map(e => ({...e}));
+
+  // Junta e ordena
+  const combinado = [];
+  ORDEM_HOME.forEach(key=>{
+    const ex = extras.find(e=>e.key===key);
+    if(ex){ combinado.push({...ex, _perm: ex.permKey}); return; }
+    const m = todosComExtra.find(x=>x.key===key);
+    if(m){ combinado.push({...m, _perm:m.key}); }
+  });
+  // Qualquer módulo não listado na ordem entra no fim (exceto os ocultos/duplicados)
+  todosComExtra.forEach(m=>{ if(!ORDEM_HOME.includes(m.key) && !OCULTAR_HOME.includes(m.key)) combinado.push({...m,_perm:m.key}); });
+
+  let visiveis = 0;
+  const isDiretor = isDir;
+
+  combinado.forEach(m=>{
+    const nivel = nivelDoModulo(m._perm);
+    if(nivel==='nenhum'){
+      // Mostra bloqueado apenas para perfis de gestão (diretoria/admin veem tudo liberado, então nunca cai aqui).
+      // Para os demais: ocultar. (Decisão: ocultar em vez de cadeado, mais limpo.)
+      return;
+    }
+    visiveis++;
+    const el = document.createElement('div');
+    el.className='mod';
+    el.onclick = ()=>abrirModulo(m);
+    let badge='';
+    // badge de contagem para pedidos/orçamentos pendentes
+    if(m.key==='pedidos'){ const n=contarPendentes('pedidos'); if(n>0) badge=`<div class="mod-badge">${n}</div>`; }
+    el.innerHTML = `<div class="mod-ic ${m.cls}">${m.icone}</div><div class="mod-nm">${m.label}</div>${badge}`;
+    grid.appendChild(el);
+  });
+
+  document.getElementById('home-grid-label').textContent = isDiretor ? 'Acesso rápido' : 'Seus módulos liberados';
+
+  if(visiveis===0){
+    emptyNote.style.display='block';
+    emptyNote.innerHTML = '🔒 Nenhum módulo liberado para o seu perfil.<br>Fale com o administrador.';
+  } else {
+    emptyNote.style.display='none';
+  }
+}
+
+function contarPendentes(tipo){
+  if(!DADOS) return 0;
+  if(tipo==='pedidos'){
+    return (DADOS.pedidos||[]).filter(p=>{
+      const s=(p.status||'').toLowerCase();
+      return s.includes('pend')||s.includes('anális')||s.includes('aberto')||s==='';
+    }).length;
+  }
+  return 0;
+}
+
+/* ════════════════════════════════════════════════
+   MÓDULO — abre detalhe com lista de dados reais
+════════════════════════════════════════════════ */
+function abrirModulo(m){
+  moduloAtual = m;
+  const nivel = nivelDoModulo(m._perm || m.key);
+  document.getElementById('dt-title').textContent = m.label;
+  const badge = document.getElementById('dt-badge');
+  if(nivel==='editar'){ badge.textContent='EDITAR'; badge.className='dt-badge edit'; }
+  else { badge.textContent='SOMENTE VER'; badge.className='dt-badge view'; }
+
+  // Ferramentas conforme nível
+  const tools = document.getElementById('dt-tools');
+  const podeEditar = nivel==='editar';
+  let html='';
+  if(podeEditar) html += `<div class="tool-btn tb-primary" onclick="abrirNovo()">＋ Novo</div>`;
+  html += `<div class="tool-btn tb-out" onclick="openSheet('${m.key}')">📥 Importar</div>`;
+  html += `<div class="tool-btn tb-out" onclick="exportarModulo()">📤 Exportar</div>`;
+  tools.innerHTML = html;
+
+  document.getElementById('dt-search').value='';
+  renderModuleList();
+  document.getElementById('detail').classList.add('open');
+}
+
+function closeDetail(){ document.getElementById('detail').classList.remove('open'); }
+
+/* Mapeia cada módulo → array de dados + como renderizar cada card */
+function dadosDoModulo(key){
+  if(!DADOS) return [];
+  const map = {
+    orcamentos: DADOS.orcamentos,
+    pedidos: DADOS.pedidos,
+    faturamento: DADOS.pedidos, // NFs vinculadas
+    comissoes: DADOS.comissoes_data,
+    clientes: DADOS.clientes,
+    crm: DADOS.clientes,
+    industrias: DADOS.industrias,
+    redes: DADOS.redes,
+    sellinout: DADOS.sellOutData,
+    sellin: DADOS.orcamentos,
+    sellout: DADOS.sellOutData,
+    metas: DADOS.metasData,
+    tratativas: DADOS.tratativas,
+    produtos: DADOS.PRODUTOS_CAT,
+    mix: DADOS.mixProdutos,
+    logistica: DADOS.logisticaData,
+    regras: DADOS.regrasComerciais,
+    atas: DADOS.atasData,
+    tarefas: DADOS.tarefasData,
+    fatmensal: DADOS.pedidos,
+    'conta-corrente': DADOS.contaCorrenteData,
+    financeiro: DADOS.finCRData,
+    relatorios: DADOS.pedidos,
+  };
+  const arr = map[key];
+  return Array.isArray(arr) ? arr : [];
+}
+
+/* ════════════════════════════════════════════════
+   ESQUEMA DE CAMPOS POR MÓDULO (para criar/editar)
+   Cada campo: {k:chave, l:rótulo, t:tipo, req?, opts?}
+   tipos: text | number | money | date | textarea | select | status
+   Onde não há esquema, o editor deduz os campos do 1º registro.
+════════════════════════════════════════════════ */
+const STATUS_OPCOES = {
+  orcamentos: ['Rascunho','Enviado','Em análise','Aprovado','Recusado','Convertido em pedido'],
+  pedidos:    ['Recebido','Em separação','Faturado','Em trânsito','Entregue','Cancelado'],
+  comissoes:  ['Pendente','Pago','Cancelado'],
+  clientes:   ['Ativo','Inativo'],
+  crm:        ['Ativo','Inativo'],
+  industrias: ['Ativo','Inativo'],
+  produtos:   ['Ativo','Inativo'],
+  tarefas:    ['Aberta','Em andamento','Concluída'],
+  atas:       ['Agendada','Realizada','Cancelada'],
+  logistica:  ['Pedido Digitado','Faturado','Em trânsito','Entregue'],
+};
+
+const CAMPOS_MODULO = {
+  orcamentos: [
+    {k:'cliente', l:'Cliente', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'data', l:'Data', t:'date'},
+    {k:'validade', l:'Validade', t:'date'},
+    {k:'cond', l:'Condição de pagamento', t:'text'},
+    {k:'status', l:'Status', t:'select', opts:'orcamentos'},
+    {k:'total', l:'Valor total', t:'money'},
+    {k:'obs', l:'Observações', t:'textarea'},
+  ],
+  pedidos: [
+    {k:'cliente', l:'Cliente', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'data', l:'Data', t:'date'},
+    {k:'cond', l:'Condição de pagamento', t:'text'},
+    {k:'status', l:'Status', t:'select', opts:'pedidos'},
+    {k:'total', l:'Valor total', t:'money'},
+    {k:'obs', l:'Observações', t:'textarea'},
+  ],
+  clientes: [
+    {k:'nome', l:'Nome / Razão social', t:'text', req:true},
+    {k:'fantasia', l:'Nome fantasia', t:'text'},
+    {k:'cnpj', l:'CNPJ', t:'text'},
+    {k:'cidade', l:'Cidade', t:'text'},
+    {k:'uf', l:'UF', t:'text'},
+    {k:'telefone', l:'Telefone', t:'text'},
+    {k:'email', l:'E-mail', t:'text'},
+    {k:'status', l:'Status', t:'select', opts:'clientes'},
+  ],
+  crm: [
+    {k:'nome', l:'Nome / Razão social', t:'text', req:true},
+    {k:'cnpj', l:'CNPJ', t:'text'},
+    {k:'cidade', l:'Cidade', t:'text'},
+    {k:'telefone', l:'Telefone', t:'text'},
+    {k:'email', l:'E-mail', t:'text'},
+    {k:'status', l:'Status', t:'select', opts:'crm'},
+  ],
+  industrias: [
+    {k:'nome', l:'Nome da indústria', t:'text', req:true},
+    {k:'cnpj', l:'CNPJ', t:'text'},
+    {k:'contato', l:'Contato', t:'text'},
+    {k:'telefone', l:'Telefone', t:'text'},
+    {k:'email', l:'E-mail', t:'text'},
+    {k:'status', l:'Status', t:'select', opts:'industrias'},
+  ],
+  produtos: [
+    {k:'nome', l:'Nome do produto', t:'text', req:true},
+    {k:'codigo', l:'Código', t:'text'},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'preco', l:'Preço', t:'money'},
+    {k:'status', l:'Status', t:'select', opts:'produtos'},
+  ],
+  comissoes: [
+    {k:'cliente', l:'Cliente', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'valor', l:'Valor da comissão', t:'money'},
+    {k:'percentual', l:'Percentual (%)', t:'number'},
+    {k:'data', l:'Data', t:'date'},
+    {k:'status', l:'Status', t:'select', opts:'comissoes'},
+  ],
+  metas: [
+    {k:'descricao', l:'Descrição', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'mes', l:'Mês/Período', t:'text'},
+    {k:'meta', l:'Valor da meta', t:'money'},
+    {k:'realizado', l:'Realizado', t:'money'},
+  ],
+  tarefas: [
+    {k:'titulo', l:'Título', t:'text', req:true},
+    {k:'responsavel', l:'Responsável', t:'text'},
+    {k:'prazo', l:'Prazo', t:'date'},
+    {k:'status', l:'Status', t:'select', opts:'tarefas'},
+    {k:'descricao', l:'Descrição', t:'textarea'},
+  ],
+  atas: [
+    {k:'titulo', l:'Título da reunião', t:'text', req:true},
+    {k:'data', l:'Data', t:'date'},
+    {k:'participantes', l:'Participantes', t:'text'},
+    {k:'status', l:'Status', t:'select', opts:'atas'},
+    {k:'pauta', l:'Pauta / Assunto', t:'textarea'},
+    {k:'decisoes', l:'Decisões', t:'textarea'},
+  ],
+  tratativas: [
+    {k:'titulo', l:'Título', t:'text', req:true},
+    {k:'cliente', l:'Cliente', t:'text'},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'data', l:'Data', t:'date'},
+    {k:'descricao', l:'Descrição', t:'textarea'},
+  ],
+  logistica: [
+    {k:'cliente', l:'Cliente', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'transportadora', l:'Transportadora', t:'text'},
+    {k:'previsao', l:'Previsão de entrega', t:'date'},
+    {k:'dataEntrega', l:'Data de entrega', t:'date'},
+    {k:'statusLog', l:'Status', t:'select', opts:'logistica'},
+    {k:'obs', l:'Observações', t:'textarea'},
+  ],
+  'conta-corrente': [
+    {k:'cliente', l:'Cliente', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'tipo', l:'Tipo (crédito/débito)', t:'text'},
+    {k:'valor', l:'Valor', t:'money'},
+    {k:'data', l:'Data', t:'date'},
+    {k:'obs', l:'Observações', t:'textarea'},
+  ],
+  financeiro: [
+    {k:'descricao', l:'Descrição', t:'text', req:true},
+    {k:'cliente', l:'Cliente/Fornecedor', t:'text'},
+    {k:'valor', l:'Valor', t:'money'},
+    {k:'vencimento', l:'Vencimento', t:'date'},
+    {k:'status', l:'Status', t:'text'},
+  ],
+  redes: [
+    {k:'nome', l:'Nome da rede/grupo', t:'text', req:true},
+    {k:'obs', l:'Observações', t:'textarea'},
+  ],
+  mix: [
+    {k:'produto', l:'Produto', t:'text', req:true},
+    {k:'industria', l:'Indústria', t:'text'},
+    {k:'cliente', l:'Cliente', t:'text'},
+  ],
+};
+
+/* Qual variável do payload cada módulo grava */
+const CHAVE_DADOS = {
+  orcamentos:'orcamentos', pedidos:'pedidos', clientes:'clientes', crm:'clientes',
+  industrias:'industrias', produtos:'PRODUTOS_CAT', comissoes:'comissoes_data',
+  metas:'metasData', tarefas:'tarefasData', atas:'atasData', tratativas:'tratativas',
+  logistica:'logisticaData', 'conta-corrente':'contaCorrenteData', financeiro:'finCRData',
+  redes:'redes', mix:'mixProdutos', sellinout:'sellOutData', sellout:'sellOutData',
+  fatmensal:'pedidos',
+};
+
+/* Prefixo de ID por módulo */
+const PREFIXO_ID = {
+  orcamentos:'ORC', pedidos:'PED', clientes:'CLI', crm:'CLI', industrias:'IND',
+  produtos:'PRD', comissoes:'COM', metas:'MET', tarefas:'TAR', atas:'ATA',
+  tratativas:'TRA', logistica:'LOG', 'conta-corrente':'CC', financeiro:'FIN',
+  redes:'RED', mix:'MIX',
+};
+
+let edContext = { modKey:null, editId:null };
+
+function podeEditarModulo(modKey){
+  return nivelDoModulo((moduloAtual && moduloAtual._perm) || modKey) === 'editar';
+}
+
+function camposDoModulo(modKey){
+  if(CAMPOS_MODULO[modKey]) return CAMPOS_MODULO[modKey];
+  // Deduz do primeiro registro existente
+  const arr = dadosDoModulo(modKey);
+  if(arr.length){
+    return Object.keys(arr[0])
+      .filter(k=>!k.startsWith('_') && k!=='id' && k!=='itens' && k!=='criadorPor')
+      .slice(0,10)
+      .map(k=>({k, l:rotuloBonito(k), t: /valor|total|preco|meta|comiss/i.test(k)?'money': /data|prazo|venc|previs/i.test(k)?'date':'text'}));
+  }
+  // Fallback genérico
+  return [{k:'descricao', l:'Descrição', t:'text', req:true}, {k:'valor', l:'Valor', t:'money'}, {k:'obs', l:'Observações', t:'textarea'}];
+}
+function rotuloBonito(k){
+  return k.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase()).replace(/_/g,' ');
+}
+
+/* ── Abrir editor (novo) ── */
+function abrirNovo(){
+  if(!moduloAtual){ toast('Abra um módulo primeiro','err'); return; }
+  const modKey = moduloAtual.key;
+  if(!podeEditarModulo(modKey)){ toast('Seu perfil não permite criar aqui','err'); return; }
+  if(!CHAVE_DADOS[modKey]){ toast('Este módulo ainda não permite criação pelo app','err'); return; }
+  edContext = { modKey, editId:null };
+  document.getElementById('ed-title').textContent = 'Novo · ' + moduloAtual.label;
+  montarFormulario(modKey, null);
+  document.getElementById('editor').classList.add('open');
+}
+
+/* ── Abrir editor (editar registro existente) ── */
+function abrirEdicao(modKey, id){
+  if(!podeEditarModulo(modKey)){
+    // Só visualização: abre em modo leitura
+    abrirVisualizacao(modKey, id); return;
+  }
+  if(!CHAVE_DADOS[modKey]){ toast('Edição não disponível neste módulo','err'); return; }
+  const arr = dadosDoModulo(modKey);
+  const rec = arr.find(r=>String(r.id)===String(id));
+  edContext = { modKey, editId:id };
+  document.getElementById('ed-title').textContent = 'Editar · ' + (moduloAtual?moduloAtual.label:modKey);
+  montarFormulario(modKey, rec);
+  document.getElementById('editor').classList.add('open');
+}
+
+function abrirVisualizacao(modKey, id){
+  const arr = dadosDoModulo(modKey);
+  const rec = arr.find(r=>String(r.id)===String(id));
+  if(!rec) return;
+  const campos = camposDoModulo(modKey);
+  let html = '<div class="ed-hint">👁 Somente leitura — seu perfil não permite editar este módulo.</div>';
+  campos.forEach(c=>{
+    let v = rec[c.k]; if(v===undefined||v===null||v==='') v='—';
+    if(c.t==='money' && v!=='—') v = fmtMoeda(v);
+    html += `<div class="ed-field"><label>${esc(c.l)}</label><div class="ed-input" style="background:#f8f8f8;color:#555">${esc(String(v))}</div></div>`;
+  });
+  document.getElementById('ed-title').textContent = (moduloAtual?moduloAtual.label:modKey);
+  document.getElementById('ed-body').innerHTML = html;
+  document.getElementById('ed-save').style.display='none';
+  edContext = { modKey, editId:null };
+  document.getElementById('editor').classList.add('open');
+}
+
+function montarFormulario(modKey, rec){
+  document.getElementById('ed-save').style.display='';
+  const campos = camposDoModulo(modKey);
+  let html = '';
+  campos.forEach(c=>{
+    const val = rec ? (rec[c.k] ?? '') : '';
+    const req = c.req ? '<span class="req"> *</span>' : '';
+    html += `<div class="ed-field"><label>${esc(c.l)}${req}</label>`;
+    if(c.t==='textarea'){
+      html += `<textarea class="ed-input" id="ef-${c.k}" placeholder="—">${esc(String(val))}</textarea>`;
+    } else if(c.t==='select'){
+      const opts = STATUS_OPCOES[c.opts] || [];
+      html += `<select class="ed-input" id="ef-${c.k}">`;
+      html += `<option value="">Selecione…</option>`;
+      opts.forEach(o=>{ html += `<option value="${esc(o)}" ${String(val)===o?'selected':''}>${esc(o)}</option>`; });
+      html += `</select>`;
+    } else if(c.t==='date'){
+      html += `<input class="ed-input" id="ef-${c.k}" type="date" value="${esc(dateToInput(val))}">`;
+    } else if(c.t==='money' || c.t==='number'){
+      html += `<input class="ed-input" id="ef-${c.k}" type="number" inputmode="decimal" step="${c.t==='money'?'0.01':'any'}" value="${val!==''?Number(val):''}" placeholder="0">`;
+    } else {
+      html += `<input class="ed-input" id="ef-${c.k}" type="text" value="${esc(String(val))}" placeholder="—">`;
+    }
+    html += `</div>`;
+  });
+  // Aviso sobre itens (orçamento/pedido têm itens de produto)
+  if((modKey==='orcamentos'||modKey==='pedidos') && rec && Array.isArray(rec.itens) && rec.itens.length){
+    html += `<div class="ed-section-lbl">Itens do ${modKey==='pedidos'?'pedido':'orçamento'}</div>`;
+    html += `<div class="ed-items">`;
+    rec.itens.forEach(it=>{
+      const nome = it.produto||it.nome||it.descricao||'Item';
+      const q = it.qtd||it.quantidade||'';
+      const t = it.total!=null?fmtMoeda(it.total):'';
+      html += `<div class="ed-item-row"><span>${esc(String(nome))} ${q?'· '+q+'un':''}</span><span style="color:var(--verde);font-weight:600">${t}</span></div>`;
+    });
+    html += `</div><div class="ed-hint">A edição detalhada de itens (adicionar/remover produtos) é feita no sistema web. Aqui você ajusta os demais campos.</div>`;
+  }
+  document.getElementById('ed-body').innerHTML = html;
+  // foco no primeiro campo
+  const first = document.querySelector('#ed-body .ed-input');
+  if(first && !rec) setTimeout(()=>first.focus(), 350);
+}
+
+function closeEditor(){
+  document.getElementById('editor').classList.remove('open');
+  document.getElementById('ed-save').style.display='';
+}
+
+/* Datas: aceita dd/mm, ISO, ou texto; devolve yyyy-mm-dd para o input */
+function dateToInput(v){
+  if(!v) return '';
+  if(/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0,10);
+  const m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(m){ let y=m[3]; if(y.length===2)y='20'+y; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  return '';
+}
+function inputToDate(v){ return v || ''; } // guarda ISO; o web aceita
+
+/* ── Gera novo ID único no padrão do módulo ── */
+function gerarId(modKey){
+  const arr = dadosDoModulo(modKey);
+  const pref = PREFIXO_ID[modKey] || 'REG';
+  let n = arr.length + 1, id;
+  do { id = pref + '-' + String(n).padStart(4,'0'); n++; } while(arr.some(x=>String(x.id)===id));
+  return id;
+}
+
+/* ════════════════════════════════════════════════
+   SALVAR — grava na nuvem no MESMO formato do web
+════════════════════════════════════════════════ */
+async function salvarRegistro(){
+  const { modKey, editId } = edContext;
+  const campos = camposDoModulo(modKey);
+  const saveBtn = document.getElementById('ed-save');
+
+  // Coleta valores
+  const obj = {};
+  for(const c of campos){
+    const elx = document.getElementById('ef-'+c.k);
+    if(!elx) continue;
+    let v = elx.value;
+    if(c.req && !String(v).trim()){ toast('Preencha: '+c.l,'err'); elx.focus(); return; }
+    if(c.t==='money' || c.t==='number'){ v = v===''? '' : Number(v); }
+    if(c.t==='date'){ v = inputToDate(v); }
+    obj[c.k] = v;
+  }
+
+  const chave = CHAVE_DADOS[modKey];
+  if(!chave){ toast('Módulo sem gravação','err'); return; }
+  if(!Array.isArray(DADOS[chave])) DADOS[chave] = [];
+
+  if(editId){
+    // Edita: mantém id, itens e criador
+    const idx = DADOS[chave].findIndex(r=>String(r.id)===String(editId));
+    if(idx>=0){
+      DADOS[chave][idx] = { ...DADOS[chave][idx], ...obj };
+    }
+  } else {
+    obj.id = gerarId(modKey);
+    obj.criadorPor = usuarioLogado?.login || 'app';
+    if((modKey==='orcamentos'||modKey==='pedidos') && !obj.itens) obj.itens = [];
+    if(!obj.data && campos.some(c=>c.k==='data')) obj.data = hoje();
+    DADOS[chave].push(obj);
+  }
+
+  // Marca timestamp e autor (igual ao web)
+  DADOS._ts = Date.now();
+  DADOS._usuario = usuarioLogado?.login || 'app';
+
+  // Grava
+  saveBtn.disabled = true;
+  const oldTxt = saveBtn.textContent;
+  saveBtn.innerHTML = '<span class="ed-saving"><span class="spinner"></span></span>';
+
+  try{
+    if(RTDB){
+      const res = await fetch(rtdbUrl('gestcom/dados'), {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(DADOS)
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+    }
+    // atualiza cache local também
+    try{ localStorage.setItem('gestcom_cache', JSON.stringify(DADOS)); }catch(e){}
+
+    saveBtn.disabled=false; saveBtn.textContent=oldTxt;
+    closeEditor();
+    renderModuleList();
+    montarHome(); montarPainel(); atualizarSync();
+    toast(editId ? 'Registro atualizado ✓' : 'Registro criado ✓','ok');
+  }catch(e){
+    saveBtn.disabled=false; saveBtn.textContent=oldTxt;
+    // Reverte alteração local em caso de falha de rede
+    toast('Erro ao salvar: '+e.message+'. Verifique a internet.','err');
+  }
+}
+
+function _placeholderRemovido(){
+  return [];
+}
+
+function fmtMoeda(v){
+  const n = Number(v)||0;
+  return 'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+function statusClasse(s){
+  s=(s||'').toLowerCase();
+  if(s.includes('aprov')||s.includes('conclu')||s.includes('pago')||s.includes('entreg')||s.includes('ativo')) return 'st-green';
+  if(s.includes('pend')||s.includes('aguard')) return 'st-yellow';
+  if(s.includes('anális')||s.includes('trânsit')||s.includes('process')) return 'st-blue';
+  if(s.includes('cancel')||s.includes('atras')||s.includes('venc')) return 'st-red';
+  return 'st-gray';
+}
+
+function cardDoRegistro(key, r){
+  // Extrai campos de forma tolerante (o schema varia por módulo)
+  const id = r.id || r.numero || r.codigo || r.cod || r.nf || '—';
+  const cliente = r.cliente || r.nome || r.razaoSocial || r.fantasia || r.descricao || r.titulo || '—';
+  const industria = r.industria || r.fornecedor || r.categoria || r.grupo || '';
+  const valor = r.valorLiquido ?? r.valor ?? r.total ?? r.valorTotal ?? r.comissao ?? r.meta ?? null;
+  const status = r.status || r.situacao || '';
+  const data = r.data || r.dataEmissao || r.dataPedido || r.criadoEm || r.mes || '';
+  const itens = Array.isArray(r.itens) ? r.itens.length + ' itens' : (r.qtd? r.qtd+' un' : '');
+
+  let statusHtml = status ? `<div class="card-status ${statusClasse(status)}">${status}</div>` : '';
+  let metaLine = [industria, itens].filter(Boolean).join(' · ');
+  let valHtml = (valor!==null && valor!=='') ? `<div class="card-val">${fmtMoeda(valor)}</div>` : `<div class="card-val" style="color:#bbb">—</div>`;
+
+  const editavel = podeEditarModulo(key);
+  const idAttr = esc(String(r.id ?? id));
+  return `<div class="card" onclick="${editavel?`abrirEdicao('${key}','${idAttr}')`:`abrirVisualizacao('${key}','${idAttr}')`}">
+    <div class="card-r1"><div class="card-id">${esc(String(id))}${editavel?'<span class="card-edit-hint">✎</span>':'<span class="card-edit-hint">👁</span>'}</div>${statusHtml}</div>
+    <div class="card-cli">${esc(String(cliente))}</div>
+    ${metaLine?`<div class="card-meta">${esc(metaLine)}</div>`:''}
+    <div class="card-r2">${valHtml}<div class="card-date">${esc(String(data||''))}</div></div>
+  </div>`;
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderModuleList(){
+  if(!moduloAtual) return;
+  const key = moduloAtual.key==='sellin'||moduloAtual.key==='sellout' ? moduloAtual.key : moduloAtual.key;
+  let arr = dadosDoModulo(moduloAtual.key);
+  const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
+  const list = document.getElementById('dt-list');
+
+  if(q){
+    arr = arr.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+  }
+
+  if(!arr || arr.length===0){
+    list.innerHTML = `<div class="list-empty"><div class="ic">📭</div>${q?'Nada encontrado para "'+esc(q)+'"':'Nenhum registro neste módulo ainda.'}</div>`;
+    return;
+  }
+  // Mostra os mais recentes primeiro; limita a 100 na tela pra fluidez
+  const show = arr.slice().reverse().slice(0,100);
+  list.innerHTML = show.map(r=>cardDoRegistro(moduloAtual.key, r)).join('');
+}
+
+/* ════════════════════════════════════════════════
+   IMPORTAR / EXPORTAR
+════════════════════════════════════════════════ */
+let sheetContext = null;
+
+function openSheet(modKey){
+  sheetContext = modKey;
+  document.getElementById('sheet-title').textContent = 'Importar / Exportar';
+  document.getElementById('sheet-body').innerHTML = `
+    <div class="sheet-opt" onclick="exportarModulo()">
+      <div class="so-ic i-green">📤</div>
+      <div class="so-tx"><div class="t">Exportar Excel (.xlsx)</div><div class="s">Baixa os registros deste módulo</div></div>
+    </div>
+    <div class="sheet-opt" onclick="importarArquivo()">
+      <div class="so-ic i-blue">📥</div>
+      <div class="so-tx"><div class="t">Importar planilha</div><div class="s">Do celular, Drive ou arquivos</div></div>
+    </div>
+    <div class="sheet-opt" onclick="gerarPDF()">
+      <div class="so-ic i-red">📄</div>
+      <div class="so-tx"><div class="t">Gerar PDF</div><div class="s">Compartilhar por WhatsApp / e-mail</div></div>
+    </div>`;
+  abrirSheet();
+}
+
+function openSheetGlobal(){
+  sheetContext = moduloAtual ? moduloAtual.key : null;
+  document.getElementById('sheet-title').textContent = 'Ações rápidas';
+  document.getElementById('sheet-body').innerHTML = `
+    <div class="sheet-opt" onclick="sincronizarAgora();closeSheet()">
+      <div class="so-ic i-purple">☁️</div>
+      <div class="so-tx"><div class="t">Sincronizar com a nuvem</div><div class="s">Baixa dados mais recentes</div></div>
+    </div>
+    <div class="sheet-opt" onclick="importarArquivo()">
+      <div class="so-ic i-blue">📥</div>
+      <div class="so-tx"><div class="t">Importar planilha</div><div class="s">Excel ou CSV do celular</div></div>
+    </div>
+    <div class="sheet-opt" onclick="closeSheet()">
+      <div class="so-ic i-gray">✕</div>
+      <div class="so-tx"><div class="t">Cancelar</div></div>
+    </div>`;
+  abrirSheet();
+}
+
+function abrirSheet(){ document.getElementById('sheet-backdrop').classList.add('open'); document.getElementById('sheet').classList.add('open'); }
+function closeSheet(){ document.getElementById('sheet-backdrop').classList.remove('open'); document.getElementById('sheet').classList.remove('open'); }
+
+function exportarModulo(){
+  closeSheet();
+  const key = sheetContext || (moduloAtual&&moduloAtual.key);
+  if(!key){ toast('Abra um módulo para exportar','err'); return; }
+  const arr = dadosDoModulo(key);
+  if(!arr.length){ toast('Nada para exportar neste módulo','err'); return; }
+  try{
+    const ws = XLSX.utils.json_to_sheet(arr.map(achatarRegistro));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, key.slice(0,28));
+    XLSX.writeFile(wb, `gestcom_${key}_${hoje()}.xlsx`);
+    toast('Excel exportado ✓','ok');
+  }catch(e){ toast('Erro ao exportar: '+e.message,'err'); }
+}
+
+function achatarRegistro(r){
+  const out={};
+  for(const k in r){
+    const v=r[k];
+    if(v===null||v===undefined){ out[k]=''; }
+    else if(Array.isArray(v)){ out[k]=v.length+' itens'; }
+    else if(typeof v==='object'){ out[k]=JSON.stringify(v); }
+    else out[k]=v;
+  }
+  return out;
+}
+
+function importarArquivo(){
+  closeSheet();
+  const inp = document.getElementById('file-input');
+  inp.value='';
+  inp.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data,{type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws);
+        toast(`Planilha lida: ${rows.length} linhas ✓`,'ok');
+        // Nota: o envio para a nuvem pode ser habilitado conforme regra do seu Firebase
+        console.log('Importado:', rows);
+      }catch(err){ toast('Erro ao ler arquivo: '+err.message,'err'); }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  inp.click();
+}
+
+function gerarPDF(){
+  closeSheet();
+  const key = sheetContext || (moduloAtual&&moduloAtual.key);
+  const arr = dadosDoModulo(key);
+  if(!arr || !arr.length){ toast('Nada para gerar PDF','err'); return; }
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(16); doc.text('GestCom — '+(moduloAtual?moduloAtual.label:key), 14, 18);
+    doc.setFontSize(9); doc.setTextColor(120);
+    doc.text('Comercial Três Vales · '+hoje(), 14, 25);
+    let y=36; doc.setTextColor(0); doc.setFontSize(10);
+    arr.slice(0,40).forEach((r,i)=>{
+      const id=r.id||r.numero||r.codigo||'—';
+      const cli=r.cliente||r.nome||r.descricao||'—';
+      const val=r.valor??r.valorLiquido??r.total??'';
+      doc.text(`${i+1}. ${String(id).slice(0,14)}  ${String(cli).slice(0,32)}  ${val?fmtMoeda(val):''}`, 14, y);
+      y+=7; if(y>280){ doc.addPage(); y=20; }
+    });
+    doc.save(`gestcom_${key}_${hoje()}.pdf`);
+    toast('PDF gerado ✓','ok');
+  }catch(e){ toast('Erro no PDF: '+e.message,'err'); }
+}
+
+function hoje(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+/* ════════════════════════════════════════════════
+   NAV / TABS
+════════════════════════════════════════════════ */
+function switchTab(tab){
+  ['home','painel','sync','perfil'].forEach(t=>{
+    document.getElementById('screen-'+t).classList.toggle('hidden', t!==tab);
+  });
+  document.querySelectorAll('.bn-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.tab===tab);
+  });
+  if(tab==='sync') atualizarSync();
+  if(tab==='painel') montarPainel();
+}
+
+/* ════════════════════════════════════════════════
+   PAINEL / PERFIL / SYNC
+════════════════════════════════════════════════ */
+function montarPainel(){
+  const cont = document.getElementById('painel-kpis');
+  const extra = document.getElementById('painel-extra');
+  if(!DADOS){ cont.innerHTML=''; return; }
+  const nped = (DADOS.pedidos||[]).length;
+  const norc = (DADOS.orcamentos||[]).length;
+  const ncli = (DADOS.clientes||[]).length;
+  const fat = (DADOS.pedidos||[]).reduce((s,p)=>s+(Number(p.valorLiquido||p.valor||p.total||0)),0);
+
+  // Respeita permissão: não mostra faturamento/comissão a quem não pode ver dinheiro
+  const podeVerDinheiro = ['editar','ver'].includes(nivelDoModulo('faturamento')) || ['editar','ver'].includes(nivelDoModulo('financeiro'));
+
+  let kpis = `
+    <div class="kpi"><div class="kpi-lbl">Pedidos</div><div class="kpi-val">${nped}</div><div class="kpi-sub">registrados</div></div>
+    <div class="kpi"><div class="kpi-lbl">Orçamentos</div><div class="kpi-val">${norc}</div><div class="kpi-sub">no sistema</div></div>`;
+  if(podeVerDinheiro){
+    kpis += `<div class="kpi"><div class="kpi-lbl">Faturamento</div><div class="kpi-val" style="color:var(--verde);font-size:16px">${fmtMoeda(fat)}</div><div class="kpi-sub">total</div></div>`;
+  }
+  kpis += `<div class="kpi"><div class="kpi-lbl">Clientes</div><div class="kpi-val">${ncli}</div><div class="kpi-sub">cadastrados</div></div>`;
+  cont.innerHTML = kpis;
+
+  extra.innerHTML = `<div class="info-row"><span class="k">Pedidos pendentes</span><span class="v">${contarPendentes('pedidos')}</span></div>
+    <div class="info-row"><span class="k">Indústrias</span><span class="v">${(DADOS.industrias||[]).length}</span></div>
+    <div class="info-row"><span class="k">Seu perfil</span><span class="v">${perfilLabels[usuarioLogado.perfil]||usuarioLogado.perfil}</span></div>`;
+}
+
+function atualizarPerfil(){
+  const u = usuarioLogado;
+  document.getElementById('pf-nome').textContent = u.nome||'—';
+  document.getElementById('pf-user').textContent = u.login||'—';
+  document.getElementById('pf-perfil').textContent = perfilLabels[u.perfil]||u.perfil;
+  document.getElementById('pf-email').textContent = u.email||'—';
+  document.getElementById('pf-remember').textContent = localStorage.getItem('gestcom_sessao') ? 'Ativado' : 'Desativado';
+}
+
+function atualizarSync(){
+  const v = document.getElementById('sync-status-v');
+  if(RTDB && DADOS){
+    v.innerHTML = '<span class="sync-dot sync-on"></span>Conectado';
+    const ts = DADOS._ts ? new Date(DADOS._ts) : null;
+    document.getElementById('sync-last').textContent = ts ? ts.toLocaleString('pt-BR') : '—';
+    let total=0; ['pedidos','orcamentos','clientes','industrias','comissoes_data'].forEach(k=>total+=(DADOS[k]||[]).length);
+    document.getElementById('sync-count').textContent = total + ' registros';
+  } else if(DADOS){
+    v.innerHTML = '<span class="sync-dot sync-off"></span>Modo offline (cache)';
+  } else {
+    v.innerHTML = '<span class="sync-dot sync-off"></span>Sem dados';
+  }
+}
+
+async function sincronizarAgora(){
+  const btn = document.getElementById('btn-sync-now');
+  if(!RTDB){ toast('Sistema não configurado neste aparelho','err'); return; }
+  btn.disabled=true; const old=btn.innerHTML; btn.innerHTML='<span class="spinner spinner-light"></span> Atualizando…';
+  try{
+    await puxarDados();
+    montarHome(); montarPainel(); atualizarSync();
+    toast('Dados atualizados ✓','ok');
+  }catch(e){ toast('Erro: '+e.message,'err'); }
+  btn.disabled=false; btn.innerHTML=old;
+}
+
+function logout(){
+  if(!confirm('Deseja sair da conta?')) return;
+  localStorage.removeItem('gestcom_sessao');
+  sessionStorage.removeItem('gestcom_sessao');
+  usuarioLogado=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login').style.display='flex';
+  document.getElementById('in-pass').value='';
+  switchTab('home');
+}
+
+/* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+let toastT;
+function toast(msg, tipo){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=''; if(tipo)t.classList.add(tipo);
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ════════════════════════════════════════════════
+   AUTOLOGIN (manter conectado) + BOOT
+════════════════════════════════════════════════ */
+async function boot(){
+  carregarRTDB();
+
+  // Mostra botão biometria se já houve login antes
+  if(localStorage.getItem('gestcom_bio')){
+    document.getElementById('bio-btn').style.display='flex';
+  }
+
+  const sess = localStorage.getItem('gestcom_sessao') || sessionStorage.getItem('gestcom_sessao');
+  if(sess){
+    try{
+      const s = JSON.parse(sess);
+      document.getElementById('login-status').textContent='⏳ Reconectando…';
+      // tenta atualizar da nuvem, senão usa cache
+      try{ if(RTDB) await puxarDados(); else carregarCache(); }
+      catch(e){ carregarCache(); }
+
+      const usuarios = DADOS?.usuarios||[];
+      const found = usuarios.find(u=>u.id===s.id && (u.status||'ativo')==='ativo');
+      if(found){ usuarioLogado=found; entrarNoApp(); return; }
+    }catch(e){}
+  }
+  // pré-preenche último usuário para conveniência
+  try{ const bio=JSON.parse(localStorage.getItem('gestcom_bio')||'{}'); if(bio.login) document.getElementById('in-user').value=bio.login; }catch(e){}
+}
+
+// Registra service worker (PWA offline)
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+boot();
+</script>
+</body>
+</html>
