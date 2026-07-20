@@ -1,7 +1,7 @@
 /* GestCom PWA — service worker
    Cache leve do app-shell para abrir offline.
    Os DADOS ficam em localStorage (gestcom_cache), não aqui. */
-const CACHE = 'gestcom-v1';
+const CACHE = 'gestcom-v2';
 const SHELL = [
   './',
   './index.html',
