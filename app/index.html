@@ -10,8 +10,26 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>GestCom — Comercial Três Vales</title>
-<script src="xlsx.min.js"></script>
-<script src="jspdf.min.js"></script>
+<!-- Bibliotecas: tenta o arquivo local (offline); se falhar, busca da internet -->
+<script src="xlsx.min.js" onerror="carregarCDN('xlsx')"></script>
+<script src="jspdf.min.js" onerror="carregarCDN('jspdf')"></script>
+<script>
+/* Fallback: se o arquivo local não existir/não carregar, baixa da internet.
+   Assim o app funciona offline (com os .js na pasta) E online (sem eles). */
+function carregarCDN(qual){
+  var s = document.createElement('script');
+  if(qual === 'xlsx'){
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  } else {
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  }
+  s.onerror = function(){
+    console.error('Não foi possível carregar a biblioteca "'+qual+'" (nem local nem internet).');
+  };
+  document.head.appendChild(s);
+  console.warn('Arquivo local de "'+qual+'" não carregou; buscando da internet…');
+}
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -2342,7 +2360,7 @@ function exportarModulo(){
   closeSheet();
   const key = sheetContext || (moduloAtual&&moduloAtual.key);
   if(!key){ toast('Abra um módulo para exportar','err'); return; }
-  if(typeof XLSX==='undefined'){ toast('Recurso de Excel ainda carregando. Tente de novo em instantes.','err'); return; }
+  if(typeof XLSX==='undefined'){ toast('Biblioteca do Excel não carregou. Verifique se o arquivo "xlsx.min.js" está na mesma pasta, ou conecte à internet e tente de novo.','err'); return; }
   const arr = dadosDoModulo(key);
   if(!arr || !arr.length){ toast('Nada para exportar neste módulo','err'); return; }
   try{
@@ -2424,11 +2442,13 @@ function importarArquivo(){
 function gerarPDF(){
   closeSheet();
   const key = sheetContext || (moduloAtual&&moduloAtual.key);
-  if(!window.jspdf){ toast('Recurso de PDF ainda carregando. Tente de novo em instantes.','err'); return; }
+  // A biblioteca pode se expor como window.jspdf (novas versões) ou window.jsPDF (antigas)
+  const jspdfNS = window.jspdf || window.jsPDF;
+  if(!jspdfNS){ toast('Biblioteca do PDF não carregou. Verifique se o arquivo "jspdf.min.js" está na mesma pasta, ou conecte à internet e tente de novo.','err'); return; }
   const arr = dadosDoModulo(key);
   if(!arr || !arr.length){ toast('Nada para gerar PDF','err'); return; }
   try{
-    const { jsPDF } = window.jspdf;
+    const jsPDF = jspdfNS.jsPDF || jspdfNS;
     const doc = new jsPDF();
     doc.setFontSize(16); doc.text('GestCom — '+(moduloAtual?moduloAtual.label:key), 14, 18);
     doc.setFontSize(9); doc.setTextColor(120);
