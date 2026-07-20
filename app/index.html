@@ -296,8 +296,10 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
       </div>
       <div class="info-card">
         <div class="info-row"><span class="k">Manter conectado</span><span class="v" id="pf-remember">—</span></div>
-        <div class="info-row"><span class="k">Versão do app</span><span class="v">1.0</span></div>
+        <div class="info-row"><span class="k">Biometria (digital / Face ID)</span><span class="v" id="pf-bio">—</span></div>
+        <div class="info-row"><span class="k">Versão do app</span><span class="v">1.1</span></div>
       </div>
+      <button class="btn-full btn-dark" id="pf-bio-btn" onclick="toggleBiometriaPerfil()" style="display:none">Ativar biometria</button>
       <button class="btn-full btn-danger" onclick="logout()">Sair da conta</button>
     </div>
   </div>
@@ -563,6 +565,9 @@ async function fazerLogin(){
     }
 
     entrarNoApp();
+
+    // Oferece ativar biometria real (se o aparelho suportar e ainda não estiver ativa)
+    if(rememberOn) setTimeout(()=>ofertarBiometria(found), 900);
   }catch(e){
     if(e.message==='sem-config'){
       err.innerHTML = 'Este aparelho ainda não tem os dados.<br>Abra o sistema web uma vez neste celular, ou peça ao administrador o link de configuração.';
@@ -576,16 +581,120 @@ async function fazerLogin(){
   }
 }
 
-function loginBiometria(){
-  // Reautenticação rápida: reabre a última sessão salva
-  const sess = localStorage.getItem('gestcom_sessao');
-  if(!sess){ toast('Faça login uma vez antes de usar biometria','err'); return; }
+/* ════════════════════════════════════════════════
+   BIOMETRIA REAL (WebAuthn — digital / Face ID do aparelho)
+   - Ao ativar: registra uma credencial de plataforma no aparelho.
+   - Ao entrar: pede a biometria; se o aparelho confirmar, libera a sessão salva.
+   Guardamos só um marcador local (id da credencial + login). A verificação
+   é feita pelo próprio celular (Android/iOS), não pelo app.
+════════════════════════════════════════════════ */
+function _b64ToBuf(b64){ const s=atob(b64.replace(/-/g,'+').replace(/_/g,'/')); const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return u.buffer; }
+function _bufToB64(buf){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i++)s+=String.fromCharCode(u[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function _randBuf(n){ const u=new Uint8Array(n); crypto.getRandomValues(u); return u; }
+
+async function biometriaDisponivel(){
   try{
-    const s = JSON.parse(sess);
-    document.getElementById('in-user').value = s.login;
-    document.getElementById('in-pass').focus();
-    toast('Digite sua senha para confirmar');
-  }catch(e){}
+    if(!window.PublicKeyCredential) return false;
+    if(!PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(e){ return false; }
+}
+
+/* Oferece ativar biometria após login por senha */
+async function ofertarBiometria(user){
+  try{
+    if(localStorage.getItem('gestcom_webauthn')) return;          // já ativada
+    if(localStorage.getItem('gestcom_bio_recusou')) return;        // usuário já recusou
+    if(!(await biometriaDisponivel())) return;                     // aparelho não suporta
+    if(!confirm('Deseja ativar a entrada por biometria (digital / Face ID) neste aparelho?')) {
+      try{ localStorage.setItem('gestcom_bio_recusou','1'); }catch(e){}
+      return;
+    }
+    await registrarBiometria(user);
+  }catch(e){ /* silencioso */ }
+}
+
+async function registrarBiometria(user){
+  try{
+    const userId = _randBuf(16);
+    const cred = await navigator.credentials.create({ publicKey:{
+      challenge: _randBuf(32),
+      rp: { name:'GestCom Três Vales' },
+      user: { id:userId, name:user.login, displayName:(user.nome||user.login) },
+      pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
+      timeout: 60000,
+      attestation: 'none'
+    }});
+    if(!cred) throw new Error('cancelado');
+    const rec = { credId:_bufToB64(cred.rawId), login:user.login, id:user.id };
+    localStorage.setItem('gestcom_webauthn', JSON.stringify(rec));
+    localStorage.removeItem('gestcom_bio_recusou');
+    document.getElementById('bio-btn').style.display='flex';
+    toast('Biometria ativada ✓','ok');
+  }catch(e){
+    if(e && e.name==='NotAllowedError') toast('Ativação da biometria cancelada','err');
+    else toast('Não foi possível ativar a biometria','err');
+  }
+}
+
+/* Login pela biometria (na tela de entrada) */
+async function loginBiometria(){
+  let rec=null;
+  try{ rec = JSON.parse(localStorage.getItem('gestcom_webauthn')||'null'); }catch(e){}
+  if(!rec){
+    // Ainda não ativou: guia o usuário a entrar por senha primeiro
+    toast('Faça login com sua senha uma vez para ativar a biometria','err');
+    const s = (()=>{try{return JSON.parse(localStorage.getItem('gestcom_bio')||'{}');}catch(e){return {};}})();
+    if(s.login){ document.getElementById('in-user').value=s.login; document.getElementById('in-pass').focus(); }
+    return;
+  }
+
+  const status = document.getElementById('login-status');
+  status.textContent = '🔒 Verificando biometria…';
+
+  try{
+    const assertion = await navigator.credentials.get({ publicKey:{
+      challenge: _randBuf(32),
+      allowCredentials: [{ type:'public-key', id:_b64ToBuf(rec.credId) }],
+      userVerification: 'required',
+      timeout: 60000
+    }});
+    if(!assertion){ status.textContent=''; return; }
+
+    // Biometria confirmada pelo aparelho → carrega dados e entra
+    status.textContent = '⏳ Entrando…';
+    if(!RTDB) carregarRTDB();
+    try{ if(RTDB) await puxarDados(); else carregarCache(); }
+    catch(e){ carregarCache(); }
+
+    const usuarios = DADOS?.usuarios || [];
+    const found = usuarios.find(u => u.id===rec.id && (u.status||'ativo')==='ativo')
+               || usuarios.find(u => (u.login||'').toLowerCase()===(rec.login||'').toLowerCase() && (u.status||'ativo')==='ativo');
+    if(!found){ status.textContent=''; toast('Usuário não encontrado. Entre com senha.','err'); return; }
+
+    usuarioLogado = found;
+    try{ localStorage.setItem('gestcom_sessao', JSON.stringify({id:found.id, login:found.login, ts:Date.now()})); }catch(e){}
+    entrarNoApp();
+  }catch(e){
+    status.textContent='';
+    if(e && e.name==='NotAllowedError') toast('Biometria não reconhecida ou cancelada','err');
+    else toast('Falha na biometria. Use sua senha.','err');
+  }
+}
+
+/* Permite (re)ativar biometria pela tela de Perfil */
+async function ativarBiometriaPerfil(){
+  if(!usuarioLogado){ toast('Entre primeiro','err'); return; }
+  if(!(await biometriaDisponivel())){ toast('Este aparelho não oferece biometria no navegador','err'); return; }
+  await registrarBiometria(usuarioLogado);
+  atualizarPerfil();
+}
+function desativarBiometria(){
+  localStorage.removeItem('gestcom_webauthn');
+  document.getElementById('bio-btn').style.display='none';
+  toast('Biometria desativada');
+  atualizarPerfil();
 }
 
 /* ════════════════════════════════════════════════
@@ -1338,6 +1447,22 @@ function atualizarPerfil(){
   document.getElementById('pf-perfil').textContent = perfilLabels[u.perfil]||u.perfil;
   document.getElementById('pf-email').textContent = u.email||'—';
   document.getElementById('pf-remember').textContent = localStorage.getItem('gestcom_sessao') ? 'Ativado' : 'Desativado';
+
+  const bioAtiva = !!localStorage.getItem('gestcom_webauthn');
+  const bioEl = document.getElementById('pf-bio');
+  const bioBtn = document.getElementById('pf-bio-btn');
+  bioEl.textContent = bioAtiva ? 'Ativada ✓' : 'Desativada';
+  // mostra botão conforme suporte do aparelho
+  biometriaDisponivel().then(ok=>{
+    if(!ok){ bioBtn.style.display='none'; bioEl.textContent='Não disponível neste aparelho'; return; }
+    bioBtn.style.display='';
+    bioBtn.textContent = bioAtiva ? 'Desativar biometria' : 'Ativar biometria';
+  });
+}
+
+async function toggleBiometriaPerfil(){
+  if(localStorage.getItem('gestcom_webauthn')) desativarBiometria();
+  else await ativarBiometriaPerfil();
 }
 
 function atualizarSync(){
@@ -1396,8 +1521,8 @@ function toast(msg, tipo){
 async function boot(){
   carregarRTDB();
 
-  // Mostra botão biometria se já houve login antes
-  if(localStorage.getItem('gestcom_bio')){
+  // Mostra botão biometria se já foi ativada neste aparelho
+  if(localStorage.getItem('gestcom_webauthn')){
     document.getElementById('bio-btn').style.display='flex';
   }
 
