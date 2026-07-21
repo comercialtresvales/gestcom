@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1268,7 +1267,7 @@ tr:last-child td{border-bottom:none;}
     <div class="nav-item" style="display:none" onclick="showPanel('ctrlsaldo',this)"><span class="nav-icon">🏦</span> Controle de Saldos <span class="nav-badge" id="badge-ctrlsaldo" style="display:none">!</span></div>
     <div class="nav-item" onclick="showPanel('comissoes',this)"><span class="nav-icon">💰</span> Comissões</div>
     <div class="nav-item" onclick="showPanel('fatmensal',this)"><span class="nav-icon">📅</span> Fat. Mensal por Indústria</div>
-    <div class="nav-item" onclick="showPanel('sellinout',this)"><span class="nav-icon">↕️</span> Sell In / Sell Out</div>
+    <div class="nav-item" onclick="showPanel('sellinout',this)"><span class="nav-icon">↕️</span> Sell Out</div>
     <div class="nav-item" onclick="showPanel('metas',this)"><span class="nav-icon">🎯</span> Metas</div>
   </div>
 
@@ -1960,10 +1959,10 @@ tr:last-child td{border-bottom:none;}
       <div id="fm-content"></div>
     </div>
 
-    <!-- ===== SELL IN/OUT ===== -->
+    <!-- ===== SELL OUT ===== -->
     <div class="panel" id="panel-sellinout">
       <div class="section-bar">
-        <div><div class="section-title">Sell In / Sell Out</div><div class="section-sub">Sell In automático (pedidos faturados) · Sell Out lançado manualmente</div></div>
+        <div><div class="section-title">Sell Out</div><div class="section-sub">Vendas (saída de estoque) lançadas manualmente por cliente/indústria</div></div>
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-sellout')">+ Lançar Sell Out</button>
           <button class="btn btn-info btn-sm" onclick="exportarSellInOut()">📤 Exportar Excel</button>
@@ -1981,15 +1980,14 @@ tr:last-child td{border-bottom:none;}
           <option value="">Todos os meses</option>
         </select>
       </div>
-      <!-- KPIs Sell In/Out -->
-      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-        <div class="kpi-card kpi-azul"><div class="kpi-label">Sell In Total</div><div class="kpi-value" id="sio-kpi-in">R$ 0</div><div class="kpi-sub">Pedidos faturados</div></div>
+      <!-- KPIs Sell Out -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:16px">
         <div class="kpi-card kpi-verde"><div class="kpi-label">Sell Out Total</div><div class="kpi-value" id="sio-kpi-out">R$ 0</div><div class="kpi-sub">Vendas lançadas manualmente</div></div>
-        <div class="kpi-card kpi-amarelo"><div class="kpi-label">Giro Médio</div><div class="kpi-value" id="sio-kpi-giro">0%</div><div class="kpi-sub">Sell Out / Sell In</div></div>
+        <div class="kpi-card kpi-amarelo"><div class="kpi-label">Positivação Total</div><div class="kpi-value" id="sio-kpi-giro">0</div><div class="kpi-sub">Lojas positivadas</div></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>Cliente / Grupo</th><th>Indústria</th><th>Mês</th><th>Sell In (R$)</th><th>Sell Out (R$)</th><th>Positivação</th><th>Estoque Estimado</th><th>Giro %</th><th>Cobertura</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Cliente / Grupo</th><th>Indústria</th><th>Mês</th><th>Sell Out (R$)</th><th>Positivação</th><th>Ações</th></tr></thead>
           <tbody id="sio-tbody"></tbody>
         </table>
       </div>
@@ -4151,7 +4149,7 @@ const TODOS_MODULOS = [
   {key:'ctrlsaldo',   label:'Controle de Saldos',      icone:'🏦'},
   {key:'comissoes',   label:'Comissões',              icone:'💰'},
   {key:'fatmensal',   label:'Fat. Mensal Indústria',  icone:'📅'},
-  {key:'sellinout',   label:'Sell In / Sell Out',     icone:'↕️'},
+  {key:'sellinout',   label:'Sell Out',     icone:'↕️'},
   {key:'metas',       label:'Metas',                  icone:'🎯'},
   {key:'relatorios',  label:'Relatórios / KPIs',      icone:'📈'},
   {key:'mix',         label:'Mix de Produtos',        icone:'🧩'},
@@ -4377,7 +4375,7 @@ function _salvarLocal() {
       PRODUTOS_CAT, mixProdutos, bonificacoesData, usuarios, userPerms,
       configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
       ctrlSaldosData, ctrlSaldosHistorico,
-      tarefasData, atasData, crmData, contaCorrenteData, ccContas, ccContasCadastradas,
+      tarefasData, atasData, crmData, setoresCustom, contaCorrenteData, ccContas, ccContasCadastradas,
       finCRData, finCPData, finCBData, cbTipos, modulosConfig, modulosCustom, userAcoes,
       _ts: Date.now()
     });
@@ -4418,6 +4416,12 @@ function _carregarLocal() {
     if(Array.isArray(d.tarefasData))       tarefasData       = d.tarefasData;
     if(Array.isArray(d.atasData))          atasData          = d.atasData;
     if(Array.isArray(d.crmData))           crmData           = d.crmData;
+    if(d.setoresCustom && typeof d.setoresCustom==='object'){
+      setoresCustom = {
+        cliente:   Array.isArray(d.setoresCustom.cliente)   ? d.setoresCustom.cliente   : [],
+        industria: Array.isArray(d.setoresCustom.industria) ? d.setoresCustom.industria : []
+      };
+    }
     if(Array.isArray(d.contaCorrenteData)) contaCorrenteData = d.contaCorrenteData;
     if(Array.isArray(d.ccContas))          ccContas          = d.ccContas;
     if(d.ccContasCadastradas && typeof d.ccContasCadastradas==='object') ccContasCadastradas = d.ccContasCadastradas;
@@ -4546,7 +4550,7 @@ const panelTitles = {
   faturamento:'Faturamento / Notas Fiscais',nfcompare:'Comparação Pedido × NF',
   logistica:'Controle Logístico',saldo:'Saldo por Cliente × Indústria',
   ctrlsaldo:'Controle de Saldos por Pedido',
-  comissoes:'Controle de Comissões',sellinout:'Sell In / Sell Out',
+  comissoes:'Controle de Comissões',sellinout:'Sell Out',
   fatmensal:'Faturamento Mensal por Indústria',
   metas:'Controle de Metas',tratativas:'Tratativas Pós-Faturamento',
   mix:'Mix de Produtos',redes:'Redes / Grupos Comerciais',
@@ -10536,7 +10540,7 @@ function popularSelectsDinamicos() {
     if(cur) s.value=cur;
   });
 
-  // Para o filtro do Sell In/Out, usa nomes normalizados (grupos)
+  // Para o filtro do Sell Out, usa nomes normalizados (grupos)
   const nomesCliGrupos = [...new Set([
     ...clientes.filter(c=>c.status==='Ativo').map(c=>normalizarGrupoSellOut(c.nome)),
     ...pedidos.filter(p=>!p.excluido).map(p=>normalizarGrupoSellOut(p.cliente))
@@ -12125,7 +12129,7 @@ function exportarLogistica() {
 }
 
 /* ══════════════════════════
-   SELL IN / SELL OUT
+   SELL OUT
 ══════════════════════════ */
 
 // ── Normalização de grupos para Sell Out ──
@@ -12178,64 +12182,40 @@ function salvarSellOut() {
 function exportarSellInOut() {
   const wb = XLSX.utils.book_new();
 
-  // ── Aba 1: Comparativo Sell In × Sell Out (todos os dados, sem filtro) ──
-  const fats = pedidos.filter(p => p.nf && !p.excluido);
-  const allClis = [...new Set([
-    ...fats.map(p => normalizarGrupoSellOut(p.cliente)),
-    ...sellOutData.map(s => normalizarGrupoSellOut(s.cliente))
-  ])];
-  const allInds = [...new Set([...fats.map(p => p.industria), ...sellOutData.map(s => s.industria)])];
-  const todosMeses = [...new Set([...sellOutData.map(s => s.mes), ...fats.map(p=>{
-    if(!p.nf.data) return null;
-    const d=new Date(p.nf.data); if(isNaN(d)) return null;
-    const mn=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    return mn[d.getMonth()]+'/'+String(d.getFullYear()).slice(2);
-  }).filter(Boolean)])].sort((a,b)=>{
+  // ── Aba 1: Sell Out por Cliente/Indústria/Mês (agrupado) ──
+  const allClis = [...new Set(sellOutData.map(s => normalizarGrupoSellOut(s.cliente)))];
+  const allInds = [...new Set(sellOutData.map(s => s.industria))];
+  const todosMeses = [...new Set(sellOutData.map(s => s.mes).filter(Boolean))].sort((a,b)=>{
     const mn=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     const parse=m=>{const[n,y]=m.split('/');return(2000+parseInt(y))*12+mn.indexOf(n);};
     return parse(a)-parse(b);
   });
 
   const compRows = [
-    ['Cliente', 'Indústria', 'Mês', 'Sell In (R$)', 'Sell Out (R$)', 'Positivação (lojas)', 'Estoque Estimado (R$)', 'Giro %', 'Cobertura']
+    ['Cliente', 'Indústria', 'Mês', 'Sell Out (R$)', 'Positivação (lojas)']
   ];
-  let totSellIn = 0, totSellOut = 0;
+  let totSellOut = 0, totPos = 0;
 
   allClis.forEach(cli => {
     allInds.forEach(ind => {
       todosMeses.forEach(mes => {
-        const mesesN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const [mesNome2,anoStr2]=mes.split('/');
-        const mesIdx2=mesesN.indexOf(mesNome2);
-        const anoFull2=2000+parseInt(anoStr2);
-        // Sell In agrupado por grupo (soma todas as filiais)
-        const sellIn = fats.filter(p => normalizarGrupoSellOut(p.cliente) === cli && p.industria === ind && p.nf.data)
-          .filter(p=>{const d=new Date(p.nf.data);return !isNaN(d)&&d.getMonth()===mesIdx2&&d.getFullYear()===anoFull2;})
-          .reduce((s, p) => s + p.nf.liquida, 0);
         const soRows = sellOutData.filter(s => normalizarGrupoSellOut(s.cliente) === cli && s.industria === ind && s.mes === mes);
+        if (soRows.length === 0) return;
         const sellOut = soRows.reduce((s, r) => s + r.valor, 0);
-        if (sellIn === 0 && sellOut === 0) return;
         const positivacao = soRows.reduce((s, r) => s + (r.positivacao || 0), 0);
-        const estoque = sellIn - sellOut;
-        const giro = sellIn > 0 ? parseFloat(((sellOut / sellIn) * 100).toFixed(1)) : 0;
-        const cobertura = sellOut > 0 ? Math.round((estoque / sellOut) * 30) + ' dias' : '—';
-        compRows.push([cli, ind, mes, sellIn, sellOut, positivacao, estoque, giro, cobertura]);
-        totSellIn  += sellIn;
+        compRows.push([cli, ind, mes, sellOut, positivacao]);
         totSellOut += sellOut;
+        totPos += positivacao;
       });
     });
   });
 
   // Linha de totais
-  const giroGeral = totSellIn > 0 ? parseFloat(((totSellOut / totSellIn) * 100).toFixed(1)) : 0;
-  compRows.push(['TOTAL GERAL', '', '', totSellIn, totSellOut, '', totSellIn - totSellOut, giroGeral, '']);
+  compRows.push(['TOTAL GERAL', '', '', totSellOut, totPos]);
 
   const wsComp = XLSX.utils.aoa_to_sheet(compRows);
-  // Larguras de coluna
-  wsComp['!cols'] = [
-    {wch:22},{wch:16},{wch:10},{wch:16},{wch:16},{wch:18},{wch:22},{wch:10},{wch:14}
-  ];
-  XLSX.utils.book_append_sheet(wb, wsComp, 'Comparativo');
+  wsComp['!cols'] = [{wch:22},{wch:16},{wch:10},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, wsComp, 'Sell Out Agrupado');
 
   // ── Aba 2: Sell Out Lançado (dados brutos) ──
   const soRows2 = [['ID','Cliente','Indústria','Produto','Mês','Qtd','Valor (R$)','Positivação','Obs']];
@@ -12247,38 +12227,19 @@ function exportarSellInOut() {
   wsSO['!cols'] = [{wch:10},{wch:22},{wch:16},{wch:20},{wch:10},{wch:8},{wch:14},{wch:14},{wch:30}];
   XLSX.utils.book_append_sheet(wb, wsSO, 'Sell Out Lançado');
 
-  // ── Aba 3: Sell In — Pedidos Faturados (detalhado) ──
-  const siRows = [['Pedido','Cliente','Indústria','Data','NF Nº','Valor Bruto (R$)','Bonif. (R$)','Descontos (R$)','Valor Líquido (R$)','Status']];
-  fats.forEach(p => siRows.push([
-    p.id, p.cliente, p.industria, p.data || '',
-    p.nf.numero || '', p.nf.bruta || 0, p.nf.bonif || 0,
-    (p.nf.bruta || 0) - (p.nf.liquida || 0) - (p.nf.bonif || 0),
-    p.nf.liquida || 0, p.status
-  ]));
-  const wsSI = XLSX.utils.aoa_to_sheet(siRows);
-  wsSI['!cols'] = [{wch:12},{wch:22},{wch:16},{wch:12},{wch:12},{wch:16},{wch:14},{wch:16},{wch:16},{wch:14}];
-  XLSX.utils.book_append_sheet(wb, wsSI, 'Sell In (Pedidos Fat.)');
-
-  // ── Aba 4: KPIs Resumo ──
+  // ── Aba 3: KPIs Resumo ──
   const hoje = new Date().toLocaleDateString('pt-BR');
   const kpiRows = [
-    ['Resumo Sell In × Sell Out — GestCom Três Vales'],
+    ['Resumo Sell Out — GestCom Três Vales'],
     ['Gerado em:', hoje],
     [],
     ['Indicador', 'Valor'],
-    ['Sell In Total (R$)', totSellIn],
     ['Sell Out Total (R$)', totSellOut],
-    ['Giro Médio (%)', giroGeral],
-    ['Estoque Estimado (R$)', totSellIn - totSellOut],
+    ['Positivação Total (lojas)', totPos],
     [],
     ['Qtd. Registros Sell Out', sellOutData.length],
-    ['Qtd. Pedidos Faturados (Sell In)', fats.length],
-    ['Clientes com Sell In/Out', allClis.filter(c => {
-      return fats.some(p=>p.cliente===c) || sellOutData.some(s=>s.cliente===c);
-    }).length],
-    ['Indústrias com Sell In/Out', allInds.filter(i => {
-      return fats.some(p=>p.industria===i) || sellOutData.some(s=>s.industria===i);
-    }).length],
+    ['Clientes com Sell Out', allClis.length],
+    ['Indústrias com Sell Out', allInds.length],
   ];
   const wsKPI = XLSX.utils.aoa_to_sheet(kpiRows);
   wsKPI['!cols'] = [{wch:30},{wch:20}];
@@ -12286,9 +12247,9 @@ function exportarSellInOut() {
 
   // ── Gerar arquivo ──
   const dataStr = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `SellInOut_TresVales_${dataStr}.xlsx`);
-  addAudit(usuarioLogado?.login || 'sistema', 'Exportou Sell In/Out para Excel', '📤');
-  toast('✅ Excel exportado com 4 abas: Comparativo, Sell Out, Sell In e KPIs!');
+  XLSX.writeFile(wb, `SellOut_TresVales_${dataStr}.xlsx`);
+  addAudit(usuarioLogado?.login || 'sistema', 'Exportou Sell Out para Excel', '📤');
+  toast('✅ Excel exportado com 3 abas: Sell Out Agrupado, Lançado e KPIs!');
 }
 
 /* ══════════════════════════
@@ -13589,7 +13550,7 @@ function renderConfiguracoes() {
       {key:'saldo',       label:'Saldo Cli × Indústria', desc:'Saldo financeiro e bonificações'},
       {key:'comissoes',   label:'Comissões',             desc:'Controle e lançamento manual'},
       {key:'fatmensal',   label:'Fat. Mensal Indústria', desc:'Faturamento mês a mês por indústria'},
-      {key:'sellinout',   label:'Sell In / Sell Out',    desc:'Giro e cobertura de estoque'},
+      {key:'sellinout',   label:'Sell Out',    desc:'Vendas lançadas manualmente'},
       {key:'metas',       label:'Metas',                 desc:'Metas mensais por indústria'},
       {key:'relatorios',  label:'Relatórios / KPIs',     desc:'Análises e indicadores gerenciais'},
       {key:'mix',         label:'Mix de Produtos',       desc:'Portfólio por cliente × indústria'},
@@ -14060,6 +14021,7 @@ function coletarDadosParaSync() {
     tarefasData:        JSON.parse(JSON.stringify(typeof tarefasData!=='undefined'?tarefasData:[])),
     atasData:           JSON.parse(JSON.stringify(typeof atasData!=='undefined'?atasData:[])),
     crmData:            JSON.parse(JSON.stringify(typeof crmData!=='undefined'?crmData:[])),
+    setoresCustom:      JSON.parse(JSON.stringify(typeof setoresCustom!=='undefined'?setoresCustom:{cliente:[],industria:[]})),
     contaCorrenteData:  JSON.parse(JSON.stringify(typeof contaCorrenteData!=='undefined'?contaCorrenteData:[])),
     ccContas:           JSON.parse(JSON.stringify(typeof ccContas!=='undefined'?ccContas:[])),
     ccContasCadastradas:JSON.parse(JSON.stringify(typeof ccContasCadastradas!=='undefined'?ccContasCadastradas:{})),
@@ -14105,6 +14067,12 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(Array.isArray(dados.tarefasData)) tarefasData = dados.tarefasData;
   if(Array.isArray(dados.atasData)) atasData = dados.atasData;
   if(Array.isArray(dados.crmData)) crmData = dados.crmData;
+  if(dados.setoresCustom && typeof dados.setoresCustom==='object'){
+    setoresCustom = {
+      cliente:   Array.isArray(dados.setoresCustom.cliente)   ? dados.setoresCustom.cliente   : [],
+      industria: Array.isArray(dados.setoresCustom.industria) ? dados.setoresCustom.industria : []
+    };
+  }
   if(Array.isArray(dados.contaCorrenteData)) contaCorrenteData = dados.contaCorrenteData;
   if(Array.isArray(dados.ccContas)) ccContas = dados.ccContas;
   if(dados.ccContasCadastradas && typeof dados.ccContasCadastradas==='object') ccContasCadastradas = dados.ccContasCadastradas;
@@ -15543,106 +15511,6 @@ function excluirSellOut(soId) {
 }
 
 /* ─────────────────────────────────────────────────────
-   EDITAR SELL IN (pedidos faturados do grupo)
-───────────────────────────────────────────────────── */
-let _siEditIds = [];
-
-function editarSellIn(pedIds, grupo, ind, mes) {
-  _siEditIds = pedIds;
-  const peds = pedidos.filter(p=>pedIds.includes(p.id));
-  const totalSI = peds.reduce((s,p)=>s+(p.nf?.liquida||0),0);
-
-  const el2 = el('si-edit-grupo'); if(el2) el2.textContent = grupo;
-  const el3 = el('si-edit-ind');   if(el3) el3.textContent = ind;
-  const el4 = el('si-edit-mes');   if(el4) el4.textContent = mes;
-  const el5 = el('si-edit-total'); if(el5) el5.textContent = fmt(totalSI);
-
-  // Lista de pedidos editáveis
-  const lista = el('si-edit-lista');
-  if(lista) {
-    lista.innerHTML = peds.map(p=>`
-      <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede6">
-        <span class="tag" style="font-size:10px">${esc(p.id)}</span>
-        <span style="font-size:12px;color:#666">${esc(p.cliente)}</span>
-        <span style="font-size:11px;color:#888">${p.nf?.data||''}</span>
-        <strong style="color:var(--azul);font-size:13px">${fmt(p.nf?.liquida||0)}</strong>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-outline btn-xs" onclick="verPedidoSI('${p.id}')" title="Ver pedido">👁️</button>
-          <button class="btn btn-danger btn-xs" onclick="excluirSellInPedido('${p.id}')" title="Remover do Sell In">🗑️</button>
-        </div>
-      </div>
-    `).join('') || '<div style="color:#aaa;font-size:12px;padding:8px 0">Nenhum pedido encontrado</div>';
-  }
-
-  // Histórico de NF dos pedidos
-  const hist = el('si-edit-historico');
-  if(hist) {
-    const entries = peds.flatMap(p=>(p._audit||[]).map(a=>({...a, pedId:p.id}))).sort((a,b)=>b.ts-a.ts).slice(0,10);
-    hist.innerHTML = entries.length>0
-      ? entries.map(h=>`<div style="font-size:11px;color:#888;padding:3px 0;border-bottom:1px solid #f5f5f5">
-          <span style="color:#aaa">${h.data||''}</span> · <strong>${esc(h.usuario||'')}</strong>: ${esc(h.acao||'')}
-        </div>`).join('')
-      : '<div style="font-size:11px;color:#aaa">Sem histórico</div>';
-  }
-
-  openModal('modal-sellin-edit');
-}
-
-function verPedidoSI(pedId) {
-  closeModal('modal-sellin-edit');
-  // Navega para o pedido na aba faturamento
-  if(window.showPanel) window.showPanel('faturamento');
-  setTimeout(()=>{
-    const busca = el('fat-busca'); if(busca){ busca.value=pedId; busca.dispatchEvent(new Event('input')); }
-  }, 200);
-}
-
-function excluirSellInPedido(pedId) {
-  const p = pedidos.find(x=>x.id===pedId);
-  if(!p) return;
-  if(!confirm(`Remover NF do pedido ${pedId}?\nIsso zerará o Sell In deste pedido.\n\nO pedido continuará existindo, apenas sem NF vinculada.`)) return;
-  const nfBkp = p.nf;
-  delete p.nf;
-  addAudit(usuarioLogado?.login||'admin', `NF removida do pedido ${pedId} (Sell In) — valor era ${fmt(nfBkp?.liquida||0)}`, '🗑️');
-  // Atualiza lista no modal
-  _siEditIds = _siEditIds.filter(id=>id!==pedId);
-  renderSellInOut();
-  syncAutoSaveHook();
-  toast(`NF do pedido ${pedId} removida.`);
-  if(_siEditIds.length===0) { closeModal('modal-sellin-edit'); }
-  else {
-    // Re-abre com dados atualizados
-    const peds = pedidos.filter(p2=>_siEditIds.includes(p2.id));
-    const lista = el('si-edit-lista');
-    if(lista) lista.innerHTML = peds.map(p2=>`
-      <div style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede6">
-        <span class="tag" style="font-size:10px">${esc(p2.id)}</span>
-        <span style="font-size:12px;color:#666">${esc(p2.cliente)}</span>
-        <span style="font-size:11px;color:#888">${p2.nf?.data||''}</span>
-        <strong style="color:var(--azul);font-size:13px">${fmt(p2.nf?.liquida||0)}</strong>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-outline btn-xs" onclick="verPedidoSI('${p2.id}')" title="Ver pedido">👁️</button>
-          <button class="btn btn-danger btn-xs" onclick="excluirSellInPedido('${p2.id}')" title="Remover NF">🗑️</button>
-        </div>
-      </div>
-    `).join('');
-    const tot = el('si-edit-total');
-    if(tot) tot.textContent = fmt(peds.reduce((s,p2)=>s+(p2.nf?.liquida||0),0));
-  }
-}
-
-
-
-// Alias: abrirEditSellIn abre o pedido de NF na tela de faturamento
-function abrirEditSellIn(pedId) {
-  if(window.showPanel) window.showPanel('faturamento');
-  setTimeout(()=>{
-    const busca = el('fat-busca');
-    if(busca){ busca.value = pedId; busca.dispatchEvent(new Event('input')); }
-  }, 200);
-}
-
-/* ─────────────────────────────────────────────────────
    HOOK: após salvarNF, verificar e gerar saldo automático
 ───────────────────────────────────────────────────── */
 // Monkey-patch salvarNF para chamar verificarEGerarSaldo
@@ -15718,8 +15586,6 @@ window._renderSellInOutV3 = function() {
   const filtInd = (el('sio-filtro-ind')||{}).value||'';
   const filtMes = (el('sio-filtro-mes')||{}).value||'';
 
-  const fats = pedidos.filter(p=>p.nf && !p.excluido);
-
   // Normalização dinâmica: usa redes do cadastro
   function grupoDeCliente(nomeCli) {
     if(!nomeCli) return nomeCli;
@@ -15738,12 +15604,9 @@ window._renderSellInOutV3 = function() {
   // Atualiza função global para uso em outros lugares
   window.normalizarGrupoSellOut = grupoDeCliente;
 
-  // Meses presentes
+  // Meses presentes (apenas Sell Out)
   const mn = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const mesesSet = new Set([
-    ...fats.map(p=>{ if(!p.nf.data) return null; const d=new Date(p.nf.data); return isNaN(d)?null:mn[d.getMonth()]+'/'+String(d.getFullYear()).slice(2); }).filter(Boolean),
-    ...sellOutData.map(s=>s.mes).filter(Boolean)
-  ]);
+  const mesesSet = new Set(sellOutData.map(s=>s.mes).filter(Boolean));
   let todosOsMeses = [...mesesSet].sort((a,b)=>{
     const parse=m=>{const[n2,y]=m.split('/');return(2000+parseInt(y))*12+mn.indexOf(n2);};
     return parse(a)-parse(b);
@@ -15762,11 +15625,8 @@ window._renderSellInOutV3 = function() {
   if(selMes){ const c=selMes.value; selMes.innerHTML='<option value="">Todos os meses</option>'+todosOsMeses.map(m=>`<option value="${m}"${m===c?' selected':''}>${m}</option>`).join(''); }
 
   // Grupos únicos (rede quando tiver, cliente quando não tiver)
-  const todosGrupos = [...new Set([
-    ...fats.map(p=>grupoDeCliente(p.cliente)),
-    ...sellOutData.map(s=>grupoDeCliente(s.cliente))
-  ])].sort();
-  const todasInds = [...new Set([...fats.map(p=>p.industria),...sellOutData.map(s=>s.industria)])].sort();
+  const todosGrupos = [...new Set(sellOutData.map(s=>grupoDeCliente(s.cliente)))].sort();
+  const todasInds = [...new Set(sellOutData.map(s=>s.industria))].sort();
 
   // Atualiza filtro de clientes/grupos
   const selCli=el('sio-filtro-cli');
@@ -15779,57 +15639,36 @@ window._renderSellInOutV3 = function() {
       if(filtInd && ind!==filtInd) return;
       todosOsMeses.forEach(mes=>{
         if(filtMes && mes!==filtMes) return;
-        const [mesNome,anoStr]=mes.split('/');
-        const mesIdx=mn.indexOf(mesNome), anoFull=2000+parseInt(anoStr);
-
-        // Sell In: soma pedidos de todas as filiais do grupo
-        const pedsMes = fats.filter(p=>grupoDeCliente(p.cliente)===grupo && p.industria===ind && p.nf.data)
-          .filter(p=>{ const d=new Date(p.nf.data); return !isNaN(d)&&d.getMonth()===mesIdx&&d.getFullYear()===anoFull; });
-        const sellIn = pedsMes.reduce((s,p)=>s+p.nf.liquida,0);
-        const siPedIds = pedsMes.map(p=>p.id);
 
         // Sell Out: soma lançamentos do grupo
         const soRows=sellOutData.filter(s=>grupoDeCliente(s.cliente)===grupo&&s.industria===ind&&s.mes===mes);
         const sellOut=soRows.reduce((s,r)=>s+r.valor,0);
-        if(sellIn===0&&sellOut===0) return;
+        if(soRows.length===0) return;
 
         const positivacao=soRows.reduce((s,r)=>s+(r.positivacao||0),0);
-        const estoque=sellIn-sellOut;
-        const giro=sellIn>0?((sellOut/sellIn)*100).toFixed(1):0;
-        const cobertura=sellOut>0?Math.round((estoque/sellOut)*30)+' dias':'—';
         const soIds=soRows.map(r=>r.id);
-        rows.push({grupo,ind,mes,sellIn,sellOut,positivacao,estoque,giro,cobertura,soIds,siPedIds});
+        rows.push({grupo,ind,mes,sellOut,positivacao,soIds});
       });
     });
   });
 
-  const totIn=rows.reduce((s,r)=>s+r.sellIn,0);
   const totOut=rows.reduce((s,r)=>s+r.sellOut,0);
-  const giroMedio=totIn>0?((totOut/totIn)*100).toFixed(1):0;
-  if(el('sio-kpi-in')) el('sio-kpi-in').textContent=fmt(totIn);
+  const totPos=rows.reduce((s,r)=>s+r.positivacao,0);
   if(el('sio-kpi-out')) el('sio-kpi-out').textContent=fmt(totOut);
-  if(el('sio-kpi-giro')) el('sio-kpi-giro').textContent=giroMedio+'%';
+  if(el('sio-kpi-giro')) el('sio-kpi-giro').textContent=totPos;
 
   tbody.innerHTML = rows.length===0
-    ? `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
+    ? `<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
     : rows.map(r=>`<tr>
       <td><strong>${esc(r.grupo)}</strong></td>
       <td><span class="tag">${esc(r.ind)}</span></td>
       <td><span class="pill">${r.mes}</span></td>
-      <td class="bold azul">${fmt(r.sellIn)}</td>
       <td class="bold verde">${fmt(r.sellOut)}</td>
       <td>${r.positivacao>0?`<span class="badge badge-roxo">🏪 ${r.positivacao} ${r.positivacao===1?'loja':'lojas'}</span>`:'<span class="badge badge-cinza">—</span>'}</td>
-      <td class="${r.estoque<0?'vermelho':'bold'}">${fmt(r.estoque)}</td>
-      <td><span class="pill ${parseFloat(r.giro)>=80?'amarelo':''}">${r.giro}%</span></td>
-      <td>${r.cobertura}</td>
       <td style="white-space:nowrap">
         ${r.soIds.length>0
-          ? r.soIds.map(sid=>`<button class="btn btn-outline btn-xs" onclick="editarSellOut('${sid}')" title="Editar Sell Out">✏️ SO</button>`).join(' ')
-          : ''}
-        ${r.siPedIds.length>0
-          ? `<button class="btn btn-info btn-xs" onclick="editarSellIn(${JSON.stringify(r.siPedIds)},${JSON.stringify(r.grupo)},${JSON.stringify(r.ind)},${JSON.stringify(r.mes)})" title="Editar pedidos do Sell In">📋 SI</button>`
-          : ''}
-        ${r.soIds.length===0&&r.siPedIds.length===0?'<span style="color:#aaa;font-size:10px">—</span>':''}
+          ? r.soIds.map(sid=>`<button class="btn btn-outline btn-xs" onclick="editarSellOut('${sid}')" title="Editar Sell Out">✏️ Editar</button>`).join(' ')
+          : '<span style="color:#aaa;font-size:10px">—</span>'}
       </td>
     </tr>`).join('');
 };
@@ -16228,40 +16067,7 @@ console.info('[GestCom v6.4] ✅ Auto-save para TODOS os usuários · polling 5m
 </div>
 
 
-<!-- ===== MODAL EDITAR SELL IN ===== -->
-<div class="modal-bg" id="modal-sellin-edit">
-  <div class="modal modal-xl">
-    <div class="modal-title">📋 Sell In — Pedidos Faturados<button class="close-btn" onclick="closeModal('modal-sellin-edit')">✕</button></div>
-    <div class="alert alert-info">Estes são os pedidos faturados que compõem o Sell In deste grupo/mês. Você pode ver o pedido ou remover a NF vinculada.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="kpi-card kpi-azul" style="padding:12px">
-        <div class="kpi-label">Grupo</div>
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-grupo">—</div>
-      </div>
-      <div class="kpi-card kpi-roxo" style="padding:12px">
-        <div class="kpi-label">Indústria</div>
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-ind">—</div>
-      </div>
-      <div class="kpi-card kpi-amarelo" style="padding:12px">
-        <div class="kpi-label">Mês</div>
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-mes">—</div>
-      </div>
-      <div class="kpi-card kpi-verde" style="padding:12px">
-        <div class="kpi-label">Total Sell In</div>
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700" id="si-edit-total">R$ 0</div>
-      </div>
-    </div>
-    <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pedidos incluídos no Sell In</div>
-    <div id="si-edit-lista" style="max-height:280px;overflow-y:auto"></div>
-    <div style="margin-top:16px">
-      <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Histórico de auditoria</div>
-      <div id="si-edit-historico" style="max-height:100px;overflow-y:auto;background:#fafaf8;border-radius:6px;padding:8px;border:1px solid var(--cinza-medio)"></div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:16px">
-      <button class="btn btn-outline" onclick="closeModal('modal-sellin-edit')">Fechar</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- ===== MODAL ACOMPANHAMENTO TRATATIVA ===== -->
 <div class="modal-bg" id="modal-trat-acomp">
@@ -16520,7 +16326,7 @@ function gcOpenMenuSheet() {
       {panel:'saldo',       icon:'📊', label:'Saldo Cli × Indústria'},
       {panel:'comissoes',   icon:'💰', label:'Comissões'},
       {panel:'fatmensal',   icon:'📅', label:'Fat. Mensal por Indústria'},
-      {panel:'sellinout',   icon:'↕️', label:'Sell In / Sell Out'},
+      {panel:'sellinout',   icon:'↕️', label:'Sell Out'},
       {panel:'metas',       icon:'🎯', label:'Metas'},
     ]},
     { group:'Cadastros',   items:[
@@ -16741,6 +16547,7 @@ let tarefasData = [];
 let atasData = [];
 let contaCorrenteData = [];
 let crmData = [];
+let setoresCustom = { cliente: [], industria: [] };
 let ccContas = [];
 let ccContasCadastradas = {};
 let ccRedeSel = null;
@@ -16915,6 +16722,7 @@ let _launcherPainelAlvo = null;
 let _tarEditId = null;
 let _ataEditId = null;
 let _ataParticipantesSel = [];
+let _ataConvidadosExt = [];
 var finCPData = [];
 var finCBData = [];
 var _setoresTmp = {};
@@ -20059,6 +19867,7 @@ function _corpoReuniao(a, cabecalho) {
   const v = _vinculoLabel(a);
   if(v) m += 'Assunto referente a: ' + v + '\n';
   if(a.participantes && a.participantes.length) m += 'Participantes: ' + a.participantes.join(', ') + '\n';
+  if(a.convidados && a.convidados.length) m += 'Convidados: ' + a.convidados.map(c=>c.nome||c.email).join(', ') + '\n';
   if(a.pauta && a.pauta.trim()) m += '\n📝 PAUTA:\n' + a.pauta.trim() + '\n';
   m += '\nGestCom · Comercial Três Vales';
   return m;
@@ -20103,13 +19912,30 @@ function enviarConviteReuniao(a, fase, avisarNaTela) {
     if(e) destinos.push({ email: e, nome: p });
     else { semEmail.push(p); console.warn('[Reunião] participante "' + p + '" sem e-mail cadastrado.'); }
   });
+  // Convidados externos (e-mail informado direto, sem acesso ao sistema).
+  // Recebem convite e véspera, mas NÃO o lembrete do dia ('hoje').
+  if(fase !== 'hoje') {
+    (a.convidados || []).forEach(c => {
+      if(c && c.email && !destinos.some(d => d.email.toLowerCase() === c.email.toLowerCase())) {
+        destinos.push({ email: c.email, nome: c.nome || c.email });
+      }
+    });
+  }
+  // Criador da reunião — sempre recebe (convite e lembretes), mesmo que não
+  // esteja na lista de participantes.
+  if(a.criadoPor && a.criadoPor !== '—') {
+    const eCriador = _emailDoUsuario(a.criadoPor);
+    if(eCriador && !destinos.some(d => d.email.toLowerCase() === eCriador.toLowerCase())) {
+      destinos.push({ email: eCriador, nome: a.criadoPor });
+    }
+  }
   if(configSistema.emailAdmin && !destinos.some(d => d.email === configSistema.emailAdmin)) {
     destinos.push({ email: configSistema.emailAdmin, nome: 'Admin' });
   }
 
   // FIX: mensagens específicas — dizem exatamente o que fazer.
   if(!destinos.length) {
-    if(!(a.participantes||[]).length) {
+    if(!(a.participantes||[]).length && !(a.convidados||[]).length) {
       toast('⚠️ "' + a.titulo + '": nenhum participante foi adicionado — convite não enviado.', 'warning');
     } else {
       toast('⚠️ Convite não enviado: ' + semEmail.join(', ') + ' sem e-mail cadastrado. Cadastre em Administração → Usuários.', 'warning');
@@ -20269,6 +20095,10 @@ function novaAta() {
   popularSelectAtaParticipantes();
   el('ata-participantes-list').innerHTML = '';
   _ataParticipantesSel = [];
+  _ataConvidadosExt = [];
+  if(el('ata-convidado-nome'))  el('ata-convidado-nome').value = '';
+  if(el('ata-convidado-email')) el('ata-convidado-email').value = '';
+  renderAtaConvidados();
   openModal('modal-ata');
 }
 
@@ -20330,6 +20160,45 @@ function renderAtaParticipantes() {
        </div>` : '');
 }
 
+/* ── Convidados externos (por e-mail, sem acesso ao sistema) ── */
+function _emailValido(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((e||'').trim()); }
+
+function ataAddConvidado() {
+  const emIn = el('ata-convidado-email');
+  const nmIn = el('ata-convidado-nome');
+  const email = (emIn?.value||'').trim().toLowerCase();
+  const nome  = (nmIn?.value||'').trim();
+  if(!email) { toast('Informe o e-mail do convidado.', 'warning'); return; }
+  if(!_emailValido(email)) { toast('E-mail inválido: ' + email, 'error'); return; }
+  // já é participante interno com esse e-mail?
+  if(_ataParticipantesSel.some(p => (_emailDoUsuario(p)||'').toLowerCase() === email)) {
+    toast('Esse e-mail já está entre os participantes.', 'warning'); return;
+  }
+  if(_ataConvidadosExt.some(c => c.email.toLowerCase() === email)) {
+    toast('Convidado já adicionado.', 'warning'); return;
+  }
+  _ataConvidadosExt.push({ nome: nome || email, email });
+  if(emIn) emIn.value = '';
+  if(nmIn) nmIn.value = '';
+  renderAtaConvidados();
+}
+
+function ataRemoveConvidado(email) {
+  _ataConvidadosExt = _ataConvidadosExt.filter(c => c.email !== email);
+  renderAtaConvidados();
+}
+
+function renderAtaConvidados() {
+  const box = el('ata-convidados-list');
+  if(!box) return;
+  const chips = _ataConvidadosExt.map(c => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:3px 10px;font-size:12px;margin:2px">
+      ✉️ ${esc(c.nome)}${c.nome!==c.email ? ` <span style="font-size:10px;color:#15803d">&lt;${esc(c.email)}&gt;</span>` : ''}
+      <button onclick="ataRemoveConvidado('${esc(c.email)}')" style="background:none;border:none;cursor:pointer;color:#888;font-size:13px;padding:0;line-height:1">×</button>
+    </span>`).join('');
+  box.innerHTML = chips || '<span style="color:#aaa;font-size:12px">Nenhum convidado externo</span>';
+}
+
 function salvarAta() {
   const titulo = (el('ata-titulo')?.value||'').trim();
   if(!titulo) { alert('Informe o título da reunião.'); return; }
@@ -20347,6 +20216,7 @@ function salvarAta() {
     cliente: el('ata-cli')?.value || '',
     industria: el('ata-industria')?.value || '',
     participantes: [..._ataParticipantesSel],
+    convidados: _ataConvidadosExt.map(c => ({ nome: c.nome, email: c.email })),
     criadoPor: usuarioLogado?.nome || '—',
     criadoEm: _ataEditId ? (atasData.find(a=>a.id===_ataEditId)?.criadoEm||hoje()) : hoje()
   };
@@ -20400,6 +20270,10 @@ function editarAta(id) {
   }, 50);
   _ataParticipantesSel = [...(a.participantes||[])];
   renderAtaParticipantes();
+  _ataConvidadosExt = (a.convidados||[]).map(c => ({ nome: c.nome||c.email, email: c.email }));
+  if(el('ata-convidado-nome'))  el('ata-convidado-nome').value = '';
+  if(el('ata-convidado-email')) el('ata-convidado-email').value = '';
+  renderAtaConvidados();
   openModal('modal-ata');
 }
 
@@ -20508,6 +20382,7 @@ function renderAtas() {
               ${_vinculoLabel(a)?' · 🔗 '+esc(_vinculoLabel(a)):''}
             </div>
             ${(a.participantes||[]).length>0?`<div style="margin-top:6px">${a.participantes.map(p=>`<span style="display:inline-block;background:var(--cinza);border-radius:20px;padding:2px 8px;font-size:11px;margin:2px">👤 ${esc(p)}</span>`).join('')}</div>`:''}
+            ${(a.convidados||[]).length>0?`<div style="margin-top:4px">${a.convidados.map(c=>`<span style="display:inline-block;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:2px 8px;font-size:11px;margin:2px" title="${esc(c.email)}">✉️ ${esc(c.nome||c.email)}</span>`).join('')}</div>`:''}
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span class="badge ${stCls[a.status]||'badge-cinza'}">${a.status}</span>
@@ -20633,6 +20508,7 @@ function verAtaCompleta(id) {
       <div><strong>Status:</strong> ${a.status}</div>
       <div><strong>Cliente:</strong> ${a.cliente||'—'}</div>
       <div class="form-group full"><strong>Participantes:</strong> ${(a.participantes||[]).join(', ')||'—'}</div>
+      ${(a.convidados||[]).length?`<div class="form-group full"><strong>✉️ Convidados externos:</strong> ${a.convidados.map(c=>esc(c.nome&&c.nome!==c.email?`${c.nome} <${c.email}>`:c.email)).join(', ')}</div>`:''}
     </div>
     ${a.pauta?`<div style="margin-bottom:12px"><strong>📝 Pauta:</strong><div style="background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:6px;padding:10px;margin-top:6px;font-size:13px;white-space:pre-wrap">${esc(a.pauta)}</div></div>`:''}
     ${a.deliberacoes?`<div style="margin-bottom:12px"><strong>✅ Deliberações:</strong><div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px;margin-top:6px;font-size:13px;white-space:pre-wrap">${esc(a.deliberacoes)}</div></div>`:''}
@@ -20645,9 +20521,9 @@ function verAtaCompleta(id) {
 function exportarAtasExcel() {
   if(typeof XLSX==='undefined') { alert('Biblioteca XLSX não carregada.'); return; }
   const wb = XLSX.utils.book_new();
-  const rows = [['ID','Título','Data','Hora','Local','Status','Participantes','Cliente']];
+  const rows = [['ID','Título','Data','Hora','Local','Status','Participantes','Convidados externos','Cliente']];
   // FIX: exportava TODAS as atas da empresa, furando a regra de visibilidade.
-  atasVisiveis().forEach(a=>rows.push([a.id,a.titulo,a.data,a.hora,a.local,a.status,(a.participantes||[]).join(';'),a.cliente||'']));
+  atasVisiveis().forEach(a=>rows.push([a.id,a.titulo,a.data,a.hora,a.local,a.status,(a.participantes||[]).join(';'),(a.convidados||[]).map(c=>c.nome&&c.nome!==c.email?`${c.nome} <${c.email}>`:c.email).join(';'),a.cliente||'']));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Atas');
   XLSX.writeFile(wb, 'Atas_GestCom.xlsx');
 }
@@ -22133,7 +22009,61 @@ function _ccIndsDaRedeCC(rede){
 
 function ccSelRedeCC(r){ ccRedeSel = r; renderCCPorCliente(); }
 
-function _setoresDef(tipo) { return tipo === 'industria' ? SETORES_INDUSTRIA : SETORES_CLIENTE; }
+function _setoresDef(tipo) {
+  var base = tipo === 'industria' ? SETORES_INDUSTRIA : SETORES_CLIENTE;
+  var extra = (setoresCustom && setoresCustom[tipo === 'industria' ? 'industria' : 'cliente']) || [];
+  var vistos = {};
+  var out = [];
+  base.concat(extra).forEach(function(s){
+    if (!s || !s.key || vistos[s.key]) return;
+    vistos[s.key] = true;
+    out.push(s);
+  });
+  return out;
+}
+
+// Gera uma key a partir do nome do setor (sem acento, sem espaço)
+function _setorKeyFromLabel(label) {
+  var base = (label||'').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return base || ('setor_' + Date.now());
+}
+
+// Adiciona um novo setor personalizado (usado pelos botões do cadastro)
+function adicionarSetorCustom(tipo) {
+  var t = (tipo === 'industria') ? 'industria' : 'cliente';
+  var nome = prompt('Nome do novo setor (ex.: Compras, Marketing, Diretoria):');
+  if (nome === null) return;
+  nome = nome.trim();
+  if (!nome) { toast('Informe um nome para o setor.'); return; }
+  var key = _setorKeyFromLabel(nome);
+  // já existe (fixo ou personalizado)?
+  if (_setoresDef(t).some(function(s){ return s.key === key || (s.label||'').toLowerCase() === nome.toLowerCase(); })) {
+    toast('Já existe um setor com esse nome.');
+    return;
+  }
+  if (!setoresCustom[t]) setoresCustom[t] = [];
+  setoresCustom[t].push({ key: key, label: nome, custom: true });
+  // garante lista de responsáveis vazia para o novo setor no form atual
+  if (!_setoresTmp[key]) _setoresTmp[key] = [{nome:'', email:'', tel:''}];
+  addAudit(usuarioLogado?.login || 'sistema', 'Setor de CRM criado: ' + nome + ' (' + (t==='industria'?'Indústria':'Cliente') + ')', '🏷️');
+  if (typeof syncAutoSaveHook === 'function') syncAutoSaveHook();
+  renderSetoresForm(t);
+  toast('Setor "' + nome + '" criado.');
+}
+
+// Exclui um setor personalizado (não permite excluir os fixos)
+function removerSetorCustom(tipo, setorKey) {
+  var t = (tipo === 'industria') ? 'industria' : 'cliente';
+  if (!confirm('Remover o setor personalizado? Os responsáveis já cadastrados nele deixarão de aparecer.')) return;
+  setoresCustom[t] = (setoresCustom[t] || []).filter(function(s){ return s.key !== setorKey; });
+  delete _setoresTmp[setorKey];
+  addAudit(usuarioLogado?.login || 'sistema', 'Setor de CRM removido (' + setorKey + ')', '🗑️');
+  if (typeof syncAutoSaveHook === 'function') syncAutoSaveHook();
+  renderSetoresForm(t);
+  toast('Setor removido.');
+}
 
 function carregarSetores(obj, tipo) {
   _setoresTmp = {};
@@ -22154,6 +22084,7 @@ function renderSetoresForm(tipo) {
   var box = document.getElementById(tipo === 'industria' ? 'i-setores' : 'c-setores');
   if (!box) return;
   var defs = _setoresDef(tipo);
+  var t = (tipo === 'industria') ? 'industria' : 'cliente';
   box.innerHTML = defs.map(function(s){
     var resps = _setoresTmp[s.key] || [];
     var linhas = resps.map(function(r, i){
@@ -22165,13 +22096,18 @@ function renderSetoresForm(tipo) {
       '</div>';
     }).join('');
     if (!linhas) linhas = '<div style="font-size:11px;color:#bbb;padding:4px 0 8px">Nenhum responsável. Clique em "+ responsável".</div>';
+    var delBtn = s.custom
+      ? '<button class="btn btn-danger btn-xs" style="margin-left:6px;font-size:9px;padding:2px 6px" onclick="removerSetorCustom(' + JSON.stringify(tipo).replace(/"/g,'&quot;') + ',' + JSON.stringify(s.key).replace(/"/g,'&quot;') + ')" title="Excluir setor personalizado">🗑️ setor</button>'
+      : '';
+    var badgeCustom = s.custom ? '<span class="badge badge-cinza" style="font-size:8px;margin-left:6px">personalizado</span>' : '';
     return '<div style="border:1px solid var(--cinza-medio);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fcfbf9">' +
       '<div style="display:flex;align-items:center;margin-bottom:7px">' +
-        '<span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.4px">' + esc(s.label) + '</span>' +
-        '<button class="btn btn-outline btn-xs" style="margin-left:auto" onclick="addResp(' + JSON.stringify(tipo).replace(/"/g,'&quot;') + ',' + JSON.stringify(s.key).replace(/"/g,'&quot;') + ')">+ responsável</button>' +
+        '<span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.4px">' + esc(s.label) + '</span>' + badgeCustom +
+        '<button class="btn btn-outline btn-xs" style="margin-left:auto" onclick="addResp(' + JSON.stringify(tipo).replace(/"/g,'&quot;') + ',' + JSON.stringify(s.key).replace(/"/g,'&quot;') + ')">+ responsável</button>' + delBtn +
       '</div>' + linhas +
     '</div>';
-  }).join('');
+  }).join('') +
+  '<button class="btn btn-outline btn-sm" style="width:100%;border-style:dashed;margin-top:2px" onclick="adicionarSetorCustom(' + JSON.stringify(t).replace(/"/g,'&quot;') + ')">➕ Adicionar novo setor</button>';
 }
 
 function addResp(tipo, setorKey) {
@@ -22438,7 +22374,7 @@ function _crmFichaCliente(c) {
       '</div></div>' +
       '<div style="display:flex;gap:6px;align-items:center"><span class="badge badge-azul">Cliente</span>' +
       '<button class="btn btn-outline btn-xs" onclick="editarCliente(' + JSON.stringify(c.id||'').replace(/"/g,'&quot;') + ')" title="Editar cadastro">✏️</button></div></div>' +
-    SETORES_CLIENTE.map(function(s){ return _crmBlocoSetor(c, s); }).join('') +
+    _setoresDef('cliente').map(function(s){ return _crmBlocoSetor(c, s); }).join('') +
     (c.historicoContatos && c.historicoContatos.length ? '<div style="font-size:10.5px;color:#888;margin-top:8px;padding-top:8px;border-top:1px solid #f0ede6">📜 ' + c.historicoContatos.length + ' contato(s) no histórico</div>' : '') +
   '</div>';
 }
@@ -22453,7 +22389,7 @@ function _crmFichaIndustria(i) {
       '</div></div>' +
       '<div style="display:flex;gap:6px;align-items:center"><span class="badge" style="background:#1a1a1a;color:var(--amarelo)">Indústria</span>' +
       '<button class="btn btn-outline btn-xs" onclick="editarIndustria(' + JSON.stringify(i.id||'').replace(/"/g,'&quot;') + ')" title="Editar cadastro">✏️</button></div></div>' +
-    SETORES_INDUSTRIA.map(function(s){ return _crmBlocoSetor(i, s); }).join('') +
+    _setoresDef('industria').map(function(s){ return _crmBlocoSetor(i, s); }).join('') +
   '</div>';
 }
 
@@ -22499,7 +22435,7 @@ function renderCRMClientes() {
     if (filtroCidade && c.cidade !== filtroCidade) return false;
     if (busca) {
       var alvo = [(c.nome||''),(c.fantasia||''),(c.cnpj||''),(c.rede||''),(c.cidade||'')].join(' ');
-      SETORES_CLIENTE.forEach(function(s){ _crmResponsaveis(c,s.key).forEach(function(r){ alvo += ' ' + (r.nome||'') + ' ' + (r.email||'') + ' ' + (r.tel||''); }); });
+      _setoresDef('cliente').forEach(function(s){ _crmResponsaveis(c,s.key).forEach(function(r){ alvo += ' ' + (r.nome||'') + ' ' + (r.email||'') + ' ' + (r.tel||''); }); });
       if (!alvo.toLowerCase().includes(busca)) return false;
     }
     return true;
@@ -22540,7 +22476,7 @@ function renderCRMIndustrias() {
     if (filtroCidade && i.cidade !== filtroCidade) return false;
     if (busca) {
       var alvo = [(i.nome||''),(i.razao||''),(i.cnpj||''),(i.cidade||'')].join(' ');
-      SETORES_INDUSTRIA.forEach(function(s){ _crmResponsaveis(i,s.key).forEach(function(r){ alvo += ' ' + (r.nome||'') + ' ' + (r.email||'') + ' ' + (r.tel||''); }); });
+      _setoresDef('industria').forEach(function(s){ _crmResponsaveis(i,s.key).forEach(function(r){ alvo += ' ' + (r.nome||'') + ' ' + (r.email||'') + ' ' + (r.tel||''); }); });
       if (!alvo.toLowerCase().includes(busca)) return false;
     }
     return true;
@@ -23738,6 +23674,17 @@ function _avisarTarefaConcluida(t) {
         Quem não estiver na lista não vê a ata.
       </div>
       <div id="ata-participantes-list"></div>
+
+      <label style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;display:block;margin:14px 0 6px">Convidados externos (por e-mail)</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <input id="ata-convidado-nome" placeholder="Nome (opcional)" style="flex:1;min-width:120px;padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        <input id="ata-convidado-email" type="email" placeholder="email@dominio.com" onkeydown="if(event.key==='Enter'){event.preventDefault();ataAddConvidado();}" style="flex:1.4;min-width:150px;padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        <button class="btn btn-outline btn-sm" onclick="ataAddConvidado()">+ Add e-mail</button>
+      </div>
+      <div style="font-size:11px;color:#666;background:#f0fdf4;border-left:3px solid #22c55e;padding:5px 8px;border-radius:0 4px 4px 0;margin-bottom:8px">
+        ✉️ Convidados externos recebem <strong>o convite</strong> e o <strong>lembrete de véspera</strong> (não recebem o lembrete do dia), e não acessam o sistema.
+      </div>
+      <div id="ata-convidados-list"></div>
     </div>
     <div class="form-group"><label>📝 Pauta</label><textarea id="ata-pauta" rows="3" placeholder="Tópicos a serem discutidos..."></textarea></div>
     <div class="form-group"><label>✅ Deliberações / Decisões</label><textarea id="ata-deliberacoes" rows="3" placeholder="Decisões tomadas na reunião..."></textarea></div>
