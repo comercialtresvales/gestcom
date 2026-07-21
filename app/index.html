@@ -461,7 +461,7 @@ const TODOS_MODULOS = [
   {key:'saldo',          label:'Saldo Cli×Ind',     icone:'📊', cls:'i-purple'},
   {key:'comissoes',      label:'Comissão',          icone:'💰', cls:'i-green'},
   {key:'fatmensal',      label:'Fat. Mensal',       icone:'📅', cls:'i-green'},
-  {key:'sellinout',      label:'Sell In / Out',     icone:'↕️', cls:'i-purple'},
+  {key:'sellinout',      label:'Sell Out',     icone:'↕️', cls:'i-purple'},
   {key:'metas',          label:'Metas',             icone:'🎯', cls:'i-red'},
   {key:'relatorios',     label:'Relatórios',        icone:'📈', cls:'i-purple'},
   {key:'mix',            label:'Mix Produtos',      icone:'🧩', cls:'i-gray'},
@@ -473,7 +473,7 @@ const TODOS_MODULOS = [
 ];
 
 /* Ordem de exibição na home. Dashboard primeiro (é o resumo do negócio).
-   Sell In/Out é UMA tela só (decisão do cliente), igual ao site.
+   Sell Out: tela única (lançamento manual de vendas), igual ao site.
    'crm' fica fora da home pra não duplicar o ícone de clientes. */
 const ORDEM_HOME = ['dashboard','pedidos','orcamentos','faturamento','comissoes','logistica',
   'fatmensal','sellinout','saldo','metas','tratativas',
@@ -483,7 +483,7 @@ const ORDEM_HOME = ['dashboard','pedidos','orcamentos','faturamento','comissoes'
 /* Módulos que NÃO aparecem como tile próprio na home (evita duplicação visual) */
 const OCULTAR_HOME = ['crm'];
 
-/* Sem extras: Sell In/Out unificado como no site */
+/* Sem extras: Sell Out como no site */
 const HOME_EXTRA = [];
 
 function defaultPerms(perfil){
@@ -825,7 +825,7 @@ function montarHome(){
   const emptyNote = document.getElementById('home-empty');
   grid.innerHTML='';
 
-  // Constrói lista completa (módulos + extras sell in/out) e ordena pela ORDEM_HOME
+  // Constrói lista completa (módulos + extra sell out) e ordena pela ORDEM_HOME
   const todosComExtra = [...TODOS_MODULOS];
   const extras = HOME_EXTRA.map(e => ({...e}));
 
@@ -2040,28 +2040,19 @@ function renderFatMensalApp(){
 }
 
 /* ════════════════════════════════════════════════
-   8) SELL IN / OUT — tela única (Sell In, Sell Out, Giro)
+   8) SELL OUT — tela única (lançamento manual de vendas)
 ════════════════════════════════════════════════ */
 function renderSellInOutApp(){
   const list = document.getElementById('dt-list');
   const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
-  const fats = pedidosValidos().filter(p=>p.nf);
   const sellOut = DADOS.sellOutData||[];
 
-  // Constrói combinações grupo × indústria × mês (mês no formato "Jul/26")
-  const nfMesRotulo = (d)=>{ const k=chaveMes(d); return k?rotuloMes(k):null; };
+  // Constrói combinações grupo × indústria × mês (apenas Sell Out)
   const linhasMap = {}; // chave "grupo|ind|mes"
-  fats.forEach(p=>{
-    const grupo=grupoCliente(p.cliente), ind=p.industria, mes=nfMesRotulo(p.nf.data);
-    if(!mes) return;
-    const k=`${grupo}|${ind}|${mes}`;
-    if(!linhasMap[k]) linhasMap[k]={grupo,ind,mes,sellIn:0,sellOut:0,positivacao:0};
-    linhasMap[k].sellIn += (p.nf.liquida||0);
-  });
   sellOut.forEach(s=>{
     const grupo=grupoCliente(s.cliente), ind=s.industria, mes=s.mes;
     const k=`${grupo}|${ind}|${mes}`;
-    if(!linhasMap[k]) linhasMap[k]={grupo,ind,mes,sellIn:0,sellOut:0,positivacao:0};
+    if(!linhasMap[k]) linhasMap[k]={grupo,ind,mes,sellOut:0,positivacao:0};
     linhasMap[k].sellOut += (s.valor||0);
     linhasMap[k].positivacao += (s.positivacao||0);
   });
@@ -2078,38 +2069,30 @@ function renderSellInOutApp(){
   if(FILTROS.ind) linhas = linhas.filter(l=>l.ind===FILTROS.ind);
   if(q) linhas = linhas.filter(l=>JSON.stringify(l).toLowerCase().includes(q));
 
-  const totIn = linhas.reduce((s,l)=>s+l.sellIn,0);
   const totOut = linhas.reduce((s,l)=>s+l.sellOut,0);
-  const giro = totIn>0?((totOut/totIn)*100):0;
+  const totPos = linhas.reduce((s,l)=>s+l.positivacao,0);
 
   const filtros = filtrosHTML([
     {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
     {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
   ]);
   const kpis = [
-    {l:'Sell In', v:fmtCompacto(totIn), sm:true, s:'Faturado'},
-    {l:'Sell Out', v:fmtCompacto(totOut), sm:true, cor:'var(--roxo)', s:'Manual'},
-    {l:'Giro', v:giro.toFixed(0)+'%', hl:true, s:'Out/In'},
+    {l:'Sell Out', v:fmtCompacto(totOut), hl:true, cor:'var(--roxo)', s:'Manual'},
+    {l:'Positivação', v:String(totPos), sm:true, s:'Lojas'},
   ];
-  const giroBar = `<div class="giro-app">
-    <div class="lbl">Giro médio (Sell Out ÷ Sell In)</div>
-    <div class="bar"><div class="fill" style="width:${Math.min(100,giro).toFixed(0)}%"></div></div>
-    <div class="pct">${giro.toFixed(0)}%</div>
-  </div>`;
 
   const cards = linhas.length===0
-    ? `<div class="list-empty"><div class="ic">↕️</div>Sem dados de Sell In/Out com esses filtros.</div>`
-    : linhas.sort((a,b)=>b.sellIn-a.sellIn).slice(0,150).map(l=>{
-        const g = l.sellIn>0?((l.sellOut/l.sellIn)*100):0;
+    ? `<div class="list-empty"><div class="ic">↕️</div>Sem dados de Sell Out com esses filtros.</div>`
+    : linhas.sort((a,b)=>b.sellOut-a.sellOut).slice(0,150).map(l=>{
         return `<div class="card">
-          <div class="c-r1"><div class="c-id">${esc(l.grupo)}</div><div class="c-st ${g>=80?'st-green':(g>=50?'st-yellow':'st-red')}">GIRO ${g.toFixed(0)}%</div></div>
+          <div class="c-r1"><div class="c-id">${esc(l.grupo)}</div><div class="c-st st-green">${fmtCompacto(l.sellOut)}</div></div>
           <div class="c-meta">${esc(l.ind)} · ${esc(l.mes)}${l.positivacao?(' · '+l.positivacao+' lojas'):''}</div>
           <div class="c-r2">
-            <div><span class="io-lbl">In</span> <b class="io-v">${fmtCompacto(l.sellIn)}</b> &nbsp; <span class="io-lbl">Out</span> <b class="io-v" style="color:var(--roxo)">${fmtCompacto(l.sellOut)}</b></div>
+            <div><span class="io-lbl">Sell Out</span> <b class="io-v" style="color:var(--roxo)">${fmtCompacto(l.sellOut)}</b></div>
           </div>
         </div>`;
       }).join('');
-  list.innerHTML = filtros + kpiHTML(kpis) + giroBar + `<div class="cards-wrap">${cards}</div>`;
+  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
 }
 
 /* ════════════════════════════════════════════════
