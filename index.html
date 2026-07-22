@@ -4062,6 +4062,7 @@ let orcItens = [];
 let pedItens = [];
 let importTipo = '';
 let importDados = [];
+let _importModoLacunas = false; // quando true, importação de clientes/indústrias só preenche campos vazios (não sobrescreve)
 let orcEditId = null;
 let pedEditId = null;
 let logEditId = null;
@@ -9239,6 +9240,68 @@ const IMPORT_COLS = {
     {key:'precoUnit', label:'Preço Unitário',     req:false, hint:'Se vazio, busca no catálogo'},
     {key:'total',     label:'Total Item',         req:false, hint:'Se vazio, calcula: Preço × Qtd × (1 - Desc%)'},
   ],
+  cr: [
+    {key:'cliente',      label:'Cliente/Indústria', req:true,  hint:'Quem vai pagar'},
+    {key:'valor',        label:'Valor',             req:true,  hint:'Ex: 1.500,00'},
+    {key:'dataLanc',     label:'Data Lançamento',   req:false, hint:'DD/MM/AAAA (padrão: hoje)'},
+    {key:'mesReceita',   label:'Mês Receita',       req:false, hint:'Ex: 03/2026'},
+    {key:'empresa',      label:'Empresa',           req:false, hint:'Padrão: COMERCIAL'},
+    {key:'tipo',         label:'Tipo Receita',      req:false, hint:'Ex: COMISSÃO DE VENDAS'},
+    {key:'descricao',    label:'Descrição',         req:false},
+    {key:'planoReceb',   label:'Plano Recebimento', req:false, hint:'Ex: PIX, Boleto'},
+    {key:'banco',        label:'Banco',             req:false, hint:'Padrão: NUBANK COMERCIAL'},
+    {key:'descontoFin',  label:'Desconto Fin.',     req:false, hint:'Abatimento (opcional)'},
+    {key:'juros',        label:'Juros',             req:false, hint:'Acréscimo (opcional)'},
+    {key:'vencimento',   label:'Vencimento',        req:false, hint:'DD/MM/AAAA'},
+    {key:'dataPagamento',label:'Data Recebimento',  req:false, hint:'Preencha quando recebido'},
+  ],
+  cp: [
+    {key:'fornecedor',   label:'Fornecedor/Prestador', req:true,  hint:'Quem vai receber'},
+    {key:'valor',        label:'Valor',                req:true,  hint:'Ex: 1.500,00'},
+    {key:'dataLanc',     label:'Data Lançamento',      req:false, hint:'DD/MM/AAAA (padrão: hoje)'},
+    {key:'mesDespesa',   label:'Mês Despesa',          req:false, hint:'Ex: 03/2026'},
+    {key:'empresa',      label:'Empresa',              req:false, hint:'Padrão: COMERCIAL'},
+    {key:'descricao',    label:'Descrição',            req:false},
+    {key:'classif',      label:'Classif. Financeira',  req:false, hint:'Ex: 3.1, 3.5'},
+    {key:'centroCusto',  label:'Centro de Custo',      req:false},
+    {key:'banco',        label:'Banco',                req:false, hint:'Padrão: NUBANK COMERCIAL'},
+    {key:'descJuros',    label:'Desc/Juros',           req:false},
+    {key:'vencimento',   label:'Vencimento',           req:false, hint:'DD/MM/AAAA'},
+    {key:'dataPagamento',label:'Data Pagamento',       req:false, hint:'Preencha quando pago'},
+  ],
+  cb: [
+    {key:'valor',        label:'Valor',              req:true,  hint:'Ex: 1.500,00'},
+    {key:'data',         label:'Data',               req:false, hint:'DD/MM/AAAA (padrão: hoje)'},
+    {key:'empresa',      label:'Empresa',            req:false, hint:'Padrão: COMERCIAL'},
+    {key:'tipo',         label:'Tipo Movimentação',  req:false, hint:'Ex: TRANSFERÊNCIA DE RECURSO'},
+    {key:'es',           label:'E/S',                req:false, hint:'E (entrada) ou S (saída)'},
+    {key:'descricao',    label:'Descrição',          req:false},
+    {key:'saiu',         label:'Saiu de',            req:false, hint:'Banco de origem'},
+    {key:'entrou',       label:'Entrou em',          req:false, hint:'Banco de destino'},
+    {key:'centroCusto',  label:'Centro de Custo',    req:false},
+    {key:'vencimento',   label:'Vencimento',         req:false, hint:'DD/MM/AAAA'},
+    {key:'dataQuit',     label:'Data Quitação',      req:false},
+  ],
+  cc: [
+    {key:'cliente',   label:'Cliente',       req:true,  hint:'Nome do cliente'},
+    {key:'valor',     label:'Valor',         req:true,  hint:'Sempre positivo (ex: 1.500,00). O tipo define crédito/débito'},
+    {key:'data',      label:'Data',          req:false, hint:'DD/MM/AAAA (padrão: hoje)'},
+    {key:'industria', label:'Indústria',     req:false},
+    {key:'tipo',      label:'Tipo',          req:false, hint:'credito (+) · debito (−) · bonificacao (+) · saldo_inicial'},
+    {key:'acao',      label:'Ação',          req:false},
+    {key:'acordo',    label:'Acordo',        req:false},
+    {key:'mesRef',    label:'Mês Ref.',      req:false, hint:'Ex: 03/2026'},
+    {key:'descricao', label:'Descrição',     req:false},
+  ],
+  contatos: [
+    {key:'nome',     label:'Nome',      req:true,  hint:'Nome do contato'},
+    {key:'tipo',     label:'Tipo',      req:false, hint:'Cliente, Indústria, Fornecedor...'},
+    {key:'cargo',    label:'Cargo',     req:false, hint:'Ex: Gerente Comercial'},
+    {key:'empresa',  label:'Empresa',   req:false},
+    {key:'telefone', label:'Telefone',  req:false},
+    {key:'email',    label:'E-mail',    req:false},
+    {key:'obs',      label:'Observações',req:false},
+  ],
 };
 
 // ── Mapas de importação separados por contexto (sem colisão de chaves) ──
@@ -9247,6 +9310,69 @@ const _HMC = Object.assign({},_HMB,{'nome':'nome','razao social':'nome','nome / 
 const _HMI = Object.assign({},_HMB,{'nome':'nome','marca':'nome','laboratorio':'nome','fabricante':'nome','razao social':'razao','razao social completa':'razao','cnpj':'cnpj','% comissao':'pct','comissao %':'pct','pct':'pct','percentual':'pct','comissao':'pct','tipo comissao':'tipoCom','tipo com':'tipoCom'});
 const _HMP = Object.assign({},_HMB,{'codigo':'cod','cod':'cod','sku':'cod','ref':'cod','referencia':'cod','codigo produto':'cod','ean':'ean','codigo de barras':'ean','barcode':'ean','gtin':'ean','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','industria':'ind','fabricante':'ind','marca':'ind','laboratorio':'ind','nome industria':'ind','preco':'preco','preco tabela':'preco','valor':'preco','preco tabela base':'preco','unidade':'unid','unid':'unid','un':'unid','categoria':'cat','cat':'cat','preco distribuidor':'precoDistribuidor','distribuidor':'precoDistribuidor','preco dist':'precoDistribuidor','preco atacado':'precoAtacado','atacado':'precoAtacado','preco atac':'precoAtacado','preco varejo':'precoVarejo','varejo':'precoVarejo','preco var':'precoVarejo','codigo mg':'codigoMG','cod mg':'codigoMG','codigo sp':'codigoSP','cod sp':'codigoSP','codigo ba':'codigoBA','cod ba':'codigoBA','codigo go':'codigoGO','cod go':'codigoGO','codigo rj':'codigoRJ','cod rj':'codigoRJ','codigo pr':'codigoPR','cod pr':'codigoPR','codigo sc':'codigoSC','cod sc':'codigoSC','codigo rs':'codigoRS','cod rs':'codigoRS','ean mg':'eanMG','ean minas':'eanMG','ean minas gerais':'eanMG','ean sp':'eanSP','ean sao paulo':'eanSP','ean ba':'eanBA','ean bahia':'eanBA','ean go':'eanGO','ean rj':'eanRJ','ean pr':'eanPR','ean sc':'eanSC','ean rs':'eanRS','canais':'canais','canais disponiveis':'canais','disponibilidade':'canais','canal':'canais'});
 const _HMD = Object.assign({},_HMB,{'cliente':'cliente','razao social':'cliente','industria':'industria','nome industria':'industria','tipo':'tipo','tipo pedido':'tipo','data':'data','data pedido':'data','data emissao':'data','condicao':'cond','cond':'cond','prazo pgto':'cond','condicao comercial':'cond','condicao pagamento':'cond','grupo':'grupo','pedido':'grupo','num pedido':'grupo','numero pedido':'grupo','id pedido':'grupo','codigo':'cod','cod':'cod','cod produto':'cod','cod. produto':'cod','codigo produto':'cod','sku':'cod','ref':'cod','descricao':'desc','descricao produto':'desc','produto':'desc','item':'desc','nome produto':'desc','qtd':'qtd','quantidade':'qtd','quant':'qtd','qty':'qtd','desconto':'descPct','desc %':'descPct','% desconto':'descPct','pct desconto':'descPct','descpct':'descPct','desconto %':'descPct','preco unit':'precoUnit','preco unitario':'precoUnit','valor unit':'precoUnit','preco un':'precoUnit','preco':'precoUnit','total item':'total','total':'total','valor total':'total','subtotal':'total','valor':'total','status':'status','situacao':'status','% comissao':'pct','comissao %':'pct','pct comissao':'pct','percentual comissao':'pct','taxa comissao':'pct','nf':'nf_numero','numero nf':'nf_numero','num nf':'nf_numero','nota fiscal':'nf_numero','nf numero':'nf_numero','numero da nf':'nf_numero','valor nf':'nf_valor','valor faturado':'nf_valor','valor nota':'nf_valor','valor nota fiscal':'nf_valor','vl nf':'nf_valor','nf valor':'nf_valor','data nf':'nf_data','data faturamento':'nf_data','data nota':'nf_data','data nota fiscal':'nf_data','dia faturado':'nf_data','dt nf':'nf_data','nf data':'nf_data','emissao nf':'nf_data'});
+// ── Mapas financeiros e CRM ──
+const _HMCR = {
+  'cliente':'cliente','cliente/industria':'cliente','cliente / industria':'cliente','cliente industria':'cliente','industria':'cliente','razao social':'cliente','sacado':'cliente','pagador':'cliente',
+  'valor':'valor','valor bruto':'valor','vlr':'valor','valor receita':'valor','valor original':'valor',
+  'data lancamento':'dataLanc','data lanc':'dataLanc','data lanc.':'dataLanc','data de lancamento':'dataLanc','lancamento':'dataLanc','data':'dataLanc',
+  'mes receita':'mesReceita','mes':'mesReceita','mes ref':'mesReceita','competencia':'mesReceita',
+  'empresa':'empresa',
+  'tipo receita':'tipo','tipo':'tipo','tipo de receita':'tipo',
+  'descricao':'descricao','descricao receita':'descricao','historico':'descricao','obs':'descricao','observacao':'descricao','observacoes':'descricao',
+  'plano recebimento':'planoReceb','plano receb':'planoReceb','plano receb.':'planoReceb','forma recebimento':'planoReceb','forma de recebimento':'planoReceb','plano':'planoReceb',
+  'banco':'banco','conta':'banco','conta bancaria':'banco',
+  'desconto fin':'descontoFin','desconto fin.':'descontoFin','desconto financeiro':'descontoFin','desc fin':'descontoFin','desconto':'descontoFin','abatimento':'descontoFin',
+  'juros':'juros','juros/multa':'juros','multa':'juros','acrescimo':'juros',
+  'vencimento':'vencimento','data vencimento':'vencimento','vcto':'vencimento','venc':'vencimento',
+  'data recebimento':'dataPagamento','recebimento':'dataPagamento','data pagamento':'dataPagamento','pagamento':'dataPagamento','data receb':'dataPagamento','recebido em':'dataPagamento','baixa':'dataPagamento'
+};
+const _HMCP = {
+  'fornecedor':'fornecedor','fornecedor/prestador':'fornecedor','fornecedor / prestador':'fornecedor','prestador':'fornecedor','razao social':'fornecedor','favorecido':'fornecedor','beneficiario':'fornecedor','credor':'fornecedor',
+  'valor':'valor','valor bruto':'valor','vlr':'valor','valor despesa':'valor','valor original':'valor',
+  'data lancamento':'dataLanc','data lanc':'dataLanc','data lanc.':'dataLanc','data de lancamento':'dataLanc','lancamento':'dataLanc','data':'dataLanc',
+  'mes despesa':'mesDespesa','mes':'mesDespesa','mes ref':'mesDespesa','competencia':'mesDespesa',
+  'empresa':'empresa',
+  'descricao':'descricao','descricao despesa':'descricao','historico':'descricao','obs':'descricao','observacao':'descricao','observacoes':'descricao',
+  'classif financeira':'classif','classif. financeira':'classif','classificacao':'classif','classif':'classif','classe':'classif','conta contabil':'classif','categoria':'classif',
+  'centro de custo':'centroCusto','centro custo':'centroCusto','centrocusto':'centroCusto','cc':'centroCusto',
+  'banco':'banco','conta':'banco','conta bancaria':'banco',
+  'desc/juros':'descJuros','desc juros':'descJuros','desconto/juros':'descJuros','juros':'descJuros','multa':'descJuros','acrescimo':'descJuros','desconto':'descJuros',
+  'vencimento':'vencimento','data vencimento':'vencimento','vcto':'vencimento','venc':'vencimento',
+  'data pagamento':'dataPagamento','pagamento':'dataPagamento','data pgto':'dataPagamento','pago em':'dataPagamento','baixa':'dataPagamento'
+};
+const _HMCB = {
+  'valor':'valor','vlr':'valor','valor movimentacao':'valor','valor original':'valor',
+  'data':'data','data movimentacao':'data','data mov':'data',
+  'empresa':'empresa',
+  'tipo movimentacao':'tipo','tipo de movimentacao':'tipo','tipo mov':'tipo','tipo':'tipo','natureza':'tipo',
+  'e/s':'es','es':'es','entrada/saida':'es','entrada saida':'es','e s':'es','tipo e/s':'es',
+  'descricao':'descricao','historico':'descricao','obs':'descricao','observacao':'descricao','observacoes':'descricao',
+  'saiu de':'saiu','saiu':'saiu','banco origem':'saiu','origem':'saiu','conta origem':'saiu','saida':'saiu',
+  'entrou em':'entrou','entrou':'entrou','banco destino':'entrou','destino':'entrou','conta destino':'entrou','entrada':'entrou',
+  'centro de custo':'centroCusto','centro custo':'centroCusto','centrocusto':'centroCusto','cc':'centroCusto',
+  'vencimento':'vencimento','data vencimento':'vencimento','vcto':'vencimento','venc':'vencimento',
+  'data quitacao':'dataQuit','quitacao':'dataQuit','data quit':'dataQuit','quitado em':'dataQuit','baixa':'dataQuit'
+};
+const _HMCC = {
+  'cliente':'cliente','razao social':'cliente','nome':'cliente','sacado':'cliente',
+  'valor':'valor','vlr':'valor','valor original':'valor',
+  'data':'data','data mov':'data','data movimentacao':'data',
+  'industria':'industria','marca':'industria','fabricante':'industria','laboratorio':'industria',
+  'tipo':'tipo','tipo movimentacao':'tipo','natureza':'tipo',
+  'acao':'acao','acao comercial':'acao',
+  'acordo':'acordo','referencia':'acordo','ref':'acordo',
+  'mes ref':'mesRef','mes referencia':'mesRef','mes':'mesRef','competencia':'mesRef','mesref':'mesRef',
+  'descricao':'descricao','historico':'descricao','obs':'descricao','observacao':'descricao','observacoes':'descricao'
+};
+const _HMCT = {
+  'nome':'nome','contato':'nome','nome contato':'nome','nome do contato':'nome',
+  'tipo':'tipo','tipo contato':'tipo','categoria':'tipo',
+  'cargo':'cargo','funcao':'cargo','posicao':'cargo',
+  'empresa':'empresa','organizacao':'empresa','cliente':'empresa','industria':'empresa',
+  'telefone':'telefone','fone':'telefone','celular':'telefone','whatsapp':'telefone','tel':'telefone',
+  'email':'email','e-mail':'email','e mail':'email',
+  'obs':'obs','observacao':'obs','observacoes':'obs','notas':'obs','anotacoes':'obs'
+};
 const HEADER_MAP = _HMP; // compatibilidade com código existente
 
 function normHeader(h) {
@@ -9256,14 +9382,17 @@ function normHeader(h) {
 }
 
 function mapearColunas(headers, tipo) {
-  const mapas = {clientes:_HMC, industrias:_HMI, produtos:_HMP, pedido:_HMD};
+  const mapas = {clientes:_HMC, industrias:_HMI, produtos:_HMP, pedido:_HMD,
+                 cr:_HMCR, cp:_HMCP, cb:_HMCB, cc:_HMCC, contatos:_HMCT};
   const mapa = mapas[tipo] || _HMP;
   return headers.map(h => mapa[normHeader(h)] || null);
 }
 
-function importarCadastro(tipo) {
+function importarCadastro(tipo, modoLacunas) {
   importTipo = tipo;
-  const titulos = {clientes:'Clientes',industrias:'Indústrias',produtos:'Produtos',pedido:'Pedidos',orcamento:'Orçamentos'};
+  _importModoLacunas = !!modoLacunas && (tipo === 'clientes' || tipo === 'industrias');
+  const titulos = {clientes:'Clientes',industrias:'Indústrias',produtos:'Produtos',pedido:'Pedidos',orcamento:'Orçamentos',
+                   cr:'Contas a Receber',cp:'Contas a Pagar',cb:'Caixa e Bancos',cc:'Conta Corrente',contatos:'Contatos CRM'};
   el('import-modal-titulo').textContent = 'Importar ' + (titulos[tipo]||tipo);
   el('import-preview').style.display = 'none';
   el('import-file-name').textContent = '.xlsx, .xls, .csv, .pdf — máx. 10MB';
@@ -9274,6 +9403,12 @@ function importarCadastro(tipo) {
   // Mostrar informações das colunas esperadas
   const cols = IMPORT_COLS[tipo];
   const tpl = el('import-template-info');
+  // Aviso do modo "preencher lacunas" (importação via CRM)
+  const avisoLacunas = _importModoLacunas
+    ? `<div class="alert" style="background:#e8f4ff;border:1px solid #9ecbf0;border-left:4px solid #1a5fa8;font-size:11px;margin-bottom:8px">
+        <strong>🔒 Modo complementar (CRM):</strong> registros já existentes <strong>não serão sobrescritos</strong> — o sistema preenche apenas os campos que estiverem <strong>vazios</strong> no cadastro atual. Registros novos são criados normalmente.
+      </div>`
+    : '';
   if(cols && tpl) {
     if(tipo === 'pedido') {
       // Layout especial para pedidos — tabela visual clara com ordem das colunas
@@ -9283,7 +9418,7 @@ function importarCadastro(tipo) {
           <td style="padding:5px 10px;font-weight:700;font-size:12px;color:${c.req?'#1a1a1a':'#444'}">${c.label}${c.req?' <span style="color:var(--vermelho)">*</span>':''}</td>
           <td style="padding:5px 10px;font-size:11px;color:#888">${c.hint||''}</td>
         </tr>`).join('');
-      tpl.innerHTML = `
+      tpl.innerHTML = avisoLacunas + `
         <div style="background:#fff8e1;border:1px solid #f0d060;border-left:4px solid var(--amarelo);border-radius:6px;padding:12px 14px;margin-bottom:8px">
           <div style="font-weight:700;font-size:12px;margin-bottom:6px">📋 Como montar sua planilha:</div>
           <div style="font-size:11px;color:#7a5800;line-height:1.8">
@@ -9313,13 +9448,13 @@ function importarCadastro(tipo) {
           ${c.hint?`<span style="font-weight:400;color:${c.req?'#ccc':'#999'}"> — ${c.hint}</span>`:''}
         </span>`
       ).join('');
-      tpl.innerHTML = `<div class="alert alert-info" style="font-size:11px">
+      tpl.innerHTML = avisoLacunas + `<div class="alert alert-info" style="font-size:11px">
         <strong>Colunas reconhecidas:</strong><br><div style="margin-top:6px;line-height:2">${colsHtml}</div>
         <div style="margin-top:6px;color:#555">* obrigatório · o sistema reconhece cabeçalhos automaticamente · a primeira linha da planilha deve ser o cabeçalho</div>
       </div>`;
     }
   } else if(tpl) {
-    tpl.innerHTML = `<div class="alert alert-info">Selecione um arquivo Excel (.xlsx, .xls, .csv) ou PDF para importar.</div>`;
+    tpl.innerHTML = avisoLacunas + `<div class="alert alert-info">Selecione um arquivo Excel (.xlsx, .xls, .csv) ou PDF para importar.</div>`;
   }
 
   // Reset file input
@@ -10018,11 +10153,26 @@ function confirmarImport() {
   // Rota para confirmação de importação de orçamentos (com preview)
   if(importTipo === 'orc-preview') { _confirmarOrcImport(); return; }
 
+  // Rota para módulos Financeiro (CR/CP/CB/CC) e CRM (contatos)
+  if(['cr','cp','cb','cc','contatos'].includes(importTipo)) {
+    if(!importDados || importDados.length === 0) { toast('Nenhum dado para importar.','error'); return; }
+    confirmarImportFinanceiro(); return;
+  }
+
   if(!importDados || importDados.length === 0) {
     toast('Nenhum dado para importar.','error'); return;
   }
 
   let adicionados = 0, atualizados = 0, ignorados = 0;
+
+  // Merge pick: no modo "lacunas" (CRM) o valor existente tem prioridade e só
+  // é substituído quando estiver vazio; no modo normal, o valor da planilha vence.
+  const _mp = (nv, ev) => {
+    const novo = (nv==null?'':String(nv).trim());
+    const atual = (ev==null?'':String(ev).trim());
+    if(_importModoLacunas) return atual || novo;   // preenche só lacunas
+    return novo || atual;                          // comportamento padrão
+  };
 
   if(importTipo === 'clientes') {
     importDados.forEach(row => {
@@ -10030,25 +10180,26 @@ function confirmarImport() {
       if(!nome) { ignorados++; return; }
       const existente = clientes.find(c => c.nome.toLowerCase() === nome.toLowerCase() ||
         (row.cnpj && c.cnpj && row.cnpj.replace(/\D/g,'') === c.cnpj.replace(/\D/g,'')));
+      const statusValido = row.status && ['Ativo','Inativo'].includes(row.status);
       const obj = {
         ...(existente || {}), // preserva campos não presentes na planilha (ccGrupo, contatos, setores, histórico...)
         id: existente ? existente.id : ('CLI-' + String(Date.now()+adicionados).slice(-5)),
-        nome,
-        fantasia: row.fantasia || (existente?.fantasia||''),
-        cnpj:     row.cnpj     || (existente?.cnpj||''),
-        ie:       row.ie       || (existente?.ie||''),
-        segmento: row.segmento || (existente?.segmento||''),
-        endereco: row.endereco || (existente?.endereco||''),
-        bairro:   row.bairro   || (existente?.bairro||''),
-        cidade:   row.cidade   || (existente?.cidade||''),
-        cep:      row.cep      || (existente?.cep||''),
-        prazo:    row.prazo    || (existente?.prazo||''),
-        contato:  row.contato  || (existente?.contato||''),
-        email:    row.email    || (existente?.email||''),
-        telefone: row.telefone || (existente?.telefone||''),
-        status:   row.status && ['Ativo','Inativo'].includes(row.status) ? row.status : (existente?.status||'Ativo'),
-        obs:      row.obs      || (existente?.obs||''),
-        rede:     row.rede     || (existente?.rede||''),
+        nome: _importModoLacunas && existente ? existente.nome : nome,
+        fantasia: _mp(row.fantasia, existente?.fantasia),
+        cnpj:     _mp(row.cnpj,     existente?.cnpj),
+        ie:       _mp(row.ie,       existente?.ie),
+        segmento: _mp(row.segmento, existente?.segmento),
+        endereco: _mp(row.endereco, existente?.endereco),
+        bairro:   _mp(row.bairro,   existente?.bairro),
+        cidade:   _mp(row.cidade,   existente?.cidade),
+        cep:      _mp(row.cep,      existente?.cep),
+        prazo:    _mp(row.prazo,    existente?.prazo),
+        contato:  _mp(row.contato,  existente?.contato),
+        email:    _mp(row.email,    existente?.email),
+        telefone: _mp(row.telefone, existente?.telefone),
+        status:   _importModoLacunas ? (existente?.status || (statusValido?row.status:'Ativo')) : (statusValido ? row.status : (existente?.status||'Ativo')),
+        obs:      _mp(row.obs,      existente?.obs),
+        rede:     _mp(row.rede,     existente?.rede),
       };
       if(existente) { clientes = clientes.map(c=>c.id===existente.id?obj:c); atualizados++; }
       else          { clientes.push(obj); adicionados++; }
@@ -10058,8 +10209,9 @@ function confirmarImport() {
     renderRedes();
     popularSelectsDinamicos();
     renderMix();
-    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} clientes novos, ${atualizados} atualizados`, '📥');
-    toast(`✅ Clientes importados: ${adicionados} novo${adicionados!==1?'s':''}, ${atualizados} atualizado${atualizados!==1?'s':''}${ignorados?' ('+ignorados+' ignorado'+( ignorados!==1?'s':'')+')'  :''}`);
+    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} clientes novos, ${atualizados} ${_importModoLacunas?'complementados':'atualizados'}`, '📥');
+    toast(`✅ Clientes importados: ${adicionados} novo${adicionados!==1?'s':''}, ${atualizados} ${_importModoLacunas?'complementado':'atualizado'}${atualizados!==1?'s':''}${ignorados?' ('+ignorados+' ignorado'+( ignorados!==1?'s':'')+')'  :''}`);
+    _importModoLacunas = false;
     syncAutoSaveHook();
 
   } else if(importTipo === 'industrias') {
@@ -10068,19 +10220,26 @@ function confirmarImport() {
       if(!nome) { ignorados++; return; }
       const existente = industrias.find(i => i.nome.toUpperCase() === nome ||
         (row.cnpj && i.cnpj && row.cnpj.replace(/\D/g,'') === i.cnpj.replace(/\D/g,'')));
-      const pct = parseFloat((row.pct||'0').toString().replace(',','.')) || (existente?.pct||0);
+      const pctPlan = parseFloat((row.pct||'0').toString().replace(',','.')) || 0;
+      // No modo lacunas, só define pct se o existente não tiver (0/indefinido)
+      const pct = _importModoLacunas
+        ? ((existente?.pct) ? existente.pct : pctPlan)
+        : (pctPlan || (existente?.pct||0));
+      const tipoComValido = row.tipoCom && ['Faturamento','Liquidez'].includes(row.tipoCom);
+      const statusValido = row.status && ['Ativo','Inativo'].includes(row.status);
       const obj = {
+        ...(existente || {}), // preserva campos não presentes na planilha (contatos, setores...)
         id:      existente ? existente.id : ('IND-' + String(Date.now()+adicionados).slice(-5)),
-        nome,
-        razao:   row.razao   || (existente?.razao||''),
-        cnpj:    row.cnpj    || (existente?.cnpj||''),
+        nome:    _importModoLacunas && existente ? existente.nome : nome,
+        razao:   _mp(row.razao,   existente?.razao),
+        cnpj:    _mp(row.cnpj,    existente?.cnpj),
         pct,
-        tipoCom: row.tipoCom && ['Faturamento','Liquidez'].includes(row.tipoCom) ? row.tipoCom : (existente?.tipoCom||'Faturamento'),
-        contato: row.contato || (existente?.contato||''),
-        email:   row.email   || (existente?.email||''),
-        telefone:row.telefone|| (existente?.telefone||''),
-        status:  row.status && ['Ativo','Inativo'].includes(row.status) ? row.status : (existente?.status||'Ativo'),
-        obs:     row.obs     || (existente?.obs||''),
+        tipoCom: _importModoLacunas ? (existente?.tipoCom || (tipoComValido?row.tipoCom:'Faturamento')) : (tipoComValido ? row.tipoCom : (existente?.tipoCom||'Faturamento')),
+        contato: _mp(row.contato, existente?.contato),
+        email:   _mp(row.email,   existente?.email),
+        telefone:_mp(row.telefone,existente?.telefone),
+        status:  _importModoLacunas ? (existente?.status || (statusValido?row.status:'Ativo')) : (statusValido ? row.status : (existente?.status||'Ativo')),
+        obs:     _mp(row.obs,     existente?.obs),
       };
       if(existente) { industrias = industrias.map(i=>i.id===existente.id?obj:i); atualizados++; }
       else          { industrias.push(obj); adicionados++; }
@@ -10089,8 +10248,9 @@ function confirmarImport() {
     renderIndustrias();
     popularSelectsDinamicos();
     _popularSelectsIndustriaTodos();
-    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} indústrias novas, ${atualizados} atualizadas`, '📥');
-    toast(`✅ Indústrias importadas: ${adicionados} nova${adicionados!==1?'s':''}, ${atualizados} atualizada${atualizados!==1?'s':''}${ignorados?' ('+ignorados+' ignorada'+( ignorados!==1?'s':'')+')'  :''}`);
+    addAudit(usuarioLogado?.login||'admin', `Importou ${adicionados} indústrias novas, ${atualizados} ${_importModoLacunas?'complementadas':'atualizadas'}`, '📥');
+    toast(`✅ Indústrias importadas: ${adicionados} nova${adicionados!==1?'s':''}, ${atualizados} ${_importModoLacunas?'complementada':'atualizada'}${atualizados!==1?'s':''}${ignorados?' ('+ignorados+' ignorada'+( ignorados!==1?'s':'')+')'  :''}`);
+    _importModoLacunas = false;
     syncAutoSaveHook();
 
   } else if(importTipo === 'produtos') {
@@ -10424,13 +10584,19 @@ function recalcularTipoComissoesIndustria(nomeInd, novoTipo) {
 function baixarModeloImport() {
   const cols = IMPORT_COLS[importTipo];
   if(!cols) { toast('Modelo não disponível para este tipo.','error'); return; }
-  const titulos = {clientes:'Clientes',industrias:'Industrias',produtos:'Produtos',pedido:'Pedidos'};
+  const titulos = {clientes:'Clientes',industrias:'Industrias',produtos:'Produtos',pedido:'Pedidos',
+                   cr:'Contas_a_Receber',cp:'Contas_a_Pagar',cb:'Caixa_e_Bancos',cc:'Conta_Corrente',contatos:'Contatos_CRM'};
   const wb = XLSX.utils.book_new();
   const header = cols.map(c => c.label + (c.req?' *':''));
   const exemplo = {
     clientes: ['Farmácia Central', 'Farmácia Central', '12.345.678/0001-90', '123.456.789.012', 'Varejo', 'Rua Exemplo, 123 - Sala 4', 'Centro', 'São Paulo, SP', '01000-000', '28D', 'João Silva', 'joao@farmaciacentral.com', '(11) 99999-9999', 'Ativo', ''],
     industrias: ['LABOTRAT', 'Laboratório Tratamento Ltda', '98.765.432/0001-10', '7', 'Faturamento', 'Ana Lima', 'ana@labotrat.com', '(11) 3333-4444', 'Ativo', ''],
     produtos: ['ZAL-001', '7891234560012', 'Shampoo Hidratação 300ml', 'ZALIKE', 'Shampoo', '18.00', '12.00', '14.50', '18.00', '0156mg', '0156sp', '0156', '', '', '', '', '', '7891234560013', '7891234560012', '7891234560011', '', '', '', '', '', 'distribuidor,atacado,varejo', 'UN', 'Ativo', ''],
+    cr: ['LABOTRAT', '1.500,00', '01/03/2026', '03/2026', 'COMERCIAL', 'COMISSÃO DE VENDAS', 'Comissão pedido 1234', 'PIX', 'NUBANK COMERCIAL', '0,00', '0,00', '10/03/2026', ''],
+    cp: ['Papelaria Silva Ltda', '350,00', '01/03/2026', '03/2026', 'COMERCIAL', 'Material de escritório', '3.6', 'Administrativo', 'NUBANK COMERCIAL', '0,00', '05/03/2026', ''],
+    cb: ['5.000,00', '01/03/2026', 'COMERCIAL', 'TRANSFERÊNCIA DE RECURSO', 'S', 'Transferência entre contas', 'NUBANK COMERCIAL', 'ITAÚ COMERCIAL', '', '01/03/2026', ''],
+    cc: ['Farmácia Central', '1.200,00', '01/03/2026', 'ZALIKE', 'debito', 'Acordo comercial', 'ACD-001', '03/2026', 'Verba de ação'],
+    contatos: ['Maria Souza', 'Cliente', 'Compradora', 'Farmácia Central', '(11) 98888-7777', 'maria@farmaciacentral.com', 'Prefere contato à tarde'],
     pedido: [
       // Cliente       | Indústria | Tipo        | Data       | Condição | Status    | Cód.     | Descrição                   | Qtd | Desconto | Preço Unit | Total
       ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Recebido', 'LAB-001', 'Shampoo Hidratação 300ml',    '2',  '10',      '18.00',    '32.40'],
@@ -16880,39 +17046,58 @@ function toggleAcao(userId, modKey, acao) {
 }
 
 function confirmarImportFinanceiro() {
-  var adicionados = 0, ignorados = 0;
+  var adicionados = 0, ignorados = 0, atualizados = 0;
 
   // ── CC: Conta Corrente ──
   if (importTipo === 'cc') {
     importDados.forEach(function(row) {
       if (!row.cliente || !row.valor) { ignorados++; return; }
-      const valor = parseFloat(String(row.valor || '0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
-      if (!valor) { ignorados++; return; }
+      // Preserva sinal informado na planilha (ex: -500) e converte formato BR
+      let valorRaw = String(row.valor || '0').trim();
+      const negativoInformado = /^-/.test(valorRaw) || /^\(.*\)$/.test(valorRaw); // -500 ou (500)
+      const valorAbs = Math.abs(parseFloat(valorRaw.replace(/[R$()\s]/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.')) || 0);
+      if (!valorAbs) { ignorados++; return; }
       const tipo = (row.tipo || 'debito').toLowerCase().trim()
         .replace('crédito','credito').replace('débito','debito')
         .replace('bonificação','bonificacao').replace('bonificaçao','bonificacao')
         .replace('saldo inicial','saldo_inicial').replace('saldo_anterior','saldo_inicial');
       const tipoFinal = ['credito','debito','bonificacao','saldo_inicial'].includes(tipo) ? tipo : 'debito';
+      // Convenção do módulo (igual ao lançamento manual):
+      // crédito/bonificação = POSITIVO · débito/verba = NEGATIVO
+      // saldo_inicial respeita o sinal informado na planilha
+      let valorComSinal;
+      if (tipoFinal === 'saldo_inicial')      valorComSinal = negativoInformado ? -valorAbs : valorAbs;
+      else if (tipoFinal === 'debito')        valorComSinal = -valorAbs;
+      else                                    valorComSinal = valorAbs; // credito, bonificacao
+      const cliNome = (row.cliente || '').trim();
+      const indNome = (row.industria || '').trim();
       const obj = {
         id: 'CC-IMP-' + Date.now() + '-' + adicionados,
         data: row.data || hoje(),
-        cliente: (row.cliente || '').trim(),
-        industria: (row.industria || '').trim(),
+        cliente: cliNome,
+        industria: indNome,
+        filial: '',
         tipo: tipoFinal,
         acao: row.acao || '',
         acordo: row.acordo || '',
         mesRef: row.mesRef || '',
         descricao: row.descricao || 'Importado',
-        valor,
+        valor: valorComSinal,
         referencia: row.acordo || '',
         auto: false,
         usuario: usuarioLogado?.nome || 'Importação'
       };
       contaCorrenteData.push(obj);
+      // Cria a conta automaticamente se ainda não existir (igual ao lançamento manual)
+      if (typeof ccContas !== 'undefined' && indNome &&
+          !ccContas.some(function(c){ return c.cliente===cliNome && c.industria===indNome; })) {
+        ccContas.push({id:'CC'+Date.now()+'-'+adicionados, cliente:cliNome, industria:indNome, saldoInicial:0, criadaEm:hoje()});
+      }
       adicionados++;
     });
     syncAutoSaveHook();
     if (typeof renderCCPorCliente === 'function') renderCCPorCliente();
+    if (typeof ccRenderLista === 'function') ccRenderLista();
   }
 
 
@@ -17039,6 +17224,7 @@ function confirmarImportFinanceiro() {
   }
 
   var msg = importTipo.toUpperCase()+': '+adicionados+' registro'+(adicionados!==1?'s':'')+' importado'+(adicionados!==1?'s':'');
+  if(atualizados) msg += ' · '+atualizados+' atualizado'+(atualizados!==1?'s':'');
   if(ignorados) msg += ' · '+ignorados+' ignorado'+(ignorados!==1?'s':'');
   closeModal('modal-import');
   toast('✅ '+msg);
@@ -23187,6 +23373,7 @@ function _avisarTarefaConcluida(t) {
         <select id="crm-cli-rede" onchange="renderCRMClientes()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;outline:none"><option value="">Todas as redes</option></select>
         <select id="crm-cli-cidade" onchange="renderCRMClientes()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;outline:none"><option value="">Todas as cidades</option></select>
         <span id="crm-cli-contador" style="font-size:11px;color:#888;white-space:nowrap"></span>
+        <button class="btn btn-outline btn-sm" onclick="importarCadastro('clientes', true)" title="Importa uma planilha preenchendo apenas os campos vazios dos clientes já cadastrados. Não sobrescreve dados existentes.">📥 Importar / Complementar</button>
       </div>
       <div id="crm-cli-list" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
     </div>
@@ -23196,6 +23383,7 @@ function _avisarTarefaConcluida(t) {
         <select id="crm-ind-nome" onchange="renderCRMIndustrias()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;outline:none;max-width:190px"><option value="">Todas as indústrias</option></select>
         <select id="crm-ind-cidade" onchange="renderCRMIndustrias()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;outline:none"><option value="">Todas as cidades</option></select>
         <span id="crm-ind-contador" style="font-size:11px;color:#888;white-space:nowrap"></span>
+        <button class="btn btn-outline btn-sm" onclick="importarCadastro('industrias', true)" title="Importa uma planilha preenchendo apenas os campos vazios das indústrias já cadastradas. Não sobrescreve dados existentes.">📥 Importar / Complementar</button>
       </div>
       <div id="crm-ind-list" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
     </div>
