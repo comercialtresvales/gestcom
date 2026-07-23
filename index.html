@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -4271,8 +4272,37 @@ const parsePrecoBR = v => {
   if(s.includes(',') && s.includes('.')) s = s.replace(/\./g,'').replace(',','.');
   // Só vírgula → decimal BR: 1,75
   else if(s.includes(',')) s = s.replace(',','.');
-  // Só ponto → já é decimal internacional: 1.75
+  // Só ponto: pode ser separador de MILHAR (BR) ou decimal (internacional)
+  else if(s.includes('.')){
+    // Vários pontos (1.234.567) OU último grupo com exatamente 3 dígitos (17.600) → milhar
+    const partes = s.split('.');
+    const ultimo = partes[partes.length-1];
+    if(partes.length > 2 || ultimo.length === 3) s = s.replace(/\./g,'');
+  }
   return parseFloat(s) || 0;
+};
+
+// Converte valor vindo de planilha (número JS ou texto BR/US) para float confiável
+const parseValorImport = v => {
+  if(typeof v === 'number' && isFinite(v)) return v;
+  let s = String(v==null?'':v).replace(/[R$\s\u00A0]/g,'').trim();
+  if(!s) return 0;
+  const neg = /^-/.test(s) || /^\(.*\)$/.test(s);
+  s = s.replace(/[()\-]/g,'');
+  const temV = s.includes(','), temP = s.includes('.');
+  if(temV && temP){
+    // o separador decimal é o que aparece por ÚLTIMO
+    s = s.lastIndexOf(',') > s.lastIndexOf('.')
+      ? s.replace(/\./g,'').replace(',','.')   // 30.264,14 (BR)
+      : s.replace(/,/g,'');                    // 30,264.14 (US)
+  } else if(temV){
+    s = s.replace(',','.');
+  } else if(temP){
+    const q = s.split('.');
+    if(q.length>2 || q[q.length-1].length===3) s = s.replace(/\./g,'');
+  }
+  const n = parseFloat(s) || 0;
+  return neg ? -n : n;
 };
 const today = () => new Date().toISOString().split('T')[0];
 // Normaliza qualquer formato de data para YYYY-MM-DD para comparação correta
@@ -4891,8 +4921,8 @@ function orcCalcItem() {
   const cliNome = el('orc-cli')?.value || '';
   const mixInfo = _getPrecoMix(cliNome, cod);
   const tab = mixInfo.precoTab;
-  const qtd = parseFloat(el('orc-add-qtd').value)||0;
-  const desc = parseFloat(el('orc-add-desc-pct').value)||0;
+  const qtd = parsePrecoBR(el('orc-add-qtd').value)||0;
+  const desc = parsePrecoBR(el('orc-add-desc-pct').value)||0;
   const unit = tab*(1-desc/100);
   const total = unit*qtd;
   el('orc-add-total').value = fmt(total);
@@ -4902,11 +4932,11 @@ function orcAddItem() {
   const cod = el('orc-add-cod').value.trim().toUpperCase();
   const desc = el('orc-add-desc').value.trim();
   const ind  = el('orc-add-ind').value.trim();
-  const qtd  = parseFloat(el('orc-add-qtd').value)||1;
+  const qtd  = parsePrecoBR(el('orc-add-qtd').value)||1;
   const cliNome = el('orc-cli')?.value || '';
   const mixInfo = _getPrecoMix(cliNome, cod);
   const precoTab = mixInfo.precoTab;
-  const descPct  = parseFloat(el('orc-add-desc-pct').value) || mixInfo.descPct || 0;
+  const descPct  = parsePrecoBR(el('orc-add-desc-pct').value) || mixInfo.descPct || 0;
   const precoUnit = precoTab*(1-descPct/100);
   const total = precoUnit*qtd;
   if(!cod||!desc){alert('Preencha o código e a descrição.');return;}
@@ -5539,8 +5569,8 @@ function pedCalcItem() {
   const cliNome = el('ped-cli')?.value || '';
   const mixInfo = _getPrecoMix(cliNome, cod);
   const tab     = mixInfo.precoNeg; // preço negociado (mix ou tabela com desconto)
-  const qtd     = parseFloat(el('ped-add-qtd')?.value)||0;
-  const descPct = parseFloat(el('ped-add-desc-pct')?.value)||0;
+  const qtd     = parsePrecoBR(el('ped-add-qtd')?.value)||0;
+  const descPct = parsePrecoBR(el('ped-add-desc-pct')?.value)||0;
 
   // Só preenche preço unitário automaticamente se estiver vazio
   const unitEl = el('ped-add-preco-unit');
@@ -5583,11 +5613,11 @@ function pedAddItem() {
   const cod = el('ped-add-cod').value.trim().toUpperCase();
   const desc = el('ped-add-desc').value.trim();
   const ind  = el('ped-add-ind').value.trim();
-  const qtd  = parseFloat(el('ped-add-qtd').value)||1;
+  const qtd  = parsePrecoBR(el('ped-add-qtd').value)||1;
   const cliNome = el('ped-cli')?.value || '';
   const mixInfo = _getPrecoMix(cliNome, cod);
   const precoTab = mixInfo.precoTab;
-  const descPct  = parseFloat(el('ped-add-desc-pct').value) || mixInfo.descPct || 0;
+  const descPct  = parsePrecoBR(el('ped-add-desc-pct').value) || mixInfo.descPct || 0;
   // Lê preço unitário digitado manualmente (campo editável)
   const unitManualRaw = (el('ped-add-preco-unit').value||'').replace(/[R$\s]/g,'').replace(',','.');
   const unitManual = parseFloat(unitManualRaw)||0;
@@ -5750,12 +5780,12 @@ function pedToggleNFSection() {
 }
 
 function pedCalcNFInline() {
-  const val  = parseFloat(el('ped-nf-valor')?.value)||0;
-  const abat = parseFloat(el('ped-nf-abat')?.value)||0;
-  const dev  = parseFloat(el('ped-nf-dev')?.value)||0;
-  const dfin = parseFloat(el('ped-nf-dfin')?.value)||0;
-  const nfd  = parseFloat(el('ped-nf-nfd')?.value)||0;
-  const bon  = parseFloat(el('ped-nf-bonif')?.value)||0;
+  const val  = parsePrecoBR(el('ped-nf-valor')?.value)||0;
+  const abat = parsePrecoBR(el('ped-nf-abat')?.value)||0;
+  const dev  = parsePrecoBR(el('ped-nf-dev')?.value)||0;
+  const dfin = parsePrecoBR(el('ped-nf-dfin')?.value)||0;
+  const nfd  = parsePrecoBR(el('ped-nf-nfd')?.value)||0;
+  const bon  = parsePrecoBR(el('ped-nf-bonif')?.value)||0;
   const liq  = Math.max(0, val - abat - dev - dfin - nfd - bon);
   if(el('ped-nf-liquida-val')) {
     el('ped-nf-liquida-val').textContent = fmt(liq);
@@ -5877,13 +5907,13 @@ function salvarPedido() {
   const pedExistente = pedEditId ? pedidos.find(x=>x.id===pedEditId) : null;
 
   if(nfSecAberta && nfNumInline) {
-    const nfVal  = parseFloat(el('ped-nf-valor')?.value)||0;
+    const nfVal  = parsePrecoBR(el('ped-nf-valor')?.value)||0;
     if(!nfVal){ alert('Informe o valor da NF na seção de Nota Fiscal.'); return; }
-    const nfAbat = parseFloat(el('ped-nf-abat')?.value)||0;
-    const nfDev  = parseFloat(el('ped-nf-dev')?.value)||0;
-    const nfDfin = parseFloat(el('ped-nf-dfin')?.value)||0;
-    const nfNfd  = parseFloat(el('ped-nf-nfd')?.value)||0;
-    const nfBon  = parseFloat(el('ped-nf-bonif')?.value)||0;
+    const nfAbat = parsePrecoBR(el('ped-nf-abat')?.value)||0;
+    const nfDev  = parsePrecoBR(el('ped-nf-dev')?.value)||0;
+    const nfDfin = parsePrecoBR(el('ped-nf-dfin')?.value)||0;
+    const nfNfd  = parsePrecoBR(el('ped-nf-nfd')?.value)||0;
+    const nfBon  = parsePrecoBR(el('ped-nf-bonif')?.value)||0;
     const nfLiq  = Math.max(0, nfVal - nfAbat - nfDev - nfDfin - nfNfd - nfBon);
     nfInline = {
       numero: nfNumInline,
@@ -6150,12 +6180,12 @@ function nfPedidoChange(pedId) {
 }
 
 function calcNFLiquida() {
-  const val=parseFloat(el('nf-valor').value)||0;
-  const abat=parseFloat(el('nf-abat').value)||0;
-  const dev=parseFloat(el('nf-devolucoes').value)||0;
-  const fin=parseFloat(el('nf-desc-fin').value)||0;
-  const nfd=parseFloat(el('nf-nfd').value)||0;
-  const bon=parseFloat(el('nf-bonif').value)||0;
+  const val=parsePrecoBR(el('nf-valor').value)||0;
+  const abat=parsePrecoBR(el('nf-abat').value)||0;
+  const dev=parsePrecoBR(el('nf-devolucoes').value)||0;
+  const fin=parsePrecoBR(el('nf-desc-fin').value)||0;
+  const nfd=parsePrecoBR(el('nf-nfd').value)||0;
+  const bon=parsePrecoBR(el('nf-bonif').value)||0;
   const liq=val-abat-dev-fin-nfd-bon;
   el('nf-liquida-val').textContent=fmt(Math.max(0,liq));
   el('nf-liquida-val').style.color=liq>0?'var(--verde)':'var(--vermelho)';
@@ -6165,13 +6195,13 @@ function salvarNF() {
   const num=el('nf-num').value.trim();
   const pedId=el('nf-pedido').value;
   if(!num||!pedId){alert('Informe o número da NF e o pedido vinculado.');return;}
-  const val=parseFloat(el('nf-valor').value)||0;
+  const val=parsePrecoBR(el('nf-valor').value)||0;
   if(!val){alert('Informe o valor da NF (deve ser maior que zero).');return;}
-  const abat=parseFloat(el('nf-abat').value)||0;
-  const dev=parseFloat(el('nf-devolucoes').value)||0;
-  const fin=parseFloat(el('nf-desc-fin').value)||0;
-  const nfd=parseFloat(el('nf-nfd').value)||0;
-  const bon=parseFloat(el('nf-bonif').value)||0;
+  const abat=parsePrecoBR(el('nf-abat').value)||0;
+  const dev=parsePrecoBR(el('nf-devolucoes').value)||0;
+  const fin=parsePrecoBR(el('nf-desc-fin').value)||0;
+  const nfd=parsePrecoBR(el('nf-nfd').value)||0;
+  const bon=parsePrecoBR(el('nf-bonif').value)||0;
   const liq=Math.max(0,val-abat-dev-fin-nfd-bon);
   const ped=pedidos.find(p=>p.id===pedId);
   const jaTemNF = !!(ped && ped.nf); // detecta re-registro
@@ -6290,13 +6320,13 @@ function salvarNFSemPedido() {
   if(!cli)  { alert('Selecione o cliente.'); return; }
   if(!ind)  { alert('Selecione a indústria.'); return; }
 
-  const val  = parseFloat(el('nf-valor').value)||0;
+  const val  = parsePrecoBR(el('nf-valor').value)||0;
   if(!val)  { alert('Informe o valor da NF (deve ser maior que zero).'); return; }
-  const abat = parseFloat(el('nf-abat').value)||0;
-  const dev  = parseFloat(el('nf-devolucoes').value)||0;
-  const fin  = parseFloat(el('nf-desc-fin').value)||0;
-  const nfd  = parseFloat(el('nf-nfd').value)||0;
-  const bon  = parseFloat(el('nf-bonif').value)||0;
+  const abat = parsePrecoBR(el('nf-abat').value)||0;
+  const dev  = parsePrecoBR(el('nf-devolucoes').value)||0;
+  const fin  = parsePrecoBR(el('nf-desc-fin').value)||0;
+  const nfd  = parsePrecoBR(el('nf-nfd').value)||0;
+  const bon  = parsePrecoBR(el('nf-bonif').value)||0;
   const liq  = Math.max(0, val - abat - dev - fin - nfd - bon);
   const tipo = el('nf-tipo-sp').value || 'venda';
   const cond = el('nf-cond-sp').value||'';
@@ -7662,7 +7692,7 @@ function recSwitchTab(modo, btn) {
 
 function recCalcParcelas() {
   const qtd    = Math.max(1, parseInt(el('rec-parc-qtd')?.value)||1);
-  const tot    = parseFloat(el('rec-parc-total')?.value)||0;
+  const tot    = parsePrecoBR(el('rec-parc-total')?.value)||0;
   const mesIni = el('rec-parc-mes-inicial')?.value||'';
   const MESES  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const prev   = el('rec-parcelas-preview'); if(!prev) return;
@@ -7735,7 +7765,7 @@ function recAjustarMesParcela(idx, novoMes) {
 
 function calcRecebimentoParcial() {
   const c = comissoes_data.find(x=>x.id===_recEditId); if(!c) return;
-  const novoVal    = parseFloat(el('rec-valor')?.value)||0;
+  const novoVal    = parsePrecoBR(el('rec-valor')?.value)||0;
   const jaRecebido = c.valorRecebido||0;
   const totalRec   = jaRecebido + novoVal;
   const saldo      = parseFloat((c.valor - totalRec).toFixed(2));
@@ -7821,7 +7851,7 @@ function confirmarRecebimento() {
   }
 
   // Modo simples
-  const novoVal = parseFloat(el('rec-valor').value)||0;
+  const novoVal = parsePrecoBR(el('rec-valor').value)||0;
   if(!novoVal||novoVal<=0) { alert('Informe um valor maior que zero.'); return; }
   const mes        = el('rec-mes').value;
   const obs        = el('rec-obs').value.trim();
@@ -7924,7 +7954,7 @@ function edcomParcelaChange(idx, campo, valor) {
 }
 
 function edcomAddParcela() {
-  const previsto = parseFloat(el('edcom-valor').value)||0;
+  const previsto = parsePrecoBR(el('edcom-valor').value)||0;
   const somaAtual = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
   const saldo = Math.max(0, previsto - somaAtual);
   // Mês sugerido: o da última parcela, ou o mês de previsão
@@ -8023,8 +8053,8 @@ function edcomToggleOverride() {
 // Recalcula valor previsto = base × % (quando não está em modo manual)
 function edcomRecalcPrevisto() {
   if(el('edcom-override').checked) { edcomAtualizarSaldo(); return; }
-  const base = parseFloat(el('edcom-base').value)||0;
-  const pct  = parseFloat(el('edcom-pct').value)||0;
+  const base = parsePrecoBR(el('edcom-base').value)||0;
+  const pct  = parsePrecoBR(el('edcom-pct').value)||0;
   el('edcom-valor').value = (base * pct / 100).toFixed(2);
   edcomAtualizarSaldo();
 }
@@ -8041,7 +8071,7 @@ function _edcomStatusCalc(previsto, recebido, desconto) {
 
 // Atualiza preview + eventualmente o status automático
 function edcomAtualizarSaldo() {
-  const previsto = parseFloat(el('edcom-valor').value)||0;
+  const previsto = parsePrecoBR(el('edcom-valor').value)||0;
 
   // Recebido = SOMA das parcelas (cada uma com seu próprio mês)
   const recebido = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
@@ -8068,7 +8098,7 @@ function edcomAtualizarSaldo() {
       : '';
   }
 
-  const desconto = parseFloat(el('edcom-desconto').value)||0;
+  const desconto = parsePrecoBR(el('edcom-desconto').value)||0;
   const saldo = previsto - recebido - desconto;
 
   if(el('edcom-status-auto').checked){
@@ -8099,10 +8129,10 @@ function edcomAtualizarSaldo() {
 function salvarEdicaoComissao() {
   const c = comissoes_data.find(x=>x.id===_edComId); if(!c) return;
 
-  const base     = parseFloat(el('edcom-base').value)||0;
-  const pct      = parseFloat(el('edcom-pct').value)||0;
-  const valor    = parseFloat(el('edcom-valor').value)||0;
-  const desconto = parseFloat(el('edcom-desconto').value)||0;
+  const base     = parsePrecoBR(el('edcom-base').value)||0;
+  const pct      = parsePrecoBR(el('edcom-pct').value)||0;
+  const valor    = parsePrecoBR(el('edcom-valor').value)||0;
+  const desconto = parsePrecoBR(el('edcom-desconto').value)||0;
   const tipoRaw  = el('edcom-tipo').value;
   const tipo     = tipoRaw==='Bonificacao' ? 'Bonificação' : tipoRaw;
   const mesPrev  = el('edcom-mes-prev').value;
@@ -8521,7 +8551,7 @@ function abrirEditarMixItem(idx) {
 }
 function mixEditCalcNeg() {
   const tab = parsePrecoBR(el('mix-edit-tabela')?.value);
-  const pct = parseFloat(el('mix-edit-desc-pct')?.value)||0;
+  const pct = parsePrecoBR(el('mix-edit-desc-pct')?.value)||0;
   const neg = tab*(1-pct/100);
   const el2 = el('mix-edit-neg-preview');
   if(el2) el2.textContent = 'Preço negociado: ' + fmt(neg);
@@ -8548,7 +8578,7 @@ function salvarMixEdit() {
   const idx = parseInt(el('mix-edit-idx').value);
   if(isNaN(idx)||!mixProdutos[idx]) return;
   const tabela   = parsePrecoBR(el('mix-edit-tabela').value);
-  const desc_pct = parseFloat(el('mix-edit-desc-pct').value)||0;
+  const desc_pct = parsePrecoBR(el('mix-edit-desc-pct').value)||0;
   mixProdutos[idx] = {
     ...mixProdutos[idx],
     desc:    el('mix-edit-desc').value.trim()  || mixProdutos[idx].desc,
@@ -8592,7 +8622,7 @@ function _mixGetIdxsSelecionados() {
 function mixBulkSetDesconto() {
   const idxs = _mixGetIdxsSelecionados();
   if(!idxs.length) { toast('Selecione ao menos um produto.','error'); return; }
-  const val = parseFloat(el('mix-bulk-desc')?.value);
+  const val = parsePrecoBR(el('mix-bulk-desc')?.value);
   if(isNaN(val)||val<0||val>100) { toast('Informe um % de desconto válido (0–100).','error'); return; }
   if(!confirm(`Aplicar ${val}% de desconto em ${idxs.length} produto(s)?`)) return;
   idxs.forEach(i=>{ mixProdutos[i].desc_pct = val; });
@@ -8638,7 +8668,7 @@ function mixBulkSetPreco() {
   const idxs = _mixGetIdxsSelecionados();
   if(!idxs.length) { toast('Selecione ao menos um produto.','error'); return; }
   const tipo = el('mix-bulk-preco-tipo')?.value || 'reajuste';
-  const val = parseFloat(el('mix-bulk-preco-val')?.value);
+  const val = parsePrecoBR(el('mix-bulk-preco-val')?.value);
   if(isNaN(val) || val < 0) { toast('Informe um valor válido.','error'); return; }
   if(tipo === 'reajuste') {
     if(!confirm(`Reajustar preço tabela em +${val}% para ${idxs.length} produto(s)?`)) return;
@@ -9751,6 +9781,20 @@ function handleImportFile(input) {
         const ws = wb.Sheets[wb.SheetNames[0]];
         // raw:false → formata datas como string no formato definido pelo cellDates
         const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'yyyy-mm-dd'});
+        // CORREÇÃO: raw:false formata números pelo locale (ex: "R$ 30,264.14"),
+        // corrompendo valores na importação. Reprocessa em modo raw e usa o
+        // NÚMERO puro sempre que a célula original for numérica.
+        const dataRaw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+        for(let r=0; r<data.length; r++){
+          if(!dataRaw[r]) continue;
+          for(let c=0; c<data[r].length; c++){
+            const bruto = dataRaw[r][c];
+            if(typeof bruto === 'number' && isFinite(bruto)){
+              // não sobrescreve datas (já convertidas em Date por cellDates)
+              if(!(dataRaw[r][c] instanceof Date)) data[r][c] = bruto;
+            }
+          }
+        }
         if(!data || data.length < 2) {
           _importPreviewMsg('⚠️ Arquivo vazio ou sem dados.', 'warning'); return;
         }
@@ -10632,7 +10676,7 @@ function baixarModeloImport() {
    MIX MODAL
 ══════════════════════════ */
 function autoFill(cod){const p=PRODUTOS_CAT[cod.toUpperCase()];if(p){el('add-descricao').value=p.desc;el('add-industria').value=p.ind;el('add-preco-tabela').value='R$ '+fmtN(p.preco);calcPrecoNegociado();}}
-function calcPrecoNegociado(){const tab=parseFloat((el('add-preco-tabela').value||'').replace('R$','').replace(',','.').trim())||0;const desc=parseFloat(el('add-desconto').value)||0;const neg=tab*(1-desc/100);el('add-preco-neg').value=neg>0?'R$ '+fmtN(neg):'';}
+function calcPrecoNegociado(){const tab=parseFloat((el('add-preco-tabela').value||'').replace('R$','').replace(',','.').trim())||0;const desc=parsePrecoBR(el('add-desconto').value)||0;const neg=tab*(1-desc/100);el('add-preco-neg').value=neg>0?'R$ '+fmtN(neg):'';}
 const produtosAdicionados=[];
 function adicionarProduto(){
   const cod=el('add-codigo').value,desc=el('add-descricao').value,ind=el('add-industria').value,tab=el('add-preco-tabela').value,pct=el('add-desconto').value,neg=el('add-preco-neg').value;
@@ -11417,7 +11461,7 @@ function salvarIndustria() {
     id, nome,
     razao:    el('i-razao').value.trim(),
     cnpj:     el('i-cnpj').value.trim(),
-    pct:      parseFloat(el('i-pct').value)||0,
+    pct:      parsePrecoBR(el('i-pct').value)||0,
     tipoCom:  el('i-tipo-com').value || 'Faturamento',
     contato:  el('i-contato').value.trim(),
     email:    el('i-email').value.trim(),
@@ -12320,7 +12364,7 @@ function renderSellInOut() {
 function salvarSellOut() {
   const cli = el('so-cli').value;
   const ind = el('so-ind').value;
-  const valor = parseFloat(el('so-valor').value)||0;
+  const valor = parsePrecoBR(el('so-valor').value)||0;
   if(!cli||!ind||!valor){alert('Preencha os campos obrigatórios.');return;}
   let soN = sellOutData.length + 1;
   let soId;
@@ -12948,7 +12992,7 @@ function _coletarConfigLembretes() {
   if(el('cfg-lemb-reu-vespera')) configSistema.lembReuniaoVespera = el('cfg-lemb-reu-vespera').checked;
   if(el('cfg-lemb-reu-dia'))     configSistema.lembReuniaoDia     = el('cfg-lemb-reu-dia').checked;
   if(el('cfg-lemb-reu-horas')) {
-    let h = parseFloat(el('cfg-lemb-reu-horas').value);
+    let h = parsePrecoBR(el('cfg-lemb-reu-horas').value);
     if(isNaN(h) || h < 1) h = 1;
     if(h > 12) h = 12;
     configSistema.lembReuniaoHorasAntes = h;
@@ -13113,7 +13157,7 @@ function atualizarLabelMetaValor() {
 }
 
 function salvarMeta() {
-  const ind = el('meta-ind').value; const valor = parseFloat(el('meta-valor').value)||0;
+  const ind = el('meta-ind').value; const valor = parsePrecoBR(el('meta-valor').value)||0;
   if(!ind){alert('Selecione a Indústria.');return;}
   if(!valor){alert('Informe o valor da meta (maior que zero).');return;}
   const mes = el('meta-mes').value;
@@ -13123,7 +13167,7 @@ function salvarMeta() {
     metasData = metasData.filter(m=>!(m.industria===ind&&m.mes===mes&&m.tipo===tipo));
   }
   const id = window._metaEditId || ('META-'+String(metasData.length+1).padStart(3,'0'));
-  const realizado = parseFloat(el('meta-real-manual')?.value)||0;
+  const realizado = parsePrecoBR(el('meta-real-manual')?.value)||0;
   const obj = {id,industria:ind,mes,valor,tipo,realizado,obs:el('meta-obs').value,usuario:usuarioLogado?.login||'admin',criado:new Date().toLocaleDateString('pt-BR')};
   metasData = metasData.filter(m=>m.id!==id);
   metasData.push(obj);
@@ -13619,7 +13663,7 @@ function renderRegras() {
 }
 
 function salvarRegra() {
-  const ind = el('regra-ind').value; const pct = parseFloat(el('regra-pct').value)||0;
+  const ind = el('regra-ind').value; const pct = parsePrecoBR(el('regra-pct').value)||0;
   if(!ind||!pct){alert('Preencha Indústria e % de Comissão.');return;}
   const vinculoTipo = (el('regra-vinculo-tipo')||{}).value||'todos';
   const rede = vinculoTipo==='rede' ? ((el('regra-rede')||{}).value||'') : '';
@@ -15001,7 +15045,7 @@ function abrirUtilizarSaldoManual(saldoId) {
 
 function confirmarUsarSaldoCtrl() {
   const s = ctrlSaldosData.find(x=>x.id===_csEditSaldoId); if (!s) return;
-  const valor = parseFloat(el('cs-uso-valor').value)||0;
+  const valor = parsePrecoBR(el('cs-uso-valor').value)||0;
   if (!valor || valor<=0) { alert('Informe um valor maior que zero.'); return; }
   if (valor > s.valorRestante + 0.01) { alert(`Valor (${fmt(valor)}) supera o saldo restante (${fmt(s.valorRestante)})`); return; }
   const tipo = el('cs-uso-tipo').value || 'venda';
@@ -17055,7 +17099,7 @@ function confirmarImportFinanceiro() {
       // Preserva sinal informado na planilha (ex: -500) e converte formato BR
       let valorRaw = String(row.valor || '0').trim();
       const negativoInformado = /^-/.test(valorRaw) || /^\(.*\)$/.test(valorRaw); // -500 ou (500)
-      const valorAbs = Math.abs(parseFloat(valorRaw.replace(/[R$()\s]/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.')) || 0);
+      const valorAbs = Math.abs(parseValorImport(row.valor));
       if (!valorAbs) { ignorados++; return; }
       const tipo = (row.tipo || 'debito').toLowerCase().trim()
         .replace('crédito','credito').replace('débito','debito')
@@ -17105,10 +17149,10 @@ function confirmarImportFinanceiro() {
   if(importTipo === 'cr') {
     importDados.forEach(row => {
       if(!row.cliente || !row.valor) { ignorados++; return; }
-      const valor = parseFloat(String(row.valor||'0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
+      const valor = parseValorImport(row.valor);
       if(!valor) { ignorados++; return; }
-      const descFin = parseFloat(String(row.descontoFin||'0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
-      const jrs = parseFloat(String(row.juros||'0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
+      const descFin = parseValorImport(row.descontoFin);
+      const jrs = parseValorImport(row.juros);
       const obj = {
         id: 'CR-' + Date.now() + '-' + adicionados,
         dataLanc: row.dataLanc || hoje(),
@@ -17138,9 +17182,9 @@ function confirmarImportFinanceiro() {
   if(importTipo === 'cp') {
     importDados.forEach(row => {
       if(!row.fornecedor || !row.valor) { ignorados++; return; }
-      const valor = parseFloat(String(row.valor||'0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
+      const valor = parseValorImport(row.valor);
       if(!valor) { ignorados++; return; }
-      const dj = parseFloat(String(row.descJuros||'0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
+      const dj = parseValorImport(row.descJuros);
       const obj = {
         id: 'CP-' + Date.now() + '-' + adicionados,
         dataLanc: row.dataLanc || hoje(),
@@ -17170,7 +17214,7 @@ function confirmarImportFinanceiro() {
   if(importTipo === 'cb') {
     importDados.forEach(row => {
       if(!row.valor) { ignorados++; return; }
-      const valor = parseFloat(String(row.valor||'0').replace(/[R$\.]/g,'').replace(',','.')) || 0;
+      const valor = parseValorImport(row.valor);
       if(!valor) { ignorados++; return; }
       const obj = {
         id: 'CB-' + Date.now() + '-' + adicionados,
@@ -17444,17 +17488,22 @@ function finRenderCR() {
 
     var tbody = el('fin-cr-tbody');
     if(!tbody) return;
+    list.sort(function(a,b){ return (b.dataLanc||'').localeCompare(a.dataLanc||''); });
+    finCRListaVisivel = list.map(function(r){ return r.id; });
     if(list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhum lançamento encontrado. Clique em <strong>+ Nova Receita</strong> para adicionar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhum lançamento encontrado. Clique em <strong>+ Nova Receita</strong> para adicionar.</td></tr>';
+      finCRAtualizarBulkBar();
       return;
     }
-    list.sort(function(a,b){ return (b.dataLanc||'').localeCompare(a.dataLanc||''); });
     tbody.innerHTML = '';
     list.forEach(function(r) {
       var st = finGetStatus(r.vencimento, r.dataPagamento);
       var tr = document.createElement('tr');
       var vcorCls = st === 'Vencido' ? 'style="color:var(--vermelho);font-weight:600"' : st === 'Recebido' ? 'style="color:var(--verde)"' : '';
+      var marcado = finCRSelecionados.indexOf(r.id) !== -1;
+      if(marcado) tr.style.background = '#fff5f5';
       tr.innerHTML =
+        '<td style="text-align:center"><input type="checkbox" class="fin-cr-chk" data-id="'+esc(r.id)+'"'+(marcado?' checked':'')+'></td>'+
         '<td style="font-size:11px">'+finFmtData(r.dataLanc)+'</td>'+
         '<td style="font-size:11px;color:var(--cinza-escuro)">'+esc(r.mesReceita||'')+'</td>'+
         '<td>'+finEmpBadge(r.empresa)+'</td>'+
@@ -17490,9 +17539,89 @@ function finRenderCR() {
       btnDel.title = 'Excluir lançamento';
       btnDel.onclick = (function(rid){ return function(){ finExcluirCR(rid); }; })(r.id);
       tdAcoes.appendChild(btnDel);
+      var chk = tr.querySelector('.fin-cr-chk');
+      if(chk) chk.onclick = function(ev){ ev.stopPropagation(); finCRToggleUm(this.dataset.id, this.checked); };
       tbody.appendChild(tr);
     });
+    finCRAtualizarBulkBar();
   } catch(e) { console.warn('finRenderCR:', e); }
+}
+
+/* ══════════════════════════
+   CR — SELEÇÃO E EXCLUSÃO EM MASSA
+══════════════════════════ */
+var finCRSelecionados = [];
+var finCRListaVisivel = [];
+
+function finCRToggleUm(id, marcado) {
+  var i = finCRSelecionados.indexOf(id);
+  if(marcado && i === -1) finCRSelecionados.push(id);
+  if(!marcado && i !== -1) finCRSelecionados.splice(i, 1);
+  var tr = document.querySelector('.fin-cr-chk[data-id="'+id+'"]');
+  if(tr) { tr = tr.closest('tr'); if(tr) tr.style.background = marcado ? '#fff5f5' : ''; }
+  finCRAtualizarBulkBar();
+}
+
+function finCRToggleTodos(marcado) {
+  if(marcado) {
+    finCRListaVisivel.forEach(function(id){
+      if(finCRSelecionados.indexOf(id) === -1) finCRSelecionados.push(id);
+    });
+  } else {
+    finCRSelecionados = finCRSelecionados.filter(function(id){
+      return finCRListaVisivel.indexOf(id) === -1;
+    });
+  }
+  finRenderCR();
+}
+
+function finCRSelecionarTodos() { finCRToggleTodos(true); }
+
+function finCRLimparSelecao() {
+  finCRSelecionados = [];
+  finRenderCR();
+}
+
+function finCRAtualizarBulkBar() {
+  var bar = document.getElementById('fin-cr-bulkbar');
+  var cnt = document.getElementById('fin-cr-bulk-count');
+  var tot = document.getElementById('fin-cr-bulk-total');
+  var all = document.getElementById('fin-cr-check-all');
+  if(!bar) return;
+  // remove ids que já não existem mais na base
+  finCRSelecionados = finCRSelecionados.filter(function(id){
+    return finCRData.some(function(r){ return r.id === id; });
+  });
+  var n = finCRSelecionados.length;
+  bar.style.display = n > 0 ? 'flex' : 'none';
+  if(cnt) cnt.textContent = n + (n === 1 ? ' lançamento selecionado' : ' lançamentos selecionados');
+  if(tot) {
+    var soma = finCRData.filter(function(r){ return finCRSelecionados.indexOf(r.id) !== -1; })
+                        .reduce(function(s,r){ return s + (r.vlrReceber || r.valor || 0); }, 0);
+    tot.textContent = '· Total: ' + fmt(soma);
+  }
+  if(all) {
+    var visiveisMarcados = finCRListaVisivel.filter(function(id){ return finCRSelecionados.indexOf(id) !== -1; }).length;
+    all.checked = finCRListaVisivel.length > 0 && visiveisMarcados === finCRListaVisivel.length;
+    all.indeterminate = visiveisMarcados > 0 && visiveisMarcados < finCRListaVisivel.length;
+  }
+}
+
+function finCRExcluirSelecionados() {
+  var n = finCRSelecionados.length;
+  if(!n) { toast('Nenhum lançamento selecionado.','error'); return; }
+  var soma = finCRData.filter(function(r){ return finCRSelecionados.indexOf(r.id) !== -1; })
+                      .reduce(function(s,r){ return s + (r.vlrReceber || r.valor || 0); }, 0);
+  if(!confirm('Excluir '+n+' lançamento(s) de Contas a Receber?\n\nTotal: '+fmt(soma)+'\n\nEsta ação não pode ser desfeita.')) return;
+  finCRData = finCRData.filter(function(r){ return finCRSelecionados.indexOf(r.id) === -1; });
+  if(typeof addAudit === 'function') {
+    try { addAudit((usuarioLogado&&usuarioLogado.login)||'admin', 'Exclusão em massa: '+n+' lançamento(s) de Contas a Receber ('+fmt(soma)+')', '🗑️'); } catch(e){}
+  }
+  finCRSelecionados = [];
+  if(typeof finSalvarDados === 'function') finSalvarDados();
+  finRenderCR();
+  if(typeof finRenderDashboard === 'function') finRenderDashboard();
+  toast('✅ '+n+' lançamento(s) excluído(s).');
 }
 
 function finRenderCP() {
@@ -22987,9 +23116,19 @@ function _avisarTarefaConcluida(t) {
           <button class="btn btn-outline btn-sm" onclick="importarCadastro('cr')">📥 Importar</button>
           <button class="btn btn-primary btn-sm" onclick="finNovoCR()">+ Nova Receita</button>
         </div>
+        <!-- Barra de ações em massa -->
+        <div id="fin-cr-bulkbar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:10px 14px;border:1.5px solid var(--vermelho);border-radius:8px;background:#fff5f5">
+          <strong id="fin-cr-bulk-count" style="font-size:12.5px">0 selecionado(s)</strong>
+          <span id="fin-cr-bulk-total" style="font-size:12px;color:var(--cinza-escuro)"></span>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-xs" onclick="finCRSelecionarTodos(true)">Selecionar todos do filtro</button>
+          <button class="btn btn-outline btn-xs" onclick="finCRLimparSelecao()">Limpar seleção</button>
+          <button class="btn btn-danger btn-sm" onclick="finCRExcluirSelecionados()">🗑️ Excluir selecionados</button>
+        </div>
         <div class="card" style="padding:0;overflow:auto">
           <table>
             <thead><tr>
+              <th style="width:34px;text-align:center"><input type="checkbox" id="fin-cr-check-all" onclick="finCRToggleTodos(this.checked)" title="Selecionar todos"></th>
               <th>Data Lanç.</th><th>Mês</th><th>Empresa</th><th>Cliente/Indústria</th>
               <th>Tipo Receita</th><th>Descrição</th><th>Plano Receb.</th>
               <th>Banco</th><th style="text-align:right">Valor</th>
