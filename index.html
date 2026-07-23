@@ -17459,8 +17459,9 @@ function finFiltrarEmp(arr) {
   return arr.filter(function(r){ return (r.empresa||'').toUpperCase() === emp; });
 }
 
-function finGetStatus(venc, pago) {
-  if(pago) return 'Recebido';
+function finGetStatus(venc, pago, modulo) {
+  // modulo: 'cp' → quitado = "Pago" · demais/omitido → "Recebido" (compatível com CR)
+  if(pago) return modulo === 'cp' ? 'Pago' : 'Recebido';
   if(!venc) return 'Em Aberto';
   var hoje = new Date(); hoje.setHours(0,0,0,0);
   var dv = new Date(venc); dv.setHours(0,0,0,0);
@@ -17496,8 +17497,8 @@ function finRenderDashboard() {
 
     var totalReceber = cr.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento) !== 'Recebido'; }).reduce(function(s,r){ return s+(r.vlrReceber||r.valor||0); },0);
     var vencidasCR = cr.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento) === 'Vencido'; }).length;
-    var totalPagar = cp.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento) !== 'Pago'; }).reduce(function(s,r){ return s+(r.vlrPagar||r.valor||0); },0);
-    var vencidasCP = cp.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento) === 'Vencido'; }).length;
+    var totalPagar = cp.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento, 'cp') !== 'Pago'; }).reduce(function(s,r){ return s+(r.vlrPagar||r.valor||0); },0);
+    var vencidasCP = cp.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento, 'cp') === 'Vencido'; }).length;
 
     var el = function(id){ return document.getElementById(id); };
     if(el('fin-dash-receber')) el('fin-dash-receber').textContent = fmt(totalReceber);
@@ -17563,7 +17564,7 @@ function finRenderDashboard() {
       var vencidas = [];
       cr.filter(function(r){ return finGetStatus(r.vencimento,r.dataPagamento)==='Vencido'; })
         .forEach(function(r){ vencidas.push({tipo:'receber',nome:r.cliente||r.desc||'',valor:r.vlrReceber||r.valor||0,venc:r.vencimento,empresa:r.empresa}); });
-      cp.filter(function(r){ return finGetStatus(r.vencimento,r.dataPagamento)==='Vencido'; })
+      cp.filter(function(r){ return finGetStatus(r.vencimento,r.dataPagamento,'cp')==='Vencido'; })
         .forEach(function(r){ vencidas.push({tipo:'pagar',nome:r.fornecedor||r.desc||'',valor:r.vlrPagar||r.valor||0,venc:r.vencimento,empresa:r.empresa}); });
       if(vCount) vCount.textContent = vencidas.length;
       if(vencidas.length === 0) {
@@ -17786,7 +17787,7 @@ function finRenderCP() {
       if(emp && (r.empresa||'').toUpperCase() !== emp) return false;
       if(mesFilt && finMesDoRegistro(r) !== mesFilt) return false;
       if(busca && !(r.fornecedor||'').toLowerCase().includes(busca) && !(r.descricao||'').toLowerCase().includes(busca)) return false;
-      var st = finGetStatus(r.vencimento, r.dataPagamento);
+      var st = finGetStatus(r.vencimento, r.dataPagamento, 'cp');
       if(stFilt === 'Pago' && st !== 'Pago') return false;
       if(stFilt === 'Em Aberto' && st !== 'Em Aberto') return false;
       if(stFilt === 'Vencido' && st !== 'Vencido') return false;
@@ -17794,9 +17795,9 @@ function finRenderCP() {
       return true;
     });
 
-    var aberto = list.filter(function(r){return finGetStatus(r.vencimento,r.dataPagamento)!=='Pago';}).reduce(function(s,r){return s+(r.vlrPagar||r.valor||0);},0);
+    var aberto = list.filter(function(r){return finGetStatus(r.vencimento,r.dataPagamento,'cp')!=='Pago';}).reduce(function(s,r){return s+(r.vlrPagar||r.valor||0);},0);
     var pagoMes = list.filter(function(r){return r.dataPagamento&&r.dataPagamento.substring(0,7)===mesAtual;}).reduce(function(s,r){return s+(r.vlrPagar||r.valor||0);},0);
-    var venc = list.filter(function(r){return finGetStatus(r.vencimento,r.dataPagamento)==='Vencido';}).length;
+    var venc = list.filter(function(r){return finGetStatus(r.vencimento,r.dataPagamento,'cp')==='Vencido';}).length;
     var prev = list.filter(function(r){return !r.dataPagamento&&r.vencimento&&r.vencimento<=d30.toISOString().split('T')[0];}).reduce(function(s,r){return s+(r.vlrPagar||r.valor||0);},0);
 
     var el = function(id){return document.getElementById(id);};
@@ -17807,18 +17808,23 @@ function finRenderCP() {
 
     var tbody = el('fin-cp-tbody');
     if(!tbody) return;
+    list.sort(function(a,b){ return (b.dataLanc||'').localeCompare(a.dataLanc||''); });
+    _finBulk.cp.visivel = list.map(function(r){ return r.id; });
     if(list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhum lançamento encontrado. Clique em <strong>+ Nova Despesa</strong> para adicionar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhum lançamento encontrado. Clique em <strong>+ Nova Despesa</strong> para adicionar.</td></tr>';
+      finBulkAtualizarBar('cp');
       return;
     }
-    list.sort(function(a,b){ return (b.dataLanc||'').localeCompare(a.dataLanc||''); });
     tbody.innerHTML = '';
     list.forEach(function(r) {
-      var st = finGetStatus(r.vencimento, r.dataPagamento);
-      var stLabel = st === 'Pago' ? 'Pago' : st;
+      var st = finGetStatus(r.vencimento, r.dataPagamento, 'cp');
+      var stLabel = st;
       var tr = document.createElement('tr');
       var vcorCls = st === 'Vencido' ? 'style="color:var(--vermelho);font-weight:600"' : st === 'Pago' ? 'style="color:var(--cinza-escuro)"' : '';
+      var marcado = _finBulk.cp.sel.indexOf(r.id) !== -1;
+      if(marcado) tr.style.background = '#fff5f5';
       tr.innerHTML =
+        '<td style="text-align:center"><input type="checkbox" class="fin-cp-chk" data-id="'+esc(r.id)+'"'+(marcado?' checked':'')+'></td>'+
         '<td style="font-size:11px">'+finFmtData(r.dataLanc)+'</td>'+
         '<td style="font-size:11px;color:var(--cinza-escuro)">'+esc(r.mesDespesa||'')+'</td>'+
         '<td>'+finEmpBadge(r.empresa)+'</td>'+
@@ -17854,8 +17860,11 @@ function finRenderCP() {
       btnDelCP.title = 'Excluir lançamento';
       btnDelCP.onclick = (function(rid){ return function(){ finExcluirCP(rid); }; })(r.id);
       tdAcoes.appendChild(btnDelCP);
+      var chkCP = tr.querySelector('.fin-cp-chk');
+      if(chkCP) chkCP.onclick = function(ev){ ev.stopPropagation(); finBulkToggleUm('cp', this.dataset.id, this.checked); };
       tbody.appendChild(tr);
     });
+    finBulkAtualizarBar('cp');
   } catch(e) { console.warn('finRenderCP:', e); }
 }
 
@@ -17877,17 +17886,22 @@ function finRenderCB() {
 
     var tbody = document.getElementById('fin-cb-tbody');
     if(!tbody) return;
+    list.sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
+    _finBulk.cb.visivel = list.map(function(r){ return r.id; });
     if(list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhuma movimentação encontrada. Clique em <strong>+ Nova Movimentação</strong> para adicionar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhuma movimentação encontrada. Clique em <strong>+ Nova Movimentação</strong> para adicionar.</td></tr>';
+      finBulkAtualizarBar('cb');
       return;
     }
-    list.sort(function(a,b){ return (b.data||'').localeCompare(a.data||''); });
     tbody.innerHTML = '';
     list.forEach(function(r) {
       var st = r.dataQuit ? 'Pago' : 'Em Aberto';
       var esBadge = r.es === 'E' ? '<span class="badge badge-verde">E</span>' : r.es === 'S' ? '<span class="badge badge-vermelho">S</span>' : '<span class="badge badge-azul">T</span>';
       var tr = document.createElement('tr');
+      var marcadoCB = _finBulk.cb.sel.indexOf(r.id) !== -1;
+      if(marcadoCB) tr.style.background = '#fff5f5';
       tr.innerHTML =
+        '<td style="text-align:center"><input type="checkbox" class="fin-cb-chk" data-id="'+esc(r.id)+'"'+(marcadoCB?' checked':'')+'></td>'+
         '<td style="font-size:11px">'+finFmtData(r.data)+'</td>'+
         '<td>'+finEmpBadge(r.empresa)+'</td>'+
         '<td>'+esc(r.descricao||'')+'</td>'+
@@ -17913,8 +17927,11 @@ function finRenderCB() {
       btnDelCB.title = 'Excluir movimentação';
       btnDelCB.onclick = (function(rid){ return function(){ finExcluirCB(rid); }; })(r.id);
       tdAcoes.appendChild(btnDelCB);
+      var chkCB = tr.querySelector('.fin-cb-chk');
+      if(chkCB) chkCB.onclick = function(ev){ ev.stopPropagation(); finBulkToggleUm('cb', this.dataset.id, this.checked); };
       tbody.appendChild(tr);
     });
+    finBulkAtualizarBar('cb');
   } catch(e) { console.warn('finRenderCB:', e); }
 }
 
@@ -18590,7 +18607,7 @@ function finExportarAtivo() {
     var rowsCP = [['CONTAS A PAGAR'],[''],
       ['ID','Data Lanç.','Mês','Empresa','Fornecedor','Classif.','Banco','Valor','Vlr. Pagar','Vencimento','Pagamento','Status']];
     finCPData.forEach(function(r){
-      var st = finGetStatus(r.vencimento, r.dataPagamento);
+      var st = finGetStatus(r.vencimento, r.dataPagamento, 'cp');
       rowsCP.push([r.id,r.dataLanc,r.mesDespesa,r.empresa,r.fornecedor,r.classif,r.banco,r.valor,r.vlrPagar||r.valor,r.vencimento,r.dataPagamento||'',st]);
     });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsCP), 'CP - A Pagar');
@@ -18657,6 +18674,105 @@ function finExcluirCB(id) {
   try { addAudit((usuarioLogado||{}).login||'?', 'Excluiu movimentação CB: ' + (r.descricao||'') + ' — ' + fmt(r.valor||0), '🗑️'); } catch(e) {}
   finRenderCB(); finRenderDashboard();
   toast('Movimentação excluída.');
+}
+
+/* ══════════════════════════════════════════════════════
+   MOTOR GENÉRICO DE SELEÇÃO E EXCLUSÃO EM MASSA
+   Usado por CP (Contas a Pagar) e CB (Caixa e Bancos).
+   CR mantém a implementação própria já existente.
+══════════════════════════════════════════════════════ */
+var _finBulk = {
+  cp: {
+    sel: [], visivel: [],
+    getData:   function(){ return finCPData; },
+    setData:   function(v){ finCPData = v; },
+    render:    function(){ finRenderCP(); },
+    valorDe:   function(r){ return r.vlrPagar || r.valor || 0; },
+    rotulo:    'Contas a Pagar',
+    nomeDe:    function(r){ return r.fornecedor || r.descricao || ''; }
+  },
+  cb: {
+    sel: [], visivel: [],
+    getData:   function(){ return finCBData; },
+    setData:   function(v){ finCBData = v; },
+    render:    function(){ finRenderCB(); },
+    valorDe:   function(r){ return r.valor || 0; },
+    rotulo:    'Caixa e Bancos',
+    nomeDe:    function(r){ return r.descricao || ''; }
+  }
+};
+
+function finBulkToggleUm(mod, id, marcado) {
+  var b = _finBulk[mod]; if(!b) return;
+  var i = b.sel.indexOf(id);
+  if(marcado && i === -1) b.sel.push(id);
+  if(!marcado && i !== -1) b.sel.splice(i, 1);
+  var chk = document.querySelector('.fin-'+mod+'-chk[data-id="'+id+'"]');
+  if(chk) { var tr = chk.closest('tr'); if(tr) tr.style.background = marcado ? '#fff5f5' : ''; }
+  finBulkAtualizarBar(mod);
+}
+
+function finBulkToggleTodos(mod, marcado) {
+  var b = _finBulk[mod]; if(!b) return;
+  if(marcado) {
+    b.visivel.forEach(function(id){ if(b.sel.indexOf(id) === -1) b.sel.push(id); });
+  } else {
+    b.sel = b.sel.filter(function(id){ return b.visivel.indexOf(id) === -1; });
+  }
+  b.render();
+}
+
+function finBulkSelecionarTodos(mod) { finBulkToggleTodos(mod, true); }
+
+function finBulkLimparSelecao(mod) {
+  var b = _finBulk[mod]; if(!b) return;
+  b.sel = [];
+  b.render();
+}
+
+function finBulkAtualizarBar(mod) {
+  var b = _finBulk[mod]; if(!b) return;
+  var bar = document.getElementById('fin-'+mod+'-bulkbar');
+  var cnt = document.getElementById('fin-'+mod+'-bulk-count');
+  var tot = document.getElementById('fin-'+mod+'-bulk-total');
+  var all = document.getElementById('fin-'+mod+'-check-all');
+  if(!bar) return;
+  var dados = b.getData();
+  // Descarta ids que já não existem (ex: excluídos individualmente)
+  b.sel = b.sel.filter(function(id){
+    return dados.some(function(r){ return r.id === id; });
+  });
+  var n = b.sel.length;
+  bar.style.display = n > 0 ? 'flex' : 'none';
+  if(cnt) cnt.textContent = n + (n === 1 ? ' lançamento selecionado' : ' lançamentos selecionados');
+  if(tot) {
+    var soma = dados.filter(function(r){ return b.sel.indexOf(r.id) !== -1; })
+                    .reduce(function(s,r){ return s + b.valorDe(r); }, 0);
+    tot.textContent = '· Total: ' + fmt(soma);
+  }
+  if(all) {
+    var marcados = b.visivel.filter(function(id){ return b.sel.indexOf(id) !== -1; }).length;
+    all.checked = b.visivel.length > 0 && marcados === b.visivel.length;
+    all.indeterminate = marcados > 0 && marcados < b.visivel.length;
+  }
+}
+
+function finBulkExcluirSelecionados(mod) {
+  var b = _finBulk[mod]; if(!b) return;
+  if(typeof _finPodeExcluir === 'function' && !_finPodeExcluir()) return;
+  var n = b.sel.length;
+  if(!n) { toast('Nenhum lançamento selecionado.','error'); return; }
+  var dados = b.getData();
+  var soma = dados.filter(function(r){ return b.sel.indexOf(r.id) !== -1; })
+                  .reduce(function(s,r){ return s + b.valorDe(r); }, 0);
+  if(!confirm('Excluir '+n+' lançamento(s) de '+b.rotulo+'?\n\nTotal: '+fmt(soma)+'\n\nEsta ação não pode ser desfeita.')) return;
+  b.setData(dados.filter(function(r){ return b.sel.indexOf(r.id) === -1; }));
+  try { addAudit((usuarioLogado&&usuarioLogado.login)||'admin', 'Exclusão em massa: '+n+' lançamento(s) de '+b.rotulo+' ('+fmt(soma)+')', '🗑️'); } catch(e){}
+  b.sel = [];
+  if(typeof finSalvarDados === 'function') finSalvarDados();
+  b.render();
+  if(typeof finRenderDashboard === 'function') finRenderDashboard();
+  toast('✅ '+n+' lançamento(s) excluído(s).');
 }
 
 function finCarregarDados() {
@@ -23340,9 +23456,19 @@ function _avisarTarefaConcluida(t) {
           <button class="btn btn-outline btn-sm" onclick="importarCadastro('cp')">📥 Importar</button>
           <button class="btn btn-primary btn-sm" onclick="finNovoCP()">+ Nova Despesa</button>
         </div>
+        <!-- Barra de ações em massa -->
+        <div id="fin-cp-bulkbar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:10px 14px;border:1.5px solid var(--vermelho);border-radius:8px;background:#fff5f5">
+          <strong id="fin-cp-bulk-count" style="font-size:12.5px">0 selecionado(s)</strong>
+          <span id="fin-cp-bulk-total" style="font-size:12px;color:var(--cinza-escuro)"></span>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-xs" onclick="finBulkSelecionarTodos('cp')">Selecionar todos do filtro</button>
+          <button class="btn btn-outline btn-xs" onclick="finBulkLimparSelecao('cp')">Limpar seleção</button>
+          <button class="btn btn-danger btn-sm" onclick="finBulkExcluirSelecionados('cp')">🗑️ Excluir selecionados</button>
+        </div>
         <div class="card" style="padding:0;overflow:auto">
           <table>
             <thead><tr>
+              <th style="width:34px;text-align:center"><input type="checkbox" id="fin-cp-check-all" onclick="finBulkToggleTodos('cp', this.checked)" title="Selecionar todos"></th>
               <th>Data Lanç.</th><th>Mês</th><th>Empresa</th><th>Fornecedor/Prestador</th>
               <th>Tipo Despesa</th><th>Descrição</th><th>Classif. Financeira</th>
               <th>Centro de Custo</th><th>Banco</th>
@@ -23373,9 +23499,19 @@ function _avisarTarefaConcluida(t) {
           <button class="btn btn-outline btn-sm" onclick="importarCadastro('cb')">📥 Importar</button>
           <button class="btn btn-primary btn-sm" onclick="finNovoCB()">+ Nova Movimentação</button>
         </div>
+        <!-- Barra de ações em massa -->
+        <div id="fin-cb-bulkbar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:10px 14px;border:1.5px solid var(--vermelho);border-radius:8px;background:#fff5f5">
+          <strong id="fin-cb-bulk-count" style="font-size:12.5px">0 selecionado(s)</strong>
+          <span id="fin-cb-bulk-total" style="font-size:12px;color:var(--cinza-escuro)"></span>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-xs" onclick="finBulkSelecionarTodos('cb')">Selecionar todos do filtro</button>
+          <button class="btn btn-outline btn-xs" onclick="finBulkLimparSelecao('cb')">Limpar seleção</button>
+          <button class="btn btn-danger btn-sm" onclick="finBulkExcluirSelecionados('cb')">🗑️ Excluir selecionados</button>
+        </div>
         <div class="card" style="padding:0;overflow:auto">
           <table>
             <thead><tr>
+              <th style="width:34px;text-align:center"><input type="checkbox" id="fin-cb-check-all" onclick="finBulkToggleTodos('cb', this.checked)" title="Selecionar todos"></th>
               <th>Data</th><th>Empresa</th><th>Descrição</th><th>Tipo Movimentação</th>
               <th>E/S</th><th>Saiu de</th><th>Entrou em</th>
               <th>Centro de Custo</th><th style="text-align:right">Valor</th>
