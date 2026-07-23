@@ -4399,6 +4399,19 @@ function _migrarConfigLembretes() {
 
 function _salvarLocal() {
   try {
+    // FIX v27 — o modulo Financeiro e declarado num bloco <script> POSTERIOR a
+    // esta funcao. Se _salvarLocal() rodar antes disso, finCRData/CP/CB ainda
+    // sao undefined e o JSON.stringify gravava vazio POR CIMA dos lancamentos
+    // ja salvos. Aqui so gravamos o financeiro quando ele realmente existe;
+    // caso contrario preservamos o que ja estava em 'gestcom_dados'.
+    var _fin = {};
+    var _prev = {};
+    try { _prev = JSON.parse(localStorage.getItem('gestcom_dados') || '{}') || {}; } catch(_) { _prev = {}; }
+    _fin.finCRData = (typeof finCRData !== 'undefined' && Array.isArray(finCRData)) ? finCRData : (_prev.finCRData || []);
+    _fin.finCPData = (typeof finCPData !== 'undefined' && Array.isArray(finCPData)) ? finCPData : (_prev.finCPData || []);
+    _fin.finCBData = (typeof finCBData !== 'undefined' && Array.isArray(finCBData)) ? finCBData : (_prev.finCBData || []);
+    _fin.cbTipos   = (typeof cbTipos   !== 'undefined' && Array.isArray(cbTipos))   ? cbTipos   : (_prev.cbTipos   || []);
+
     const payload = JSON.stringify({
       pedidos, orcamentos, orcamentosExcluidos, clientes, industrias, redes, comissoes_data,
       logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
@@ -4406,7 +4419,8 @@ function _salvarLocal() {
       configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
       ctrlSaldosData, ctrlSaldosHistorico,
       tarefasData, atasData, crmData, setoresCustom, contaCorrenteData, ccContas, ccContasCadastradas,
-      finCRData, finCPData, finCBData, cbTipos, modulosConfig, modulosCustom, userAcoes,
+      finCRData: _fin.finCRData, finCPData: _fin.finCPData, finCBData: _fin.finCBData, cbTipos: _fin.cbTipos,
+      modulosConfig, modulosCustom, userAcoes,
       _ts: Date.now()
     });
     localStorage.setItem('gestcom_dados', payload);
@@ -16764,7 +16778,8 @@ var ccContaSel = null;
 let modulosConfig = {};
 let modulosCustom = [];
 let userAcoes = {};
-var cbTipos = [];
+// FIX v27 — nao zerar cbTipos ja restaurado (mesmo bug do finCRData/CP/CB).
+var cbTipos = (typeof cbTipos !== 'undefined' && Array.isArray(cbTipos)) ? cbTipos : [];
 var CB_TIPOS_PADRAO = [
   {nome:'TRANSFERÊNCIA DE RECURSO',              es:'T'},
   {nome:'RETIRADA DE SÓCIO',                     es:'S'},
@@ -16862,8 +16877,12 @@ const LAUNCHER_PAINEL_DESTINO = {
   administracao:   'configuracoes',
 };
 
-var finCRData = [];
-var finContatos = [];
+// FIX v27 — NAO reinicializar com []: este bloco <script> roda DEPOIS de
+// _carregarLocal(), entao "var finCRData = []" apagava tudo que tinha sido
+// restaurado do localStorage. Era por isso que os dados sumiam ao voltar
+// ao Menu Principal. Mantem o valor ja existente, se houver.
+var finCRData = (typeof finCRData !== 'undefined' && Array.isArray(finCRData)) ? finCRData : [];
+var finContatos = (typeof finContatos !== 'undefined' && Array.isArray(finContatos)) ? finContatos : [];
 var finAbaAtiva = 'dashboard';
 var FIN_PORTADORES = ['CAIXA','NUBANK COMERCIAL','NUBANK EXECUÇÃO','INTER COMERCIAL','INTER EXECUÇÃO','SANTANDER'];
 var FIN_PORTADOR_COR = {
@@ -16934,8 +16953,9 @@ let _tarEditId = null;
 let _ataEditId = null;
 let _ataParticipantesSel = [];
 let _ataConvidadosExt = [];
-var finCPData = [];
-var finCBData = [];
+// FIX v27 — mesmo motivo do finCRData acima: nao zerar o que ja foi restaurado.
+var finCPData = (typeof finCPData !== 'undefined' && Array.isArray(finCPData)) ? finCPData : [];
+var finCBData = (typeof finCBData !== 'undefined' && Array.isArray(finCBData)) ? finCBData : [];
 var _setoresTmp = {};
 var _tarAnexosTmp = [];
 var _tarDragId = null;
@@ -18117,6 +18137,172 @@ function finRenderFluxo() {
   } catch(e) { console.warn('finRenderFluxo:', e); }
 }
 
+function finCalcDRE(ano, emp) {
+    // ─────────────────────────────────────────────────────────────────
+    // FIX v27 — DRE REESCRITO PARA ESPELHAR A PLANILHA (abas DRE 2025/2026)
+    //
+    // Tres erros do DRE anterior:
+    //  1) Filtrava despesas por codigo: r.classif.startsWith('3.5'). Mas o
+    //     campo 'classif' guarda o NOME ("FEIRA E EXPOSICAO"), nunca o codigo.
+    //     Resultado: NENHUMA despesa era encontrada e o DRE mostrava so receita.
+    //  2) Usava dataPagamento (regime de caixa). A planilha usa MES DESPESA /
+    //     MES RECEITA — competencia (APOIO MES (DRE) = MONTH(MES DESPESA)).
+    //  3) Faltavam CSP, desconto ao cliente, nao-operacional e impostos s/
+    //     resultado, entao EBITDA e Resultado Liquido saiam errados.
+    //
+    // Agora os grupos seguem exatamente as linhas da planilha e usam VALOR
+    // (nao vlrPagar/vlrReceber), como fazem os SUMIFS do Excel.
+    // ─────────────────────────────────────────────────────────────────
+
+    var meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var M = 12;
+
+    // Grupos por NOME da classificacao financeira (identicos a planilha)
+    var G_IMPOSTOS_FAT = ['COFINS - IMP. S/ RESULTADO OPERACIONAL',
+                          'SIMPLES NACIONAL / ISS - IMP. S/ SERVIÇO',
+                          'PIS - IMP. S/ RESULTADO OPERACIONAL'];
+    var G_CSP          = ['COMISSÕES DEVIDAS'];
+    var G_COMERCIAL    = ['DOAÇÃO / BONIFICAÇÃO / ATENDIMENTO','FEIRA E EXPOSIÇÃO',
+                          'PROPAGANDA E PUBLICIDADE','SITE E PLATAFORMA DIGITAL'];
+    var G_RH           = ['BENEFÍCIOS AO COLABORADOR','BONIFICAÇÃO E PREMIÇÃO',
+                          'CONTRIBUIÇÃO SINDICAL','ENCARGO SOCIAL',
+                          'LANCHE / REFEIÇÃO / CONFRATERNIZAÇÃO','MEDICINA DO TRABALHO',
+                          'RESCISÃO E MULTA','SALÁRIO / FÉRIAS / 13º',
+                          'TREINAMENTO E CONVÊNÇÃO','UNIFORME / EPI'];
+    var G_OPERAC       = ['ESTADIAS E ALIMENTAÇÃO OPERACIONAL','TRANSPORTE E LOGÍSTICA COMERCIAL',
+                          'TRANSPORTE E LOGÍSTICA OPERACIONAL','CONDOMÍNIO E ALUGUEL DE IMÓVEL',
+                          'ENERGIA E ÁGUA','IPTU E IPVA - IMPOSTO SOB BENS',
+                          'MANUTENÇÃO DE EQUIPAMENTOS MÉDICOS','MANUTENÇÃO DE MÓVEIS E UTENSÍLIOS',
+                          'MANUTENÇÃO DO IMÓVEL','MANUTENÇÃO EQUIPAMENTO ESTRUTURAL',
+                          'MATERIAL DE HIGIENE E LIMPEZA','SEGURO DE BENS'];
+    var G_ADMIN        = ['COMUNICAÇÃO E TI','CONSULTORIA E ASSESSORIA','JUDICIAL E CARTÓRIO',
+                          'MATERIAL DE ESCRITÓRIO',
+                          'SERVIÇO EXTERNO E POSTAL','TAXA DE CONVÊNIO E PARCERIA',
+                          'TAXA DE FISCALIZAÇÃO E LICENÇA'];
+    var G_IMP_RESULT   = ['CSLL - IMP. S/ RESULTADO LÍQUIDO','IRPJ - IMP. S/ RESULTADO LÍQUIDO'];
+    var G_NAO_OPER_D   = ['DESPESA NÃO OPERACIONAL'];
+
+    function _ym(v) {
+      if(!v) return null;
+      var p = String(v).split('-');
+      var a = parseInt(p[0]), m = parseInt(p[1]);
+      if(isNaN(a) || isNaN(m)) return null;
+      return [a, m];
+    }
+    function _empOk(r) {
+      return !emp || (r.empresa||'').toUpperCase() === emp;
+    }
+    // Despesas por COMPETENCIA (mesDespesa) — igual APOIO MES (DRE) da planilha
+    function sCP(nomes, mesIdx) {
+      var t = 0;
+      for(var i=0;i<finCPData.length;i++){
+        var r = finCPData[i];
+        if(!_empOk(r)) continue;
+        var c = _ym(r.mesDespesa || r.dataLanc);
+        if(!c || c[0]!==ano || c[1]!==(mesIdx+1)) continue;
+        if(nomes.indexOf((r.classif||'').trim()) === -1) continue;
+        t += (r.valor||0);
+      }
+      return t;
+    }
+    // Receitas por COMPETENCIA (mesReceita)
+    function sCR(tipos, mesIdx) {
+      var t = 0;
+      for(var i=0;i<finCRData.length;i++){
+        var r = finCRData[i];
+        if(!_empOk(r)) continue;
+        var c = _ym(r.mesReceita || r.dataLanc);
+        if(!c || c[0]!==ano || c[1]!==(mesIdx+1)) continue;
+        if(tipos.indexOf((r.tipo||'').trim()) === -1) continue;
+        t += (r.valor||0);
+      }
+      return t;
+    }
+    // Desconto ao cliente e juros: por mes de RECEBIMENTO (como na planilha)
+    function sCRcampo(campo, mesIdx) {
+      var t = 0;
+      for(var i=0;i<finCRData.length;i++){
+        var r = finCRData[i];
+        if(!_empOk(r)) continue;
+        var c = _ym(r.dataPagamento);
+        if(!c || c[0]!==ano || c[1]!==(mesIdx+1)) continue;
+        t += (r[campo]||0);
+      }
+      return t;
+    }
+    // Juros sob pagamentos atrasados: soma DESC/JUROS do CP por mes de PAGAMENTO
+    // (a planilha usa APOIO MES (PAGAMENTO), nao a classificacao financeira)
+    function sCPjuros(mesIdx) {
+      var t = 0;
+      for(var i=0;i<finCPData.length;i++){
+        var r = finCPData[i];
+        if(!_empOk(r)) continue;
+        var c = _ym(r.dataPagamento);
+        if(!c || c[0]!==ano || c[1]!==(mesIdx+1)) continue;
+        t += (r.descJuros||0);
+      }
+      return t;
+    }
+    function serie(fn){ var a=[]; for(var i=0;i<M;i++) a.push(fn(i)); return a; }
+    function soma(a,b){ var o=[]; for(var i=0;i<M;i++) o.push((a[i]||0)+(b[i]||0)); return o; }
+    function sub(a,b){ var o=[]; for(var i=0;i<M;i++) o.push((a[i]||0)-(b[i]||0)); return o; }
+    function acc(arr){ return arr.reduce(function(s,v){return s+v;},0); }
+
+    // ── 1. Faturamento ──
+    var rcComissao = serie(function(i){ return sCR(['COMISSÃO DE VENDAS'], i); });
+    var rcMerch    = serie(function(i){ return sCR(['SERVIÇOS MERCHANDISING'], i); });
+    var fat        = soma(rcComissao, rcMerch);
+
+    // ── 2. Impostos sobre faturamento ──
+    var impFat = serie(function(i){ return sCP(G_IMPOSTOS_FAT, i); });
+    var recLiq = sub(fat, impFat);
+
+    // ── 3. CSP ──
+    var csp      = serie(function(i){ return sCP(G_CSP, i); });
+    var lucroBru = sub(recLiq, csp);
+
+    // ── 4..7. Despesas operacionais ──
+    var descCliente = serie(function(i){ return sCRcampo('descontoFin', i); });
+    var comercial   = soma(descCliente, serie(function(i){ return sCP(G_COMERCIAL, i); }));
+    var rh          = serie(function(i){ return sCP(G_RH, i); });
+    var operac      = serie(function(i){ return sCP(G_OPERAC, i); });
+    var jurosAtraso = serie(function(i){ return sCPjuros(i); });
+    var admin       = soma(serie(function(i){ return sCP(G_ADMIN, i); }), jurosAtraso);
+
+    var ebitda = [];
+    for(var i=0;i<M;i++) ebitda.push(lucroBru[i]-comercial[i]-rh[i]-operac[i]-admin[i]);
+
+    // ── 8. Nao operacional ──
+    var rcNaoOper  = serie(function(i){ return sCR(['RECEITA NÃO OPERACIONAL'], i); });
+    var despNaoOper= serie(function(i){ return sCP(G_NAO_OPER_D, i); });
+    var naoOper    = sub(rcNaoOper, despNaoOper);
+
+    // ── 9. Operacoes financeiras (juros cobrados - juros pagos) ──
+    var jurosReceb = serie(function(i){ return sCRcampo('juros', i); });
+    var opFin      = jurosReceb;
+
+    // ── 10. Impostos sobre resultado ──
+    var impResult = serie(function(i){ return sCP(G_IMP_RESULT, i); });
+
+    // ── Resultado liquido ──
+    var resultado = [];
+    for(var i2=0;i2<M;i2++) resultado.push(ebitda[i2]+naoOper[i2]+opFin[i2]-impResult[i2]);
+
+    return {
+      ano: ano, emp: emp, meses: meses, M: M,
+      rcComissao: rcComissao, rcMerch: rcMerch, fat: fat,
+      impFat: impFat, recLiq: recLiq,
+      csp: csp, lucroBru: lucroBru,
+      descCliente: descCliente, comercial: comercial,
+      rh: rh, operac: operac,
+      admin: admin, jurosAtraso: jurosAtraso,
+      ebitda: ebitda,
+      rcNaoOper: rcNaoOper, despNaoOper: despNaoOper, naoOper: naoOper,
+      jurosReceb: jurosReceb, opFin: opFin,
+      impResult: impResult, resultado: resultado
+    };
+}
+
 function finRenderDRE() {
   try {
     var ano = parseInt((document.getElementById('fin-dre-ano')||{}).value||'2026');
@@ -18124,136 +18310,122 @@ function finRenderDRE() {
     var wrap = document.getElementById('fin-dre-wrap');
     if(!wrap) return;
 
-    var meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var D = finCalcDRE(ano, emp);
+    var meses = D.meses, M = D.M;
+    var rcComissao=D.rcComissao, rcMerch=D.rcMerch, fat=D.fat;
+    var impFat=D.impFat, recLiq=D.recLiq, csp=D.csp, lucroBru=D.lucroBru;
+    var descCliente=D.descCliente, comercial=D.comercial, rh=D.rh, operac=D.operac;
+    var admin=D.admin, jurosAtraso=D.jurosAtraso, ebitda=D.ebitda;
+    var rcNaoOper=D.rcNaoOper, despNaoOper=D.despNaoOper;
+    var jurosReceb=D.jurosReceb, impResult=D.impResult, resultado=D.resultado;
 
-    function calcCR(tipoReceita, mesIdx) {
-      return finCRData.filter(function(r){
-        if(emp && (r.empresa||'').toUpperCase()!==emp) return false;
-        var d = r.dataPagamento||r.dataLanc||''; if(!d) return false;
-        var p = d.split('-');
-        return parseInt(p[0])===ano && parseInt(p[1])===(mesIdx+1) && (!tipoReceita||r.tipo===tipoReceita);
-      }).reduce(function(s,r){return s+(r.vlrReceber||r.valor||0);},0);
+    function sub(a,b){ var o=[]; for(var i=0;i<M;i++) o.push((a[i]||0)-(b[i]||0)); return o; }
+    function acc(arr){ return arr.reduce(function(s,v){return s+v;},0); }
+
+    // ── Render ──
+    var colsIdx = []; for(var q=0;q<M;q++) colsIdx.push(q);
+
+    function cell(v, cor, bold, w) {
+      return '<div style="min-width:'+(w||72)+'px;text-align:right;padding:6px 5px;font-size:11px;color:'+cor+';font-weight:'+(bold?'700':'500')+'">'+(v!==0?fmt(v):'—')+'</div>';
     }
-
-    function calcCP(prefixo, mesIdx) {
-      return finCPData.filter(function(r){
-        if(emp && (r.empresa||'').toUpperCase()!==emp) return false;
-        var d = r.dataPagamento||r.dataLanc||''; if(!d) return false;
-        var p = d.split('-');
-        return parseInt(p[0])===ano && parseInt(p[1])===(mesIdx+1) && (r.classif||'').startsWith(prefixo);
-      }).reduce(function(s,r){return s+(r.vlrPagar||r.valor||0);},0);
-    }
-
-    // Calcular todos os valores mensais
-    var M = 12;
-    var fat = Array.from({length:M},function(_,i){ return calcCR(null,i); });
-    var rc13 = Array.from({length:M},function(_,i){ return calcCR('COMISSÃO DE VENDAS',i); });
-    var rc14 = Array.from({length:M},function(_,i){ return calcCR('SERVIÇOS MERCHANDISING',i); });
-    var rc12 = Array.from({length:M},function(_,i){ return calcCR('RECEITA NÃO OPERACIONAL',i); });
-    var d35  = Array.from({length:M},function(_,i){ return calcCP('3.5',i); });
-    var d33  = Array.from({length:M},function(_,i){ return calcCP('3.3',i); });
-    var d36  = Array.from({length:M},function(_,i){ return calcCP('3.6',i); });
-    var d34  = Array.from({length:M},function(_,i){ return calcCP('3.4',i); });
-    var d32  = Array.from({length:M},function(_,i){ return calcCP('3.2',i); });
-    var ebitda = Array.from({length:M},function(_,i){ return fat[i]-d35[i]-d33[i]-d36[i]-d34[i]-d32[i]; });
-    var resultado = Array.from({length:M},function(_,i){ return ebitda[i]; });
-
-    // Acumulado
-    function acc(arr) { return arr.reduce(function(s,v){return s+v;},0); }
-
-    // Montar HTML do DRE
-    // Colunas: até 4 meses + acumulado (para caber na tela)
-    var colsIdx = [0,1,2,3]; // Jan-Abr
-    var ncols = colsIdx.length;
-
     function dreRow(label, vals, tipo, indent) {
       var acum = acc(vals);
-      var cor = tipo==='pos'?'#1D9E75':tipo==='neg'?'#D85A30':tipo==='result'?(acum>=0?'#1D9E75':'#D85A30'):'var(--preto)';
-      var bg = tipo==='result'?'background:#EAF3DE;':'';
-      var sub = tipo==='sub'?'background:var(--cinza-medio);font-weight:600;':tipo==='result'?'background:#EAF3DE;font-weight:600;font-size:13px;':'';
-      var pad = indent ? 'padding-left:28px' : 'padding-left:14px';
-      var html = '<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--cinza-medio);'+sub+bg+'">';
-      html += '<div style="flex:1;'+pad+';padding:7px 0;font-size:12px;color:var(--preto)">'+label+'</div>';
+      var sub2 = tipo==='sub'?'background:var(--cinza-medio);font-weight:600;':tipo==='result'?'background:#EAF3DE;font-weight:600;':'';
+      var pad = indent ? 'padding-left:26px' : 'padding-left:12px';
+      var h = '<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--cinza-medio);'+sub2+'">';
+      h += '<div style="flex:1;min-width:230px;'+pad+';padding:6px 0;font-size:12px;color:var(--preto)">'+label+'</div>';
       colsIdx.forEach(function(i){
         var v = vals[i]||0;
         var vc = tipo==='pos'?'#1D9E75':tipo==='neg'?'#D85A30':tipo==='result'?(v>=0?'#1D9E75':'#D85A30'):'var(--preto)';
-        html += '<div style="min-width:80px;text-align:right;padding:7px 6px;font-size:11px;color:'+vc+';font-weight:'+(tipo==='sub'||tipo==='result'?'700':'500')+'">'+(v!==0?fmt(v):'—')+'</div>';
-        var pct = fat[i] > 0 ? (v/fat[i]*100) : 0;
-        html += '<div style="min-width:40px;text-align:right;padding:7px 4px;font-size:10px;color:var(--cinza-escuro)">'+(v!==0?pct.toFixed(0)+'%':'')+'</div>';
+        h += cell(v, vc, tipo==='sub'||tipo==='result');
       });
-      var av = acum;
-      var avc = tipo==='pos'?'#1D9E75':tipo==='neg'?'#D85A30':tipo==='result'?(av>=0?'#1D9E75':'#D85A30'):'var(--preto)';
-      html += '<div style="min-width:90px;text-align:right;padding:7px 10px;font-size:12px;color:'+avc+';font-weight:700">'+(av!==0?fmt(av):'—')+'</div>';
-      html += '</div>';
-      return html;
+      var avc = tipo==='pos'?'#1D9E75':tipo==='neg'?'#D85A30':tipo==='result'?(acum>=0?'#1D9E75':'#D85A30'):'var(--preto)';
+      h += '<div style="min-width:92px;text-align:right;padding:6px 10px;font-size:12px;color:'+avc+';font-weight:700;border-left:0.5px solid var(--cinza-medio)">'+(acum!==0?fmt(acum):'—')+'</div>';
+      h += '</div>';
+      return h;
     }
-
-    function dreGrp(label, total) {
-      return '<div style="background:#1a1a1a;color:#F5C500;padding:7px 14px;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between">'+
-        '<span>'+label+'</span>'+
-        (total!==undefined?'<span style="color:#aaa;font-size:10px">'+fmt(total)+'</span>':'')+
-        '</div>';
+    function dreGrp(label) {
+      return '<div style="background:#1a1a1a;color:#F5C500;padding:6px 12px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase">'+label+'</div>';
+    }
+    function dreTotal(label, vals, cor, bg) {
+      var acum = acc(vals);
+      var h = '<div style="background:'+bg+';display:flex;align-items:center;border-top:2px solid '+cor+'">';
+      h += '<div style="flex:1;min-width:230px;padding:9px 12px;font-size:12px;font-weight:700;color:'+cor+'">'+label+'</div>';
+      colsIdx.forEach(function(i){
+        var v=vals[i]||0;
+        h += '<div style="min-width:72px;text-align:right;padding:9px 5px;font-size:11px;font-weight:700;color:'+(v>=0?cor:'#D85A30')+'">'+(v!==0?fmt(v):'—')+'</div>';
+      });
+      h += '<div style="min-width:92px;text-align:right;padding:9px 10px;font-size:12px;font-weight:700;color:'+(acum>=0?cor:'#D85A30')+';border-left:0.5px solid rgba(0,0,0,.15)">'+fmt(acum)+'</div>';
+      h += '</div>';
+      return h;
     }
 
     var html = '';
-    // Cabeçalho
-    html += '<div style="background:#1a1a1a;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">';
-    html += '<div><div style="font-size:13px;font-weight:600;color:#F5C500">DRE — Demonstrativo de Resultado</div><div style="font-size:10px;color:#888;margin-top:2px">Competência · '+ano+' · '+((emp||'Consolidado'))+'</div></div>';
-    html += '<div style="display:flex;gap:0">';
-    colsIdx.forEach(function(i){ html += '<div style="min-width:80px;text-align:right;font-size:10px;color:#F5C500;font-weight:600;padding:0 6px">'+meses[i]+'</div><div style="min-width:40px;font-size:9px;color:#555;text-align:right">%</div>'; });
-    html += '<div style="min-width:90px;text-align:right;font-size:10px;color:#888;padding-right:10px">Acumulado</div></div></div>';
+    html += '<div style="overflow-x:auto">';
+    html += '<div style="min-width:1180px">';
 
-    html += dreGrp('1. Faturamento (receita bruta)');
-    html += dreRow('Comissão de vendas (1.1.3)', rc13, 'pos', true);
-    html += dreRow('Serviços merchandising (1.1.4)', rc14, 'pos', true);
-    html += dreRow('Receita não operacional (1.1.2)', rc12, 'pos', true);
-    html += dreRow('= Faturamento Total', fat, 'sub', false);
+    html += '<div style="background:#1a1a1a;padding:10px 12px;display:flex;align-items:center">';
+    html += '<div style="flex:1;min-width:230px"><div style="font-size:13px;font-weight:600;color:#F5C500">DRE — Demonstrativo de Resultado</div><div style="font-size:10px;color:#888;margin-top:2px">Competência · '+ano+' · '+(emp||'Consolidado')+'</div></div>';
+    colsIdx.forEach(function(i){ html += '<div style="min-width:72px;text-align:right;font-size:10px;color:#F5C500;font-weight:600;padding:0 5px">'+meses[i]+'</div>'; });
+    html += '<div style="min-width:92px;text-align:right;font-size:10px;color:#fff;padding-right:10px;font-weight:600">Acumulado</div>';
+    html += '</div>';
 
-    html += dreGrp('2. Impostos s/ Faturamento');
-    html += dreRow('COFINS / PIS / ISS / Simples (3.2.1/5/6)', d32, 'neg', true);
-    html += dreRow('= Receita Líquida', fat.map(function(v,i){return v-d32[i];}), 'sub', false);
+    html += dreGrp('1. Faturamento');
+    html += dreRow('Comissão de vendas', rcComissao, 'pos', true);
+    html += dreRow('Serviços merchandising', rcMerch, 'pos', true);
+    html += dreRow('= Faturamento', fat, 'sub', false);
+
+    html += dreGrp('2. Impostos sobre faturamento');
+    html += dreRow('COFINS / PIS / Simples Nacional / ISS', impFat, 'neg', true);
+    html += dreRow('= Receita Líquida', recLiq, 'sub', false);
 
     html += dreGrp('3. CSP — Custo dos Serviços Prestados');
-    html += dreRow('= Lucro Bruto', fat.map(function(v,i){return v-d32[i];}), 'sub', false);
+    html += dreRow('Comissões devidas', csp, 'neg', true);
+    html += dreRow('= Lucro Bruto', lucroBru, 'sub', false);
 
-    html += dreGrp('4. Comerciais e Marketing (3.5)');
-    html += dreRow('Comissões devidas, eventos, marketing (3.5.x)', d35, 'neg', true);
+    html += dreGrp('4. Comerciais e Marketing');
+    html += dreRow('Desconto ao cliente', descCliente, 'neg', true);
+    html += dreRow('Doação / feira / publicidade / plataforma', sub(comercial, descCliente), 'neg', true);
+    html += dreRow('= Total comerciais', comercial, 'sub', false);
 
-    html += dreGrp('5. Recursos Humanos (3.3)');
-    html += dreRow('Salários, encargos, benefícios (3.3.x)', d33, 'neg', true);
+    html += dreGrp('5. Recursos Humanos');
+    html += dreRow('Salários, encargos, benefícios, rescisões', rh, 'neg', true);
 
-    html += dreGrp('6. Operacionais e Estruturais (3.6)');
-    html += dreRow('Aluguel, contas, manutenção (3.6.x)', d36, 'neg', true);
+    html += dreGrp('6. Operacionais e Estruturais');
+    html += dreRow('Transporte, estadias, aluguel, energia, manutenção', operac, 'neg', true);
 
-    html += dreGrp('7. Administrativas e Jurídicas (3.4)');
-    html += dreRow('Contabilidade, jurídico, taxas (3.4.x)', d34, 'neg', true);
+    html += dreGrp('7. Administrativas e Jurídicas');
+    html += dreRow('Contabilidade, TI, taxas, jurídico', sub(admin, jurosAtraso), 'neg', true);
+    html += dreRow('Juros sob pagamentos atrasados', jurosAtraso, 'neg', true);
+    html += dreRow('= Total administrativas', admin, 'sub', false);
 
-    // EBITDA
-    html += '<div style="background:#1a1a1a;color:#F5C500;padding:7px 14px;font-size:11px;font-weight:600;letter-spacing:.6px;display:flex;border-top:2px solid #F5C500">';
-    html += '<span style="flex:1">= MARGEM EBITDA</span>';
-    colsIdx.forEach(function(i){ var v=ebitda[i]; html += '<div style="min-width:80px;text-align:right;color:#F5C500;font-size:12px;font-weight:700;padding:0 6px">'+fmt(v)+'</div><div style="min-width:40px;text-align:right;color:#888;font-size:10px">'+(fat[i]>0?(v/fat[i]*100).toFixed(0)+'%':'')+'</div>'; });
-    html += '<div style="min-width:90px;text-align:right;color:#F5C500;font-size:13px;font-weight:700;padding-right:10px">'+fmt(acc(ebitda))+'</div></div>';
+    html += dreTotal('= MARGEM EBITDA', ebitda, '#BA7517', '#FDF6E3');
 
-    html += dreGrp('8. Mov. Não Operacional + Op. Financeiras');
-    html += dreRow('Tarifa bancária, juros (2.1.x)', new Array(M).fill(0), 'neg', true);
+    html += dreGrp('8. Movimentação não operacional');
+    html += dreRow('Receita não operacional', rcNaoOper, 'pos', true);
+    html += dreRow('Despesa não operacional', despNaoOper, 'neg', true);
 
-    html += dreGrp('9. Depreciação + Impostos s/ Resultado');
-    html += dreRow('CSLL / IRPJ (3.2.2/4)', new Array(M).fill(0), 'neg', true);
+    html += dreGrp('9. Operações financeiras');
+    html += dreRow('Juros cobrados', jurosReceb, 'pos', true);
 
-    // Resultado líquido
-    html += '<div style="background:#EAF3DE;display:flex;align-items:center;border-top:2px solid #1D9E75">';
-    html += '<div style="flex:1;padding:10px 14px;font-size:13px;font-weight:700;color:#1D9E75">= Resultado Líquido</div>';
-    colsIdx.forEach(function(i){ var v=resultado[i]; html += '<div style="min-width:80px;text-align:right;color:'+(v>=0?'#1D9E75':'#D85A30')+';font-size:13px;font-weight:700;padding:10px 6px">'+fmt(v)+'</div><div style="min-width:40px;text-align:right;color:#1D9E75;font-size:10px;padding:10px 4px">'+(fat[i]>0?(v/fat[i]*100).toFixed(0)+'%':'')+'</div>'; });
-    html += '<div style="min-width:90px;text-align:right;color:#1D9E75;font-size:14px;font-weight:700;padding:10px">'+fmt(acc(resultado))+'</div></div>';
+    html += dreGrp('10. Impostos sobre resultado');
+    html += dreRow('CSLL / IRPJ', impResult, 'neg', true);
+
+    html += dreTotal('= RESULTADO LÍQUIDO', resultado, '#1D9E75', '#EAF3DE');
 
     // Indicadores
-    var acumFat = acc(fat); var acumRes = acc(resultado); var acumEbitda = acc(ebitda);
+    var aFat = acc(fat), aEb = acc(ebitda), aRes = acc(resultado);
     html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:0.5px solid var(--cinza-medio)">';
-    [[' Margem EBITDA',acumFat>0?(acumEbitda/acumFat*100).toFixed(1)+'%':'—','#BA7517'],['Resultado Líquido %',acumFat>0?(acumRes/acumFat*100).toFixed(1)+'%':'—','#1D9E75'],['Margem Contribuição',fmt(acumRes),'#1D9E75'],['Ponto de Equilíbrio','—','var(--preto)']].forEach(function(ind){
-      html += '<div style="padding:10px 14px;border-right:0.5px solid var(--cinza-medio)"><div style="font-size:10px;color:var(--cinza-escuro);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">'+ind[0]+'</div><div style="font-size:16px;font-weight:700;color:'+ind[2]+'">'+ind[1]+'</div></div>';
+    [['Faturamento acumulado', fmt(aFat), 'var(--preto)'],
+     ['Margem EBITDA', aFat>0?(aEb/aFat*100).toFixed(1)+'%':'—', '#BA7517'],
+     ['Resultado Líquido', fmt(aRes), aRes>=0?'#1D9E75':'#D85A30'],
+     ['Margem Líquida', aFat>0?(aRes/aFat*100).toFixed(1)+'%':'—', aRes>=0?'#1D9E75':'#D85A30']
+    ].forEach(function(ind){
+      html += '<div style="padding:10px 12px;border-right:0.5px solid var(--cinza-medio)"><div style="font-size:10px;color:var(--cinza-escuro);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">'+ind[0]+'</div><div style="font-size:15px;font-weight:700;color:'+ind[2]+'">'+ind[1]+'</div></div>';
     });
     html += '</div>';
 
+    html += '</div></div>';
     wrap.innerHTML = html;
   } catch(e) { console.warn('finRenderDRE:', e); }
 }
@@ -18630,7 +18802,132 @@ function finExportarAtivo() {
 
 function finExportarFluxo() { toast('Exportação em desenvolvimento'); }
 
-function finExportarDRE() { toast('Exportação em desenvolvimento'); }
+function finExportarDRE() {
+  // FIX v27 — antes esta funcao era apenas um aviso "Exportacao em
+  // desenvolvimento": o botao existia mas nada era gerado. Agora exporta
+  // o DRE completo (12 meses + acumulado) usando exatamente os mesmos
+  // numeros da tela, via finCalcDRE().
+  try {
+    if (typeof XLSX === 'undefined') {
+      toast('Biblioteca de Excel não carregou. Verifique sua conexão e recarregue a página.', 'error');
+      return;
+    }
+    var ano = parseInt((document.getElementById('fin-dre-ano')||{}).value||'2026');
+    var emp = (document.getElementById('fin-dre-empresa')||{}).value||'';
+    var D = finCalcDRE(ano, emp);
+    var M = D.M;
+
+    function acc(a){ return a.reduce(function(s,v){return s+(v||0);},0); }
+    function sub(a,b){ var o=[]; for(var i=0;i<M;i++) o.push((a[i]||0)-(b[i]||0)); return o; }
+    function r2(v){ return Math.round((v||0)*100)/100; }
+
+    var rows = [];
+    rows.push(['DRE — DEMONSTRATIVO DE RESULTADO']);
+    rows.push(['Empresa:', emp || 'Consolidado', '', 'Ano:', ano, '', 'Regime:', 'Competência']);
+    rows.push(['Gerado em:', new Date().toLocaleString('pt-BR')]);
+    rows.push([]);
+
+    var head = ['Linha'];
+    for (var i=0;i<M;i++) head.push(D.meses[i]);
+    head.push('Acumulado');
+    rows.push(head);
+
+    function linha(label, vals) {
+      var r = [label];
+      for (var i=0;i<M;i++) r.push(r2(vals[i]));
+      r.push(r2(acc(vals)));
+      rows.push(r);
+    }
+    function branco(){ rows.push([]); }
+
+    linha('1. FATURAMENTO', []);
+    linha('   Comissão de vendas', D.rcComissao);
+    linha('   Serviços merchandising', D.rcMerch);
+    linha('= Faturamento', D.fat);
+    branco();
+
+    linha('2. IMPOSTOS SOBRE FATURAMENTO', []);
+    linha('   COFINS / PIS / Simples Nacional / ISS', D.impFat);
+    linha('= Receita Líquida', D.recLiq);
+    branco();
+
+    linha('3. CSP — CUSTO DOS SERVIÇOS PRESTADOS', []);
+    linha('   Comissões devidas', D.csp);
+    linha('= Lucro Bruto', D.lucroBru);
+    branco();
+
+    linha('4. COMERCIAIS E MARKETING', []);
+    linha('   Desconto ao cliente', D.descCliente);
+    linha('   Doação / feira / publicidade / plataforma', sub(D.comercial, D.descCliente));
+    linha('= Total comerciais', D.comercial);
+    branco();
+
+    linha('5. RECURSOS HUMANOS', []);
+    linha('   Salários, encargos, benefícios, rescisões', D.rh);
+    branco();
+
+    linha('6. OPERACIONAIS E ESTRUTURAIS', []);
+    linha('   Transporte, estadias, aluguel, energia, manutenção', D.operac);
+    branco();
+
+    linha('7. ADMINISTRATIVAS E JURÍDICAS', []);
+    linha('   Contabilidade, TI, taxas, jurídico', sub(D.admin, D.jurosAtraso));
+    linha('   Juros sob pagamentos atrasados', D.jurosAtraso);
+    linha('= Total administrativas', D.admin);
+    branco();
+
+    linha('= MARGEM EBITDA', D.ebitda);
+    branco();
+
+    linha('8. MOVIMENTAÇÃO NÃO OPERACIONAL', []);
+    linha('   Receita não operacional', D.rcNaoOper);
+    linha('   Despesa não operacional', D.despNaoOper);
+    branco();
+
+    linha('9. OPERAÇÕES FINANCEIRAS', []);
+    linha('   Juros cobrados', D.jurosReceb);
+    branco();
+
+    linha('10. IMPOSTOS SOBRE RESULTADO', []);
+    linha('   CSLL / IRPJ', D.impResult);
+    branco();
+
+    linha('= RESULTADO LÍQUIDO', D.resultado);
+    branco();
+
+    var aFat = acc(D.fat), aEb = acc(D.ebitda), aRes = acc(D.resultado);
+    rows.push(['INDICADORES']);
+    rows.push(['Faturamento acumulado', r2(aFat)]);
+    rows.push(['Margem EBITDA (%)', aFat>0 ? r2(aEb/aFat*100) : 0]);
+    rows.push(['Resultado líquido acumulado', r2(aRes)]);
+    rows.push(['Margem líquida (%)', aFat>0 ? r2(aRes/aFat*100) : 0]);
+
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var cols = [{wch:46}];
+    for (var c=0;c<M;c++) cols.push({wch:13});
+    cols.push({wch:15});
+    ws['!cols'] = cols;
+
+    // formato numerico BR nas celulas de valor
+    var ref = XLSX.utils.decode_range(ws['!ref']);
+    for (var R=4; R<=ref.e.r; R++) {
+      for (var C=1; C<=M+1; C++) {
+        var addr = XLSX.utils.encode_cell({r:R,c:C});
+        var cell = ws[addr];
+        if (cell && typeof cell.v === 'number') cell.z = '#,##0.00';
+      }
+    }
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'DRE ' + ano);
+    var nome = 'DRE_' + ano + (emp ? '_' + emp.replace(/[^A-Za-zÀ-ÿ0-9]/g,'') : '_Consolidado') + '.xlsx';
+    XLSX.writeFile(wb, nome);
+    toast('✅ DRE exportado: ' + nome);
+  } catch(e) {
+    console.error('finExportarDRE:', e);
+    toast('Erro ao exportar o DRE: ' + (e && e.message ? e.message : 'erro desconhecido'), 'error');
+  }
+}
 
 function _finPodeExcluir() {
   // Só quem tem permissão de editar/excluir no financeiro
@@ -18780,16 +19077,39 @@ function finBulkExcluirSelecionados(mod) {
 }
 
 function finCarregarDados() {
+  // FIX v27 — existem DUAS gravacoes dos mesmos dados: as chaves dedicadas
+  // (gestcom_fin_cr/cp/cb) e o pacotao 'gestcom_dados'. Antes, se a chave
+  // dedicada estivesse vazia ou corrompida, o modulo abria zerado mesmo
+  // havendo dados bons no pacotao. Agora usamos a chave dedicada e, se ela
+  // nao trouxer nada, caimos no pacotao. Nunca sobrescrevemos com vazio.
+  function _lerLista(chaveDedicada, campoPacote, _prev) {
+    var out = null;
+    try {
+      var raw = localStorage.getItem(chaveDedicada);
+      if(raw) { var p = JSON.parse(raw); if(Array.isArray(p) && p.length) out = p; }
+    } catch(e) {}
+    if(!out && _prev && Array.isArray(_prev[campoPacote]) && _prev[campoPacote].length) {
+      out = _prev[campoPacote];
+    }
+    return out;
+  }
   try {
-    var cr = localStorage.getItem('gestcom_fin_cr');
-    var cp = localStorage.getItem('gestcom_fin_cp');
-    var cb = localStorage.getItem('gestcom_fin_cb');
-    if(cr) finCRData = JSON.parse(cr);
-    if(cp) finCPData = JSON.parse(cp);
-    if(cb) finCBData = JSON.parse(cb);
-    var ct = localStorage.getItem('gestcom_cb_tipos');
-    if(ct) cbTipos = JSON.parse(ct);
-  } catch(e) {}
+    var _prev = {};
+    try { _prev = JSON.parse(localStorage.getItem('gestcom_dados') || '{}') || {}; } catch(_) { _prev = {}; }
+
+    var _cr = _lerLista('gestcom_fin_cr',   'finCRData', _prev);
+    var _cp = _lerLista('gestcom_fin_cp',   'finCPData', _prev);
+    var _cb = _lerLista('gestcom_fin_cb',   'finCBData', _prev);
+    var _ct = _lerLista('gestcom_cb_tipos', 'cbTipos',   _prev);
+
+    if(_cr) finCRData = _cr;
+    if(_cp) finCPData = _cp;
+    if(_cb) finCBData = _cb;
+    if(_ct) cbTipos   = _ct;
+
+    // Garante que as duas gravacoes voltem a ficar iguais.
+    if((_cr || _cp || _cb || _ct) && typeof finSalvarDados === 'function') finSalvarDados();
+  } catch(e) { console.warn('finCarregarDados:', e); }
 }
 
 
@@ -18842,6 +19162,9 @@ function finCargaPlanilha() {
   });
 
   var ok = finSalvarDados();
+  // FIX v27 — grava tambem no pacotao 'gestcom_dados', senao a proxima
+  // restauracao geral podia sobrescrever a carga com o conteudo antigo.
+  try { if (typeof _salvarLocal === 'function') _salvarLocal(); } catch(e) {}
 
   ['finRenderCR','finRenderCP','finRenderCB','finRenderExtrato','finRenderDashboard']
     .forEach(function(f) { if (typeof window[f] === 'function') { try { window[f](); } catch(e) {} } });
@@ -18872,6 +19195,10 @@ function finSalvarDados() {
     localStorage.setItem('gestcom_fin_cp', JSON.stringify(finCPData));
     localStorage.setItem('gestcom_fin_cb', JSON.stringify(finCBData));
     localStorage.setItem('gestcom_cb_tipos', JSON.stringify(cbTipos));
+    // FIX v27 — espelha no pacotao 'gestcom_dados'. Antes as duas gravacoes
+    // viviam separadas e podiam divergir, fazendo o financeiro "voltar" a um
+    // estado antigo (ou vazio) dependendo de qual fosse lida primeiro.
+    try { if (typeof _salvarLocal === 'function') _salvarLocal(); } catch(e) {}
     return true;
   } catch(e) {
     // NÃO engolir o erro: se o navegador recusou a gravação (cota cheia,
