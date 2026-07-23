@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -17288,6 +17287,21 @@ function finMostrarAba(aba, btnEl) {
   }
   document.querySelectorAll('#fin-tabs .tab').forEach(function(t){ t.classList.remove('active'); });
   if(btnEl) btnEl.classList.add('active');
+
+  // O filtro de mês não se aplica às visões anuais (Fluxo/DRE) nem à Config
+  try {
+    finPopularMeses();
+    var anual = (aba === 'fluxo' || aba === 'dre' || aba === 'config');
+    ['fin-mes-filtro'].forEach(function(id){
+      var e = document.getElementById(id);
+      if(e) e.style.display = anual ? 'none' : '';
+    });
+    document.querySelectorAll('#fin-toolbar .fin-mes-nav').forEach(function(b){
+      b.style.display = anual ? 'none' : '';
+    });
+    finAtualizarBadgeMes();
+  } catch(e) {}
+
   if(aba === 'dashboard') finRenderDashboard();
   else if(aba === 'cr') finRenderCR();
   else if(aba === 'cp') finRenderCP();
@@ -17298,6 +17312,7 @@ function finMostrarAba(aba, btnEl) {
 }
 
 function finRenderAtivo() {
+  try { finPopularMeses(); finAtualizarBadgeMes(); } catch(e) {}
   if(finAbaAtiva === 'dashboard') finRenderDashboard();
   else if(finAbaAtiva === 'cr') finRenderCR();
   else if(finAbaAtiva === 'cp') finRenderCP();
@@ -17311,6 +17326,131 @@ function finRenderAtivo() {
 function finEmpFiltro() {
   var s = document.getElementById('fin-empresa-filtro');
   return s ? s.value : '';
+}
+
+/* ═══════════════ FILTRO MÊS A MÊS ═══════════════ */
+var FIN_MESES_NOME = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function finMesFiltro() {
+  var s = document.getElementById('fin-mes-filtro');
+  return s ? s.value : '';
+}
+
+function finMesLabel(ym) {
+  if(!ym || ym.length < 7) return ym||'';
+  var a = ym.substring(0,4), m = parseInt(ym.substring(5,7),10);
+  return (FIN_MESES_NOME[m-1]||'?') + '/' + a;
+}
+
+/* Extrai o mês (AAAA-MM) de competência de um registro.
+   Prioridade: mês informado > data de baixa > vencimento > data lançamento. */
+function finMesDoRegistro(r) {
+  if(!r) return '';
+  var mes = r.mesReceita || r.mesDespesa || '';
+  if(mes) {
+    var m = String(mes).trim();
+    if(/^\d{4}-\d{2}/.test(m)) return m.substring(0,7);
+    // formatos tipo "01/2026", "1/2026", "jan/26"
+    var br = m.match(/^(\d{1,2})[\/\-](\d{4})$/);
+    if(br) return br[2] + '-' + String(br[1]).padStart(2,'0');
+    var br2 = m.match(/^(\d{4})[\/\-](\d{1,2})$/);
+    if(br2) return br2[1] + '-' + String(br2[2]).padStart(2,'0');
+  }
+  var d = r.dataPagamento || r.dataQuit || r.vencimento || r.dataLanc || r.data || '';
+  return d ? String(d).substring(0,7) : '';
+}
+
+/* Aplica o filtro de mês a uma lista qualquer de lançamentos */
+function finFiltrarMes(arr) {
+  var mes = finMesFiltro();
+  if(!mes) return arr;
+  return arr.filter(function(r){ return finMesDoRegistro(r) === mes; });
+}
+
+/* Monta as opções do select com todos os meses existentes nos dados */
+function finPopularMeses() {
+  var sel = document.getElementById('fin-mes-filtro');
+  if(!sel) return;
+  var atual = sel.value;
+  var set = {};
+  [].concat(
+    (typeof finCRData !== 'undefined' && finCRData) ? finCRData : [],
+    (typeof finCPData !== 'undefined' && finCPData) ? finCPData : [],
+    (typeof finCBData !== 'undefined' && finCBData) ? finCBData : []
+  ).forEach(function(r){
+    var m = finMesDoRegistro(r);
+    if(m && /^\d{4}-\d{2}$/.test(m)) set[m] = true;
+  });
+  // Garante o mês corrente na lista
+  var hoje = new Date();
+  set[hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')] = true;
+
+  var meses = Object.keys(set).sort().reverse();
+  var html = '<option value="">📅 Todos os meses</option>';
+  var anoAtual = '';
+  meses.forEach(function(m){
+    var ano = m.substring(0,4);
+    if(ano !== anoAtual) {
+      if(anoAtual) html += '</optgroup>';
+      html += '<optgroup label="'+ano+'">';
+      anoAtual = ano;
+    }
+    html += '<option value="'+m+'">'+finMesLabel(m)+'</option>';
+  });
+  if(anoAtual) html += '</optgroup>';
+  sel.innerHTML = html;
+  // Restaura seleção anterior se ainda existir
+  if(atual && meses.indexOf(atual) !== -1) sel.value = atual;
+  else if(atual) sel.value = '';
+}
+
+function finMesShift(delta) {
+  var sel = document.getElementById('fin-mes-filtro');
+  if(!sel) return;
+  var base = sel.value;
+  if(!base) {
+    var h = new Date();
+    base = h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+  }
+  var ano = parseInt(base.substring(0,4),10);
+  var mes = parseInt(base.substring(5,7),10) - 1 + delta;
+  ano += Math.floor(mes/12);
+  mes = ((mes % 12) + 12) % 12;
+  var novo = ano + '-' + String(mes+1).padStart(2,'0');
+  // Se o mês não existir nas opções, cria-o para permitir navegação livre
+  if(!Array.prototype.some.call(sel.options, function(o){ return o.value === novo; })) {
+    var opt = document.createElement('option');
+    opt.value = novo; opt.textContent = finMesLabel(novo);
+    sel.appendChild(opt);
+  }
+  sel.value = novo;
+  finRenderAtivo();
+}
+function finMesAnterior() { finMesShift(-1); }
+function finMesProximo()  { finMesShift(1); }
+function finMesHoje() {
+  var sel = document.getElementById('fin-mes-filtro');
+  if(!sel) return;
+  var h = new Date();
+  var m = h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+  if(!Array.prototype.some.call(sel.options, function(o){ return o.value === m; })) {
+    var opt = document.createElement('option');
+    opt.value = m; opt.textContent = finMesLabel(m);
+    sel.appendChild(opt);
+  }
+  sel.value = m;
+  finRenderAtivo();
+}
+
+/* Atualiza o badge do topo mostrando o filtro ativo */
+function finAtualizarBadgeMes() {
+  var b = document.getElementById('mod-fin-badge');
+  if(!b) return;
+  var mes = finMesFiltro(), emp = finEmpFiltro();
+  var partes = [];
+  if(emp) partes.push(emp === 'EXECUÇÃO' ? 'Execução' : 'Comercial');
+  partes.push(mes ? finMesLabel(mes) : 'Todos os meses');
+  b.textContent = partes.join(' · ');
 }
 
 function finFiltrarEmp(arr) {
@@ -17346,10 +17486,13 @@ function finRenderDashboard() {
     var emp = finEmpFiltro();
     var cr = emp ? finCRData.filter(function(r){return (r.empresa||'').toUpperCase()===emp;}) : finCRData;
     var cp = emp ? finCPData.filter(function(r){return (r.empresa||'').toUpperCase()===emp;}) : finCPData;
+    cr = finFiltrarMes(cr);
+    cp = finFiltrarMes(cp);
 
     var hoje = new Date(); hoje.setHours(0,0,0,0);
     var d7 = new Date(hoje); d7.setDate(d7.getDate()+7);
-    var mesAtual = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+    // Quando há filtro de mês, o "Resultado do Mês" segue o mês escolhido
+    var mesAtual = finMesFiltro() || (hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0'));
 
     var totalReceber = cr.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento) !== 'Recebido'; }).reduce(function(s,r){ return s+(r.vlrReceber||r.valor||0); },0);
     var vencidasCR = cr.filter(function(r){ return finGetStatus(r.vencimento, r.dataPagamento) === 'Vencido'; }).length;
@@ -17388,6 +17531,8 @@ function finRenderDashboard() {
     var saidas   = cp.filter(function(r){ return r.dataPagamento && r.dataPagamento.substring(0,7)===mesAtual; }).reduce(function(s,r){ return s+(r.vlrPagar||r.valor||0); },0);
     if(el('fin-dash-resultado')) el('fin-dash-resultado').textContent = fmt(entradas - saidas);
     if(el('fin-dash-resultado-sub')) el('fin-dash-resultado-sub').textContent = 'Entradas ' + fmt(entradas) + ' − Saídas ' + fmt(saidas);
+    var lblRes = el('fin-dash-resultado-label');
+    if(lblRes) lblRes.textContent = 'Resultado · ' + finMesLabel(mesAtual);
 
     // Próximos vencimentos
     var prox = el('fin-proximos-vcto');
@@ -17463,11 +17608,13 @@ function finRenderCR() {
     var tipoFilt = (document.getElementById('fin-cr-tipo')||{}).value||'';
     var emp = finEmpFiltro();
     var hoje = new Date(); hoje.setHours(0,0,0,0);
-    var mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+    var mesFilt = finMesFiltro();
+    var mesAtual = mesFilt || (hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0'));
     var d30 = new Date(hoje); d30.setDate(d30.getDate()+30);
 
     var list = finCRData.filter(function(r){
       if(emp && (r.empresa||'').toUpperCase() !== emp) return false;
+      if(mesFilt && finMesDoRegistro(r) !== mesFilt) return false;
       if(busca && !(r.cliente||'').toLowerCase().includes(busca) && !(r.descricao||'').toLowerCase().includes(busca)) return false;
       var st = finGetStatus(r.vencimento, r.dataPagamento);
       if(stFilt && st !== stFilt) return false;
@@ -17631,11 +17778,13 @@ function finRenderCP() {
     var classif = (document.getElementById('fin-cp-classif')||{}).value||'';
     var emp = finEmpFiltro();
     var hoje = new Date(); hoje.setHours(0,0,0,0);
-    var mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+    var mesFilt = finMesFiltro();
+    var mesAtual = mesFilt || (hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0'));
     var d30 = new Date(hoje); d30.setDate(d30.getDate()+30);
 
     var list = finCPData.filter(function(r){
       if(emp && (r.empresa||'').toUpperCase() !== emp) return false;
+      if(mesFilt && finMesDoRegistro(r) !== mesFilt) return false;
       if(busca && !(r.fornecedor||'').toLowerCase().includes(busca) && !(r.descricao||'').toLowerCase().includes(busca)) return false;
       var st = finGetStatus(r.vencimento, r.dataPagamento);
       if(stFilt === 'Pago' && st !== 'Pago') return false;
@@ -17717,8 +17866,10 @@ function finRenderCB() {
     var tipoFilt = (document.getElementById('fin-cb-tipo')||{}).value||'';
     var emp = finEmpFiltro();
 
+    var mesFilt = finMesFiltro();
     var list = finCBData.filter(function(r){
       if(emp && (r.empresa||'').toUpperCase() !== emp) return false;
+      if(mesFilt && finMesDoRegistro(r) !== mesFilt) return false;
       if(busca && !(r.descricao||'').toLowerCase().includes(busca) && !(r.saiu||'').toLowerCase().includes(busca) && !(r.entrou||'').toLowerCase().includes(busca)) return false;
       if(tipoFilt && r.tipo !== tipoFilt) return false;
       return true;
@@ -17813,11 +17964,21 @@ function finRenderExtrato() {
     });
     movs.sort(function(a,b){ return b.data.localeCompare(a.data); });
 
+    // Saldo acumulado real do banco (considera TODAS as movimentações)
     var saldoAcum = finCalcSaldoBanco(banco);
+
+    // Filtro de mês: desconta as movimentações posteriores ao mês escolhido
+    // para que o saldo exibido seja o saldo ao final daquele mês.
+    var mesFiltE = finMesFiltro();
+    if(mesFiltE) {
+      movs.filter(function(m){ return (m.data||'').substring(0,7) > mesFiltE; })
+          .forEach(function(m){ saldoAcum -= m.entrada; saldoAcum += m.saida; });
+      movs = movs.filter(function(m){ return (m.data||'').substring(0,7) === mesFiltE; });
+    }
     var tbody = document.getElementById('fin-extrato-tbody');
     if(!tbody) return;
     if(movs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhuma movimentação registrada para este banco.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--cinza-escuro);padding:24px">Nenhuma movimentação registrada para este banco'+(mesFiltE?' em <strong>'+finMesLabel(mesFiltE)+'</strong>':'')+'.</td></tr>';
       return;
     }
     tbody.innerHTML = '';
@@ -19307,6 +19468,8 @@ function _entrarNoModulo() {
         if(typeof finMostrarAbaConfig === 'function') finMostrarAbaConfig();
         if(typeof cbPopularSelectsTipo === 'function') cbPopularSelectsTipo();
         setTimeout(function(){
+          if(typeof finPopularMeses === 'function') finPopularMeses();
+          if(typeof finAtualizarBadgeMes === 'function') finAtualizarBadgeMes();
           if(typeof renderFinanceiroPainel === 'function') renderFinanceiroPainel();
           if(typeof finRenderDashboard === 'function') finRenderDashboard();
         }, 100);
@@ -19416,6 +19579,8 @@ function abrirModuloSeparado(key) {
     try { finCarregarDados(); } catch(e) {}
     if (typeof finMostrarAbaConfig === 'function') finMostrarAbaConfig();
     if (typeof cbPopularSelectsTipo === 'function') cbPopularSelectsTipo();
+    if (typeof finPopularMeses === 'function') finPopularMeses();
+    if (typeof finAtualizarBadgeMes === 'function') finAtualizarBadgeMes();
     if (typeof renderFinanceiroPainel === 'function') renderFinanceiroPainel();
     if (typeof finRenderDashboard === 'function') finRenderDashboard();
   }
@@ -23048,6 +23213,12 @@ function _avisarTarefaConcluida(t) {
             <option value="COMERCIAL">Comercial</option>
             <option value="EXECUÇÃO">Execução</option>
           </select>
+          <select id="fin-mes-filtro" onchange="finRenderAtivo()" title="Filtrar por mês de competência" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;outline:none;min-width:150px">
+            <option value="">📅 Todos os meses</option>
+          </select>
+          <button class="btn btn-outline btn-sm fin-mes-nav" onclick="finMesAnterior()" title="Mês anterior">‹</button>
+          <button class="btn btn-outline btn-sm fin-mes-nav" onclick="finMesProximo()" title="Próximo mês">›</button>
+          <button class="btn btn-outline btn-sm fin-mes-nav" onclick="finMesHoje()" title="Ir para o mês atual">Mês atual</button>
           <button class="btn btn-outline btn-sm" onclick="finAbrirImportar()">📥 Importar</button>
           <button class="btn btn-info btn-sm" onclick="finExportarAtivo()">📤 Exportar</button>
           <button class="btn btn-primary btn-sm" onclick="finNovoLancamento()">+ Novo Lançamento</button>
@@ -23072,7 +23243,7 @@ function _avisarTarefaConcluida(t) {
           <div class="kpi-card kpi-verde"><div class="kpi-label">A Receber</div><div class="kpi-value gc-val" id="fin-dash-receber">R$ 0</div><div class="kpi-sub" id="fin-dash-receber-sub">0 vencidas</div></div>
           <div class="kpi-card kpi-vermelho"><div class="kpi-label">A Pagar</div><div class="kpi-value gc-val" id="fin-dash-pagar">R$ 0</div><div class="kpi-sub" id="fin-dash-pagar-sub">0 vencidas</div></div>
           <div class="kpi-card kpi-azul"><div class="kpi-label">Saldo Consolidado</div><div class="kpi-value gc-val" id="fin-dash-saldo">R$ 0</div><div class="kpi-sub" id="fin-dash-portadores">5 portadores</div></div>
-          <div class="kpi-card kpi-amarelo"><div class="kpi-label">Resultado do Mês</div><div class="kpi-value gc-val" id="fin-dash-resultado">R$ 0</div><div class="kpi-sub" id="fin-dash-resultado-sub">Entradas − Saídas</div></div>
+          <div class="kpi-card kpi-amarelo"><div class="kpi-label" id="fin-dash-resultado-label">Resultado do Mês</div><div class="kpi-value gc-val" id="fin-dash-resultado">R$ 0</div><div class="kpi-sub" id="fin-dash-resultado-sub">Entradas − Saídas</div></div>
         </div>
 
         <div style="font-size:11px;font-weight:600;color:var(--cinza-escuro);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Saldo por Portador</div>
