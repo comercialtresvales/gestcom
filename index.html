@@ -88,6 +88,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cinza);color:var(--preto)
 
 /* KPIs */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi-grid-3{grid-template-columns:repeat(3,1fr);}
 .kpi-card{background:#fff;border:1px solid var(--cinza-medio);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
 .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .kpi-amarelo::after{background:var(--amarelo)}.kpi-verde::after{background:var(--verde)}.kpi-azul::after{background:var(--azul)}.kpi-vermelho::after{background:var(--vermelho)}.kpi-roxo::after{background:var(--roxo)}
@@ -1458,10 +1459,8 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="ped-filtro-status" onchange="renderPedidos()">
           <option value="">Todos os status</option>
-          <option>Recebido</option><option>Em digitação</option><option>Implantado</option>
-          <option>Faturado parcial</option><option>Faturado total</option><option>Expedido</option>
-          <option>Agendado</option><option>Entregue</option><option>Cancelado</option>
-          <option>Excluído</option>
+          <option>Implantado</option><option>Faturado total</option>
+          <option>Cancelado</option><option>Excluído</option>
         </select>
         <select id="ped-filtro-ind" onchange="renderPedidos()">
           <option value="">Todas as indústrias</option>
@@ -1491,7 +1490,12 @@ tr:last-child td{border-bottom:none;}
           <button class="btn btn-primary btn-sm" onclick="nfSetModo('pedido');popularSelectsDinamicos();openModal('modal-nf')">+ Registrar NF</button>
         </div>
       </div>
-      <div class="alert alert-info">ℹ️ O <strong>valor líquido da NF</strong> (após todos os abatimentos) é a base de cálculo das comissões. NFD, bonificações sem comissão e devoluções reduzem a base.</div>
+      <div class="alert alert-info">ℹ️ O <strong>valor líquido da NF</strong> (após todos os abatimentos) é a base de cálculo das comissões. NFD, bonificações sem comissão e devoluções reduzem a base.<br>
+      🛒 <strong>Venda</strong> e 🎁 <strong>Bonificação</strong> aparecem separados nos indicadores, na coluna <strong>Tipo</strong> e no quadro <strong>mês a mês</strong> no fim da página.</div>
+
+      <!-- KPIs: faturado de VENDA x faturado de BONIFICAÇÃO -->
+      <div class="kpi-grid" id="fat-kpi-grid" style="margin-bottom:16px"></div>
+
       <div class="month-pills">
         <button class="month-pill active" onclick="filtrarFatMes('',this)">Todos</button>
         <button class="month-pill" onclick="filtrarFatMes('2026-01',this)">Jan/26</button>
@@ -1517,6 +1521,11 @@ tr:last-child td{border-bottom:none;}
           <option value="">Todas as indústrias</option>
           
         </select>
+        <select id="fat-filtro-tipo" onchange="renderFaturamento()">
+          <option value="">Venda + Bonificação</option>
+          <option value="venda">🛒 Somente Vendas</option>
+          <option value="bonificacao">🎁 Somente Bonificações</option>
+        </select>
         <select id="fat-filtro-status" onchange="renderFaturamento()">
           <option value="">Todos os status</option>
           <option value="bonif">Com Bonificação</option><option value="normal">Sem Bonificação</option>
@@ -1524,9 +1533,46 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>NF</th><th>Pedido</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Val. Pedido</th><th>Val. NF</th><th>Abatimentos</th><th>Devoluções</th><th>Desc. Fin.</th><th>NFD</th><th>Bonif. s/ Com.</th><th class="bold">NF Líquida</th><th>Ações</th></tr></thead>
+          <thead><tr><th>NF</th><th>Pedido</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Val. Pedido</th><th>Val. NF</th><th>Abatimentos</th><th>Devoluções</th><th>Desc. Fin.</th><th>NFD</th><th>Bonif. s/ Com.</th><th class="bold">NF Líquida</th><th>Ações</th></tr></thead>
           <tbody id="fat-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- ===== FATURADO MÊS A MÊS: VENDA x BONIFICAÇÃO ===== -->
+      <div class="card" style="margin-top:18px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <div class="card-title">📅 Faturado Mês a Mês — Venda × Bonificação</div>
+            <div style="font-size:11px;color:#888;margin-top:3px">
+              Acompanha os filtros de <strong>cliente</strong>, <strong>indústria</strong> e <strong>tipo</strong>. Não é afetado pelo filtro de mês acima.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="fat-resumo-ano" onchange="renderFatResumoMensal()"
+              style="padding:5px 9px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff"></select>
+            <button class="btn btn-info btn-sm" onclick="exportarFatResumoMensal()">📤 Exportar</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Mês</th>
+              <th style="text-align:right">NFs Venda</th>
+              <th style="text-align:right">Venda — Bruto</th>
+              <th style="text-align:right" class="bold">Venda — Líquido</th>
+              <th style="text-align:right">NFs Bonif.</th>
+              <th style="text-align:right" class="bold">Bonificação</th>
+              <th style="text-align:right">Total Faturado</th>
+              <th style="text-align:right">% Bonif.</th>
+            </tr></thead>
+            <tbody id="fat-resumo-tbody"></tbody>
+          </table>
+        </div>
+        <div style="font-size:10.5px;color:#999;margin-top:10px;line-height:1.6">
+          <strong>Venda — Bruto:</strong> valor cheio da NF de venda ·
+          <strong>Venda — Líquido:</strong> valor da NF de venda após abatimentos, devoluções, desconto financeiro, NFD e bonificação sem comissão (é a base da comissão) ·
+          <strong>Bonificação:</strong> NFs de pedidos do tipo bonificação + a parcela "Bonif. s/ Comissão" lançada dentro das NFs de venda.
+        </div>
       </div>
     </div>
 
@@ -1575,9 +1621,8 @@ tr:last-child td{border-bottom:none;}
         </select>
         <select id="log-filtro-status" onchange="renderLogistica()">
           <option value="">Todos os status</option>
-          <option>Pedido Digitado</option><option>Pedido Enviado</option><option>Em Separação</option>
-          <option>Faturado</option><option>Aguardando Coleta</option><option>Em Transporte</option>
-          <option>Entregue</option><option>Finalizado</option><option>Cancelado</option>
+          <option>Pedido Digitado</option><option>Faturado</option><option>Em Transporte</option>
+          <option>Entregue</option><option>Cancelado</option>
         </select>
         <select id="log-filtro-ind" onchange="renderLogistica()">
           <option value="">Todas as indústrias</option>
@@ -1589,13 +1634,13 @@ tr:last-child td{border-bottom:none;}
           <option value="hoje">📅 Entrega hoje</option>
         </select>
       </div>
-      <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>transportadora, previsão, data de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo. Pedidos com previsão vencida e não entregues aparecem destacados em vermelho.</div>
+      <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>previsão, data de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo. Pedidos com previsão vencida e não entregues aparecem destacados em vermelho.</div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-wrap">
           <table>
             <thead><tr>
               <th>Pedido</th><th>Nº Ped. Cliente</th><th>NF</th><th>Cliente</th><th>Indústria</th><th>Data</th>
-              <th>Transportadora</th><th>Previsão Entrega</th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
+              <th>Previsão Entrega</th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
             </tr></thead>
             <tbody id="log-tbody"></tbody>
           </table>
@@ -1863,6 +1908,7 @@ tr:last-child td{border-bottom:none;}
         <div><div class="section-title">Controle de Comissões</div><div class="section-sub">Valor previsto × valor efetivamente recebido · suporte a parcelas</div></div>
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
+          <button class="btn btn-success btn-sm" onclick="abrirComExtra()" title="Lançar uma premiação recebida da indústria ou um desconto aplicado sobre a comissão">🏆 Premiação / Desconto</button>
           <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão de todas as comissões conforme Regras Comerciais e cadastro de indústrias">🔄 Recalcular % + Tipo</button>
           <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
           <button class="btn btn-success btn-sm" onclick="recalcularMesPrevisaoTodasComissoes()" title="Recalcula apenas o mês de previsão — corrige DPC, DDL e outros prazos que não eram reconhecidos como número">📅 Corrigir Mês (DPC/DDL)</button>
@@ -1902,6 +1948,9 @@ tr:last-child td{border-bottom:none;}
         <div class="kpi-card kpi-azul"><div class="kpi-label">A Receber</div><div class="kpi-value" id="ckpi4">R$ 0</div></div>
       </div>
 
+      <!-- KPIs de premiações e descontos avulsos -->
+      <div class="kpi-grid kpi-grid-3" id="com-extra-kpis" style="margin-bottom:14px"></div>
+
       <!-- Barra de seleção em massa -->
       <div id="com-bulk-bar" style="display:none;align-items:center;gap:12px;background:var(--amarelo-claro);border:1.5px solid var(--amarelo);border-radius:8px;padding:8px 14px;margin-bottom:10px">
         <span id="com-bulk-count" style="font-weight:600;font-size:13px">0 selecionada(s)</span>
@@ -1931,6 +1980,34 @@ tr:last-child td{border-bottom:none;}
           </tr></thead>
           <tbody id="com-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- ===== PREMIAÇÕES E DESCONTOS (lançamentos avulsos) ===== -->
+      <div class="card" style="margin-top:18px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <div class="card-title">🏆 Premiações e Descontos</div>
+            <div style="font-size:11px;color:#888;margin-top:3px">
+              Lançamentos avulsos por indústria, sem vínculo com pedido ou NF. A premiação
+              <strong style="color:var(--verde)">soma</strong> e o desconto
+              <strong style="color:var(--vermelho)">abate</strong> nos totais de comissão acima.
+              Acompanha os filtros de indústria e mês.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-success btn-sm" onclick="abrirComExtra()">+ Novo lançamento</button>
+            <button class="btn btn-info btn-sm" onclick="exportarComExtras()">📤 Exportar</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Tipo</th><th>Indústria</th><th>Cliente</th><th>Descrição</th>
+              <th>Mês</th><th>Data</th><th style="text-align:right">Valor</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="com-extra-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -2909,7 +2986,7 @@ tr:last-child td{border-bottom:none;}
         </select>
       </div>
       <div class="form-group"><label>Status</label>
-        <select id="ped-status"><option>Recebido</option><option>Em digitação</option><option>Implantado</option><option>Faturado parcial</option><option>Faturado total</option><option>Expedido</option><option>Agendado</option><option>Entregue</option><option>Cancelado</option></select>
+        <select id="ped-status"><option>Implantado</option><option>Faturado total</option><option>Cancelado</option><option>Excluído</option></select>
       </div>
       <div class="form-group"><label>Orçamento de origem (opcional)</label><input type="text" id="ped-orc-origem" placeholder="ORC-0001"></div>
     </div>
@@ -3478,6 +3555,58 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 
+<!-- ===== MODAL PREMIAÇÃO / DESCONTO ===== -->
+<div class="modal-bg" id="modal-com-extra">
+  <div class="modal">
+    <div class="modal-title"><span id="cex-titulo">🏆 Nova Premiação / Desconto</span><button class="close-btn" onclick="closeModal('modal-com-extra')">✕</button></div>
+    <div class="alert alert-info" id="cex-ajuda">
+      Use para registrar valores que chegam <strong>fora da comissão por NF</strong>: premiações e campanhas pagas pela indústria, ou descontos que ela aplica sobre o repasse.
+    </div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Tipo de Lançamento *</label>
+        <select id="cex-tipo" onchange="cexTipoChange()" style="font-weight:600">
+          <option value="premiacao">🏆 Premiação — soma (+)</option>
+          <option value="desconto">🏷️ Desconto — abate (−)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Indústria *</label>
+        <select id="cex-ind"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label>Cliente / Rede (opcional)</label>
+        <select id="cex-cli"><option value="">— Não se aplica —</option></select>
+      </div>
+      <div class="form-group"><label>Valor (R$) *</label>
+        <input type="number" id="cex-valor" placeholder="0,00" step="0.01" min="0.01"
+          style="font-size:17px;font-weight:700;padding:9px 12px">
+        <div style="font-size:10px;color:#888;margin-top:3px">Informe sempre um valor positivo — o sinal vem do tipo</div>
+      </div>
+      <div class="form-group"><label>Mês de Referência *</label>
+        <select id="cex-mes" style="font-size:13px"></select>
+      </div>
+      <div class="form-group"><label>Data do Lançamento</label>
+        <input type="date" id="cex-data">
+      </div>
+      <div class="form-group"><label>Status *</label>
+        <select id="cex-status">
+          <option value="Recebida">✅ Já efetivado</option>
+          <option value="Prevista">⏳ Previsto</option>
+        </select>
+        <div style="font-size:10px;color:#888;margin-top:3px">Efetivado entra no Total Recebido · Previsto entra em A Receber</div>
+      </div>
+      <div class="form-group full"><label>Descrição *</label>
+        <input id="cex-desc" placeholder="Ex: Campanha de verão, prêmio por meta do trimestre, desconto de material...">
+      </div>
+      <div class="form-group full"><label>Observação</label>
+        <textarea id="cex-obs" rows="2" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--cinza-medio)">
+      <button class="btn btn-outline" onclick="closeModal('modal-com-extra')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarComExtra()">💾 Salvar Lançamento</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL USAR SALDO ===== -->
 <div class="modal-bg" id="modal-usar-saldo">
   <div class="modal">
@@ -3850,13 +3979,11 @@ tr:last-child td{border-bottom:none;}
     <div id="log-status-info" style="margin-bottom:14px"></div>
     <div class="form-group"><label>Novo Status *</label>
       <select id="log-novo-status">
-        <option>Pedido Digitado</option><option>Pedido Enviado</option><option>Em Separação</option>
-        <option>Faturado</option><option>Aguardando Coleta</option><option>Em Transporte</option>
-        <option>Entregue</option><option>Finalizado</option><option>Cancelado</option>
+        <option>Pedido Digitado</option><option>Faturado</option><option>Em Transporte</option>
+        <option>Entregue</option><option>Cancelado</option>
       </select>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label>Transportadora</label><input id="log-transportadora" placeholder="Ex: Jadlog, Correios..."></div>
       <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="log-previsao"></div>
       <div class="form-group"><label>📦 Data de Entrega Real</label><input type="date" id="log-data-entrega"><div style="font-size:10px;color:#888;margin-top:3px">Preencha quando o pedido for efetivamente entregue</div></div>
     </div>
@@ -4059,6 +4186,9 @@ let pedidos = [];
 // let faturamentos = []; // REMOVIDO — variável morta. Use pedidos.filter(p => p.nf)
 
 let comissoes_data = [];
+/* Premiações e descontos avulsos da indústria — não têm vínculo com pedido/NF.
+   Premiação soma e desconto abate nos totais do módulo de Comissões. */
+let comissoesExtras = [];
 
 // Registros separados de bonificações (pedidos tipo 'bonificacao' — sem comissão)
 let bonificacoesData = [];
@@ -4498,7 +4628,7 @@ function _mixExpandir(arr) {
    um, não a base inteira mais recente.
    Exclusões ficam registradas em _tomb (lápides) para que um registro apagado
    num aparelho não volte à vida vindo da cópia do outro.                    */
-var _COLECOES_MESCLAVEIS = ['pedidos','orcamentos','comissoes_data','clientes','industrias',
+var _COLECOES_MESCLAVEIS = ['pedidos','orcamentos','comissoes_data','comissoesExtras','clientes','industrias',
   'redes','logisticaData','tratativas','bonificacoesData','metasData','tarefasData',
   'atasData','contaCorrenteData'];
 
@@ -4510,6 +4640,7 @@ function _colGet(n){
     case 'pedidos': return typeof pedidos!=='undefined'?pedidos:null;
     case 'orcamentos': return typeof orcamentos!=='undefined'?orcamentos:null;
     case 'comissoes_data': return typeof comissoes_data!=='undefined'?comissoes_data:null;
+    case 'comissoesExtras': return typeof comissoesExtras!=='undefined'?comissoesExtras:null;
     case 'clientes': return typeof clientes!=='undefined'?clientes:null;
     case 'industrias': return typeof industrias!=='undefined'?industrias:null;
     case 'redes': return typeof redes!=='undefined'?redes:null;
@@ -4528,6 +4659,7 @@ function _colSet(n, v){
     case 'pedidos': pedidos=v; return;
     case 'orcamentos': orcamentos=v; return;
     case 'comissoes_data': comissoes_data=v; return;
+    case 'comissoesExtras': comissoesExtras=v; return;
     case 'clientes': clientes=v; return;
     case 'industrias': industrias=v; return;
     case 'redes': redes=v; return;
@@ -4705,6 +4837,7 @@ function _salvarLocal() {
   try {
     payload = JSON.stringify({
       pedidos, orcamentos, orcamentosExcluidos, clientes, industrias, redes, comissoes_data,
+      comissoesExtras,
       logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
       PRODUTOS_CAT, mixProdutos: _mixComprimir(mixProdutos), bonificacoesData, usuarios, userPerms,
       configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
@@ -4781,6 +4914,7 @@ function _carregarLocal() {
     if(Array.isArray(d.industrias))       industrias       = d.industrias;
     if(Array.isArray(d.redes))            redes            = d.redes;
     if(Array.isArray(d.comissoes_data))   comissoes_data   = d.comissoes_data;
+    if(Array.isArray(d.comissoesExtras))  comissoesExtras  = d.comissoesExtras;
     if(Array.isArray(d.logisticaData))    logisticaData    = d.logisticaData;
     if(Array.isArray(d.sellOutData))      sellOutData      = d.sellOutData;
     if(Array.isArray(d.metasData))        metasData        = d.metasData;
@@ -4824,9 +4958,10 @@ function _carregarLocal() {
     pedidos.filter(p=>!p.excluido).forEach(p=>{
       if(!logisticaData.find(l=>l.pedId===p.id))
         logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,
-          data:p.data,transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''});
+          data:p.data,previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''});
     });
     if(d._tomb && typeof d._tomb==='object') { window._tomb = d._tomb; _podarTombs(); }
+    try { migrarStatusV30(); } catch(e) {}
     try { _resetSnapshot(); } catch(e) {}
     try { if(_purgarDemo()) _salvarLocal(); } catch(e) { console.warn('[GestCom] limpeza demo:', e.message); }
     console.info('[GestCom] ✓ Dados locais restaurados (' + new Date(d._ts||0).toLocaleTimeString('pt-BR') + ')');
@@ -4914,9 +5049,84 @@ function statusClass(s) {
     'Em digitação':'status-digitacao','Implantado':'status-implantado',
     'Faturado parcial':'status-fat-parcial','Faturado total':'status-fat-total',
     'Expedido':'status-expedido','Agendado':'status-agendado','Entregue':'status-entregue',
+    'Excluído':'status-cancelado',
     'Prevista':'status-prevista','Recebida':'status-recebida','Atrasada':'status-atrasada',
   };
   return map[s]||'status-rascunho';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATUS SIMPLIFICADOS (v30)
+   ──────────────────────────────────────────────────────────────
+   PEDIDO   — só existem "Implantado", "Faturado total", "Cancelado" e
+              "Excluído". Removidos "Recebido", "Em digitação",
+              "Faturado parcial", "Expedido", "Agendado" e "Entregue"
+   LOGÍSTICA— removidos "Pedido Enviado", "Em Separação",
+              "Aguardando Coleta" e "Finalizado"
+   Registros antigos são convertidos automaticamente ao carregar
+   a base (local ou nuvem), de forma que nenhum pedido fique com
+   um status que não existe mais na lista.
+══════════════════════════════════════════════════════════════ */
+const STATUS_PEDIDO_VALIDOS = ['Implantado','Faturado total','Cancelado','Excluído'];
+const STATUS_LOG_VALIDOS    = ['Pedido Digitado','Faturado','Em Transporte','Entregue','Cancelado'];
+
+/* Converte um status de pedido antigo para o equivalente atual.
+   temNF=true → o pedido já foi faturado, então cai em "Faturado total". */
+function _normalizarStatusPedido(status, temNF) {
+  const s = (status || '').trim();
+  if(!s) return temNF ? 'Faturado total' : 'Implantado';
+  if(STATUS_PEDIDO_VALIDOS.includes(s)) return s;
+  if(s === 'Excluído' || s === 'Excluido') return s;   // marcação de exclusão — preservada
+  const mapa = {
+    'Recebido':         temNF ? 'Faturado total' : 'Implantado',
+    'Em digitação':     temNF ? 'Faturado total' : 'Implantado',
+    'Em digitacao':     temNF ? 'Faturado total' : 'Implantado',
+    'Faturado parcial': 'Faturado total',
+    // Expedido / Agendado / Entregue passaram a ser controlados só na Logística
+    'Expedido':         temNF ? 'Faturado total' : 'Implantado',
+    'Agendado':         temNF ? 'Faturado total' : 'Implantado',
+    'Entregue':         temNF ? 'Faturado total' : 'Implantado'
+  };
+  return mapa[s] || (temNF ? 'Faturado total' : 'Implantado');
+}
+
+/* Converte um status logístico antigo para o equivalente atual.
+   Regra pedida: tudo que estava "Finalizado" passa a "Entregue". */
+function _normalizarStatusLogistica(statusLog) {
+  const s = (statusLog || '').trim();
+  if(!s) return 'Pedido Digitado';
+  if(STATUS_LOG_VALIDOS.includes(s)) return s;
+  const mapa = {
+    'Finalizado':        'Entregue',
+    'Pedido Enviado':    'Pedido Digitado',
+    'Em Separação':      'Pedido Digitado',
+    'Em Separacao':      'Pedido Digitado',
+    'Aguardando Coleta': 'Faturado'
+  };
+  return mapa[s] || 'Pedido Digitado';
+}
+
+/* Roda a conversão em toda a base. Chamada ao carregar dados locais,
+   ao receber dados da nuvem e na inicialização. */
+function migrarStatusV30() {
+  let n = 0;
+  try {
+    (typeof pedidos !== 'undefined' ? pedidos : []).forEach(p => {
+      const novo = _normalizarStatusPedido(p.status, !!p.nf);
+      if(novo !== p.status) { p.status = novo; n++; }
+      if(p.statusAnterior) {
+        const na = _normalizarStatusPedido(p.statusAnterior, !!p.nf);
+        if(na !== p.statusAnterior) p.statusAnterior = na;
+      }
+    });
+    (typeof logisticaData !== 'undefined' ? logisticaData : []).forEach(l => {
+      const novo = _normalizarStatusLogistica(l.statusLog);
+      if(novo !== l.statusLog) { l.statusLog = novo; n++; }
+      if('transportadora' in l) delete l.transportadora;   // campo descontinuado
+    });
+  } catch(e) { console.warn('[GestCom] migração de status:', e.message); }
+  if(n) console.info('[GestCom] ✓ ' + n + ' registro(s) de status convertido(s) para o novo padrão');
+  return n;
 }
 
 /* ══════════════════════════
@@ -5374,11 +5584,11 @@ function converterEmPedido(id) {
   const o = orcamentos.find(x=>x.id===id);
   if(!o||!confirm('Converter orçamento em pedido?')) return;
   const pedId = _gerarIdPedido();
-  const pedObj = {id:pedId,tipo:'venda',cliente:o.cliente,industria:o.industria,data:today(),cond:o.cond,status:'Recebido',itens:o.itens.map(i=>({...i})),total:o.total,obs:'Gerado a partir de '+o.id,orcOrigem:o.id,nf:null};
+  const pedObj = {id:pedId,tipo:'venda',cliente:o.cliente,industria:o.industria,data:today(),cond:o.cond,status:'Implantado',itens:o.itens.map(i=>({...i})),total:o.total,obs:'Gerado a partir de '+o.id,orcOrigem:o.id,nf:null};
   pedidos.push(pedObj);
   if(!logisticaData.find(l=>l.pedId===pedId))
     logisticaData.push({pedId:pedId,cliente:o.cliente,industria:o.industria,
-      data:today(),transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''});
+      data:today(),previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''});
   orcamentos = orcamentos.map(x=>x.id===id?{...x,status:'Convertido em pedido'}:x);
   renderOrcamentos(); renderPedidos(); renderLogistica(); renderSaldo();
   syncAutoSaveHook();
@@ -5825,7 +6035,7 @@ function novoPedido() {
   el('ped-ind').value = '';
   el('ped-data').value = today();
   el('ped-cond').value = '';
-  el('ped-status').value = 'Recebido';
+  el('ped-status').value = 'Implantado';
   el('ped-tipo').value = 'venda';
   el('ped-obs').value = '';
   el('ped-orc-origem').value = '';
@@ -6076,7 +6286,7 @@ function _gerarIdPedido() {
 
 // Status que ativam entrada na logística (a partir de Implantado)
 const STATUS_LOG_GATILHO = new Set([
-  'Implantado','Faturado parcial','Faturado total','Expedido','Agendado','Entregue'
+  'Implantado','Faturado total'
 ]);
 
 function _sincLogisticaPedido(ped) {
@@ -6091,7 +6301,6 @@ function _sincLogisticaPedido(ped) {
       cliente:        ped.cliente,
       industria:      ped.industria,
       data:           ped.data,
-      transportadora: '',
       previsao:       '',
       dataEntrega:    '',
       statusLog:      'Pedido Digitado',
@@ -6301,6 +6510,17 @@ function salvarPedido() {
     : obj.status;
   obj.status = novaStatus;
 
+  /* Escolher "Excluído" no formulário marca o pedido como excluído;
+     trocar de "Excluído" para outro status reativa o pedido. */
+  const _exclAntes = !!(pedExistente && pedExistente.excluido);
+  if(obj.status === 'Excluído') {
+    obj.excluido = true;
+    if(!_exclAntes) obj.statusAnterior = (pedExistente && pedExistente.status) || 'Implantado';
+  } else if(_exclAntes) {
+    obj.excluido = false;
+  }
+  const _exclMudou = (!!obj.excluido) !== _exclAntes;
+
   if(pedEditId){
     pedidos = pedidos.map(x => x.id===pedEditId ? {...x, ...obj, nf: nfInline } : x);
     const _lIdx=logisticaData.findIndex(l=>l.pedId===obj.id);
@@ -6312,7 +6532,14 @@ function salvarPedido() {
     pedidos.push({...obj, nf: nfInline});
     if(!logisticaData.find(l=>l.pedId===obj.id))
       logisticaData.push({pedId:obj.id,cliente:obj.cliente,industria:obj.industria,
-        data:obj.data,transportadora:'',previsao:'',dataEntrega:'',statusLog: nfInline ? 'Faturado' : 'Pedido Digitado',obs:''});
+        data:obj.data,previsao:'',dataEntrega:'',statusLog: nfInline ? 'Faturado' : 'Pedido Digitado',obs:''});
+  }
+
+  // Acompanha a comissão vinculada quando a exclusão é ligada/desligada pelo status
+  if(_exclMudou) {
+    comissoes_data = comissoes_data.map(c => c.pedido === obj.id ? {...c, excluido: !!obj.excluido} : c);
+    addAudit(usuarioLogado?.login || 'sistema',
+      `Pedido ${obj.id} ${obj.excluido ? 'marcado como excluído' : 'reativado'} pelo campo Status`, obj.excluido ? '🚫' : '♻️');
   }
 
   // Gera/atualiza comissão se NF foi lançada inline (e é venda)
@@ -6695,7 +6922,7 @@ function salvarNFSemPedido() {
   pedidos.push(pedSP);
   logisticaData.push({
     pedId, cliente: cli, industria: ind,
-    data, transportadora: '', previsao: '', dataEntrega: '',
+    data, previsao: '', dataEntrega: '',
     statusLog: 'Faturado', obs: ''
   });
 
@@ -7042,29 +7269,108 @@ function filtrarFatMes(mes, btn) {
   renderFaturamento();
 }
 
+/* ──────────────────────────────────────────────────────────────
+   VENDA × BONIFICAÇÃO — critério único usado em todo o módulo
+   · Pedido tipo "bonificacao"  → todo o valor da NF é bonificação
+   · Pedido tipo "venda"        → NF líquida é venda e a parcela
+     "Bonif. s/ Comissão" (nf.bonif) é contabilizada como bonificação
+────────────────────────────────────────────────────────────── */
+function _fatEhBonificacao(p) { return p.tipo === 'bonificacao'; }
+
+function _fatValores(p) {
+  const n = p.nf || {};
+  if(_fatEhBonificacao(p)) {
+    const v = n.valorNF || p.total || 0;
+    return { bruto: 0, venda: 0, bonif: v, total: v };
+  }
+  const bruto = n.valorNF || 0;
+  const venda = n.liquida || 0;
+  const bonif = n.bonif   || 0;
+  return { bruto, venda, bonif, total: venda + bonif };
+}
+
+/* NFs visíveis conforme os filtros do painel.
+   ignorarMes=true → usado pelo quadro mês a mês, que mostra o ano inteiro. */
+function _fatListaFiltrada(ignorarMes) {
+  const busca     = (el('fat-busca')||{}).value?.toLowerCase()||'';
+  const filtCli   = (el('fat-filtro-cli')||{}).value||'';
+  const filtInd   = (el('fat-filtro-ind')||{}).value||'';
+  const filtTipo  = (el('fat-filtro-tipo')||{}).value||'';
+  const filtMes   = ignorarMes ? '' : (window._fatMesFiltro||'');
+  const filtBonif = (el('fat-filtro-status')||{}).value||'';
+
+  let list = pedidos.filter(p => p.nf && !p.excluido);
+  if(filtCli)  list = list.filter(p => p.cliente === filtCli);
+  if(filtInd)  list = list.filter(p => p.industria === filtInd);
+  if(filtTipo === 'venda')       list = list.filter(p => !_fatEhBonificacao(p));
+  if(filtTipo === 'bonificacao') list = list.filter(p =>  _fatEhBonificacao(p));
+  if(filtMes)  list = list.filter(p => p.nf.data && p.nf.data.startsWith(filtMes));
+  if(!ignorarMes) {
+    if(filtBonif === 'bonif')  list = list.filter(p => p.nf.bonif > 0);
+    if(filtBonif === 'normal') list = list.filter(p => !p.nf.bonif || p.nf.bonif === 0);
+    if(busca) list = list.filter(p =>
+      (p.nf.numero||'').toLowerCase().includes(busca) ||
+      p.id.toLowerCase().includes(busca) ||
+      p.cliente.toLowerCase().includes(busca));
+  }
+  return list;
+}
+
 function renderFaturamento() {
-  const tbody=el('fat-tbody');if(!tbody)return;
-  const busca=(el('fat-busca')||{}).value?.toLowerCase()||'';
-  const filtCli=(el('fat-filtro-cli')||{}).value||'';
-  const filtInd=(el('fat-filtro-ind')||{}).value||'';
-  const filtMes=window._fatMesFiltro||'';
-  const filtBonif=(el('fat-filtro-status')||{}).value||'';
+  const tbody = el('fat-tbody'); if(!tbody) return;
+  const list = _fatListaFiltrada(false);
 
-  let list=pedidos.filter(p=>p.nf && !p.excluido);
-  if(filtCli) list=list.filter(p=>p.cliente===filtCli);
-  if(filtInd) list=list.filter(p=>p.industria===filtInd);
-  if(filtMes) list=list.filter(p=>p.nf.data && p.nf.data.startsWith(filtMes));
-  if(filtBonif==='bonif') list=list.filter(p=>p.nf.bonif>0);
-  if(filtBonif==='normal') list=list.filter(p=>!p.nf.bonif||p.nf.bonif===0);
-  if(busca) list=list.filter(p=>p.nf.numero.toLowerCase().includes(busca)||p.id.toLowerCase().includes(busca)||p.cliente.toLowerCase().includes(busca));
+  // ── KPIs: venda x bonificação (respeitam todos os filtros, inclusive o mês) ──
+  let kVenda = 0, kBonif = 0, kBruto = 0, nVenda = 0, nBonif = 0;
+  list.forEach(p => {
+    const v = _fatValores(p);
+    kVenda += v.venda; kBonif += v.bonif; kBruto += v.bruto;
+    if(_fatEhBonificacao(p)) nBonif++; else nVenda++;
+  });
+  const kTotal = kVenda + kBonif;
+  const pctBon = kTotal > 0 ? (kBonif / kTotal * 100) : 0;
+  const kpiGrid = el('fat-kpi-grid');
+  if(kpiGrid) kpiGrid.innerHTML = `
+    <div class="kpi-card kpi-verde">
+      <div class="kpi-label">🛒 Faturado — Vendas</div>
+      <div class="kpi-value" style="color:var(--verde)">${fmt(kVenda)}</div>
+      <div class="kpi-sub">${nVenda} NF${nVenda!==1?'s':''} · bruto ${fmt(kBruto)}</div>
+    </div>
+    <div class="kpi-card kpi-amarelo">
+      <div class="kpi-label">🎁 Faturado — Bonificação</div>
+      <div class="kpi-value" style="color:var(--amarelo-mid,#b8900a)">${fmt(kBonif)}</div>
+      <div class="kpi-sub">${nBonif} NF${nBonif!==1?'s':''} de bonificação + bonif. dentro de vendas</div>
+    </div>
+    <div class="kpi-card kpi-azul">
+      <div class="kpi-label">Σ Total Faturado</div>
+      <div class="kpi-value">${fmt(kTotal)}</div>
+      <div class="kpi-sub">Venda + bonificação</div>
+    </div>
+    <div class="kpi-card kpi-roxo">
+      <div class="kpi-label">% Bonificação</div>
+      <div class="kpi-value">${pctBon.toFixed(1).replace('.',',')}%</div>
+      <div class="kpi-sub ${pctBon>15?'neg':''}">sobre o total faturado</div>
+    </div>`;
 
-  if(list.length===0){tbody.innerHTML='<tr><td colspan="14" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';return;}
-  tbody.innerHTML=list.map(p=>{
-    const n=p.nf;
+  // ── Quadro mês a mês ──
+  try { renderFatResumoMensal(); } catch(e) {}
+
+  // ── Tabela de NFs ──
+  if(list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(p => {
+    const n = p.nf;
     const isSemPed = !!p._semPedido;
-    return `<tr>
+    const isBon = _fatEhBonificacao(p);
+    const tipoBadge = isBon
+      ? '<span class="badge badge-laranja" title="NF de bonificação — não gera comissão">🎁 Bonif.</span>'
+      : '<span class="badge badge-azul" title="NF de venda — gera comissão">🛒 Venda</span>';
+    return `<tr${isBon?' style="background:#fffaf0"':''}>
       <td class="mono bold">${n.numero}</td>
       <td class="mono">${isSemPed ? '<span class="badge badge-cinza" style="font-size:9px">Sem pedido</span>' : p.id}</td>
+      <td>${tipoBadge}</td>
       <td><strong>${esc(p.cliente)}</strong></td>
       <td><span class="tag">${esc(p.industria)}</span></td>
       <td>${n.data}</td>
@@ -7075,18 +7381,154 @@ function renderFaturamento() {
       <td class="vermelho">${n.descFin>0?'- '+fmt(n.descFin):'—'}</td>
       <td class="vermelho">${n.nfd>0?'- '+fmt(n.nfd):'—'}</td>
       <td class="vermelho">${n.bonif>0?'- '+fmt(n.bonif):'—'}</td>
-      <td class="bold verde">${fmt(n.liquida)}</td>
+      <td class="bold ${isBon?'':'verde'}">${isBon ? '<span style="color:#b8900a">'+fmt(n.valorNF||p.total||0)+'</span>' : fmt(n.liquida)}</td>
       <td>${isSemPed ? '<span style="font-size:11px;color:#aaa">🧾 Direto</span>' : `<button class="btn btn-outline btn-xs" onclick="abrirCompare('${p.id}')">⚖️ Compare</button>`}</td>
     </tr>`;
   }).join('');
 }
 
+/* ──────────────────────────────────────────────────────────────
+   QUADRO MÊS A MÊS — venda x bonificação
+────────────────────────────────────────────────────────────── */
+const FAT_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+/* Anos que possuem NF na base (sempre inclui o ano corrente) */
+function _fatAnosDisponiveis() {
+  const anos = new Set([String(new Date().getFullYear())]);
+  pedidos.forEach(p => {
+    if(p.excluido || !p.nf || !p.nf.data) return;
+    const a = String(p.nf.data).slice(0,4);
+    if(/^\d{4}$/.test(a)) anos.add(a);
+  });
+  return Array.from(anos).sort().reverse();
+}
+
+/* Soma por mês (0..11) do ano informado, respeitando cliente/indústria/tipo */
+function _fatResumoMensalDados(ano) {
+  const venda = Array(12).fill(0), bonif = Array(12).fill(0), bruto = Array(12).fill(0);
+  const qVenda = Array(12).fill(0), qBonif = Array(12).fill(0);
+  _fatListaFiltrada(true).forEach(p => {
+    const d = p.nf.data || '';
+    if(!d.startsWith(ano + '-')) return;
+    const mi = parseInt(d.slice(5,7), 10) - 1;
+    if(!(mi >= 0 && mi <= 11)) return;
+    const v = _fatValores(p);
+    venda[mi] += v.venda; bonif[mi] += v.bonif; bruto[mi] += v.bruto;
+    if(_fatEhBonificacao(p)) qBonif[mi]++; else qVenda[mi]++;
+  });
+  return { ano, venda, bonif, bruto, qVenda, qBonif };
+}
+
+function renderFatResumoMensal() {
+  const tbody = el('fat-resumo-tbody'); if(!tbody) return;
+
+  // Popula o seletor de ano preservando a escolha atual
+  const selAno = el('fat-resumo-ano');
+  const anos = _fatAnosDisponiveis();
+  if(selAno) {
+    const atual = selAno.value && anos.includes(selAno.value) ? selAno.value : anos[0];
+    selAno.innerHTML = anos.map(a => `<option value="${a}" ${a===atual?'selected':''}>${a}</option>`).join('');
+    selAno.value = atual;
+  }
+  const ano = (selAno && selAno.value) || anos[0];
+  const d = _fatResumoMensalDados(ano);
+
+  const tVenda = d.venda.reduce((a,b)=>a+b,0);
+  const tBonif = d.bonif.reduce((a,b)=>a+b,0);
+  const tBruto = d.bruto.reduce((a,b)=>a+b,0);
+  const tQV    = d.qVenda.reduce((a,b)=>a+b,0);
+  const tQB    = d.qBonif.reduce((a,b)=>a+b,0);
+
+  if(tVenda === 0 && tBonif === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF registrada em ${ano} para os filtros selecionados</td></tr>`;
+    return;
+  }
+
+  const linhas = d.venda.map((_, i) => {
+    const tot = d.venda[i] + d.bonif[i];
+    const pct = tot > 0 ? (d.bonif[i] / tot * 100) : 0;
+    const vazio = tot === 0 && d.bruto[i] === 0;
+    return `<tr style="${vazio?'opacity:.4':''}">
+      <td style="font-weight:600">${FAT_MESES[i]}</td>
+      <td style="text-align:right;color:#888">${d.qVenda[i]||'—'}</td>
+      <td style="text-align:right">${d.bruto[i] ? fmt(d.bruto[i]) : '—'}</td>
+      <td style="text-align:right" class="bold verde">${d.venda[i] ? fmt(d.venda[i]) : '—'}</td>
+      <td style="text-align:right;color:#888">${d.qBonif[i]||'—'}</td>
+      <td style="text-align:right;font-weight:700;color:#b8900a">${d.bonif[i] ? fmt(d.bonif[i]) : '—'}</td>
+      <td style="text-align:right;font-weight:600">${tot ? fmt(tot) : '—'}</td>
+      <td style="text-align:right;font-size:11px;color:${pct>15?'var(--vermelho)':'#888'}">${tot ? pct.toFixed(1).replace('.',',')+'%' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const totGeral = tVenda + tBonif;
+  const pctGeral = totGeral > 0 ? (tBonif/totGeral*100) : 0;
+  tbody.innerHTML = linhas + `
+    <tr style="background:#f4f3ef;border-top:2px solid var(--cinza-medio)">
+      <td style="font-weight:800">TOTAL ${ano}</td>
+      <td style="text-align:right;font-weight:700">${tQV}</td>
+      <td style="text-align:right;font-weight:700">${fmt(tBruto)}</td>
+      <td style="text-align:right;font-weight:800" class="verde">${fmt(tVenda)}</td>
+      <td style="text-align:right;font-weight:700">${tQB}</td>
+      <td style="text-align:right;font-weight:800;color:#b8900a">${fmt(tBonif)}</td>
+      <td style="text-align:right;font-weight:800">${fmt(totGeral)}</td>
+      <td style="text-align:right;font-weight:700;font-size:11px">${pctGeral.toFixed(1).replace('.',',')}%</td>
+    </tr>`;
+}
+
+function exportarFatResumoMensal() {
+  const ano = (el('fat-resumo-ano')||{}).value || String(new Date().getFullYear());
+  const d = _fatResumoMensalDados(ano);
+  const rows = [['Mês','NFs Venda','Venda - Bruto','Venda - Líquido','NFs Bonificação','Bonificação','Total Faturado','% Bonificação']];
+  d.venda.forEach((_, i) => {
+    const tot = d.venda[i] + d.bonif[i];
+    rows.push([FAT_MESES[i], d.qVenda[i], d.bruto[i], d.venda[i], d.qBonif[i], d.bonif[i], tot,
+      tot > 0 ? +(d.bonif[i]/tot*100).toFixed(2) : 0]);
+  });
+  const tV = d.venda.reduce((a,b)=>a+b,0), tB = d.bonif.reduce((a,b)=>a+b,0);
+  rows.push(['TOTAL ' + ano, d.qVenda.reduce((a,b)=>a+b,0), d.bruto.reduce((a,b)=>a+b,0), tV,
+    d.qBonif.reduce((a,b)=>a+b,0), tB, tV + tB, (tV+tB) > 0 ? +(tB/(tV+tB)*100).toFixed(2) : 0]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Venda x Bonif ' + ano);
+  XLSX.writeFile(wb, 'Faturamento_Venda_x_Bonificacao_' + ano + '.xlsx');
+  toast('Excel exportado!');
+}
+
 function exportarFaturamento(){
-  const wb=XLSX.utils.book_new();
-  const rows=[['NF','Pedido','Cliente','Indústria','Data','Val.Pedido','Val.NF','Abatimentos','Devoluções','Desc.Fin.','NFD','Bonif.s/Com.','NF Líquida']];
-  pedidos.filter(p=>p.nf && !p.excluido).forEach(p=>{const n=p.nf;rows.push([n.numero,p.id,p.cliente,p.industria,n.data,n.valorPedido,n.valorNF,n.abatimentos,n.devolucoes,n.descFin,n.nfd,n.bonif,n.liquida]);});
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Faturamento');
-  XLSX.writeFile(wb,'Faturamento_TresVales.xlsx');toast('Excel exportado!');
+  const wb = XLSX.utils.book_new();
+
+  // Aba 1 — NFs detalhadas, com a coluna Tipo
+  const rows = [['NF','Pedido','Tipo','Cliente','Indústria','Data','Val.Pedido','Val.NF',
+    'Abatimentos','Devoluções','Desc.Fin.','NFD','Bonif.s/Com.','NF Líquida',
+    'Faturado Venda','Faturado Bonificação']];
+  pedidos.filter(p => p.nf && !p.excluido).forEach(p => {
+    const n = p.nf, v = _fatValores(p);
+    rows.push([n.numero, p.id, _fatEhBonificacao(p)?'Bonificação':'Venda', p.cliente, p.industria,
+      n.data, n.valorPedido, n.valorNF, n.abatimentos, n.devolucoes, n.descFin, n.nfd, n.bonif,
+      n.liquida, v.venda, v.bonif]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Faturamento');
+
+  // Aba 2 — resumo mês a mês de todos os anos com movimento
+  const res = [['Ano','Mês','NFs Venda','Venda - Bruto','Venda - Líquido','NFs Bonificação','Bonificação','Total Faturado']];
+  _fatAnosDisponiveis().forEach(ano => {
+    const d = _fatResumoMensalDados(ano);
+    let temMov = false;
+    d.venda.forEach((_, i) => {
+      if(d.venda[i] || d.bonif[i] || d.bruto[i]) temMov = true;
+    });
+    if(!temMov) return;
+    d.venda.forEach((_, i) => {
+      res.push([ano, FAT_MESES[i], d.qVenda[i], d.bruto[i], d.venda[i], d.qBonif[i], d.bonif[i], d.venda[i]+d.bonif[i]]);
+    });
+    const tV = d.venda.reduce((a,b)=>a+b,0), tB = d.bonif.reduce((a,b)=>a+b,0);
+    res.push([ano, 'TOTAL', d.qVenda.reduce((a,b)=>a+b,0), d.bruto.reduce((a,b)=>a+b,0), tV,
+      d.qBonif.reduce((a,b)=>a+b,0), tB, tV + tB]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res), 'Venda x Bonificação');
+
+  XLSX.writeFile(wb, 'Faturamento_TresVales.xlsx');
+  toast('Excel exportado — inclui a aba Venda × Bonificação!');
 }
 
 /* ══════════════════════════
@@ -8045,10 +8487,29 @@ function renderComissoes() {
   const totDif  = totPrev - totRecAcum;
   const totRest = list.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+(c.valor-_recNoMes(c,'')), 0);
 
+  /* Premiações somam e descontos abatem nos totais do módulo.
+     Lançamentos "Efetivados" mexem no Total Recebido; "Previstos", no A Receber. */
+  const _ext = _comExtrasTotais();
+  const totRecComExtra  = totRec  + _ext.liquidoRecebido;
+  const totRestComExtra = totRest + _ext.liquidoPrevisto;
+
   if(el('ckpi1')) el('ckpi1').textContent = fmt(totPrev);
-  if(el('ckpi2')) el('ckpi2').textContent = fmt(totRec);
+  if(el('ckpi2')) el('ckpi2').textContent = fmt(totRecComExtra);
   if(el('ckpi3')) el('ckpi3').textContent = fmt(Math.abs(totDif));
-  if(el('ckpi4')) el('ckpi4').textContent = fmt(Math.max(0,totRest));
+  if(el('ckpi4')) el('ckpi4').textContent = fmt(Math.max(0,totRestComExtra));
+
+  // Rodapé explicativo dos KPIs quando há premiação/desconto no filtro
+  const _ck2 = el('ckpi2');
+  if(_ck2 && _ck2.parentElement) {
+    let sub = _ck2.parentElement.querySelector('.kpi-sub');
+    if(Math.abs(_ext.liquidoRecebido) > 0.001) {
+      if(!sub) { sub = document.createElement('div'); sub.className = 'kpi-sub'; _ck2.parentElement.appendChild(sub); }
+      sub.textContent = 'inclui ' + (_ext.liquidoRecebido >= 0 ? '+' : '−') + fmt(Math.abs(_ext.liquidoRecebido)) + ' de premiações/descontos';
+      sub.className = 'kpi-sub' + (_ext.liquidoRecebido < 0 ? ' neg' : '');
+    } else if(sub) { sub.remove(); }
+  }
+
+  try { renderComExtras(); } catch(e) { console.warn('[GestCom] premiações/descontos:', e.message); }
 
   const statusCor = {Prevista:'badge-amarelo',Parcial:'badge-azul',Recebida:'badge-verde',Atrasada:'badge-vermelho'};
 
@@ -8885,6 +9346,264 @@ function moverComissoesSelecionadas() {
 // Mantém compatibilidade com código legado
 function marcarRecebida(idx) { abrirLancarRecebimento(comissoes_data[idx]?.id); }
 
+/* ══════════════════════════════════════════════════════════════
+   PREMIAÇÕES E DESCONTOS AVULSOS
+   ──────────────────────────────────────────────────────────────
+   Valores que a indústria paga ou desconta fora da comissão por NF.
+   Não têm vínculo com pedido nem nota fiscal — só com a indústria
+   (e, opcionalmente, com um cliente/rede) e um mês de referência.
+
+   · premiacao → entra com sinal POSITIVO nos totais de comissão
+   · desconto  → entra com sinal NEGATIVO nos totais de comissão
+   · status "Recebida" afeta o Total Recebido
+   · status "Prevista" afeta o A Receber
+══════════════════════════════════════════════════════════════ */
+var comExtraEditId = null;
+
+function _gerarIdComExtra() {
+  let n = (comissoesExtras || []).length + 1, id;
+  do { id = 'PRE-' + String(n).padStart(4, '0'); n++; } while(comissoesExtras.some(x => x.id === id));
+  return id;
+}
+
+/* Lista de meses no mesmo formato usado pelas comissões (ex.: "Mar/26") */
+function _comExtraMeses() {
+  const ab = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const anoAtual = new Date().getFullYear();
+  const out = [];
+  for(let a = anoAtual - 1; a <= anoAtual + 1; a++) {
+    const yy = String(a).slice(2);
+    ab.forEach(m => out.push(m + '/' + yy));
+  }
+  return out;
+}
+
+function _comExtraMesAtual() {
+  const ab = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const d = new Date();
+  return ab[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
+}
+
+function cexTipoChange() {
+  const t = (el('cex-tipo') || {}).value || 'premiacao';
+  const v = el('cex-valor');
+  if(v) v.style.color = t === 'desconto' ? 'var(--vermelho)' : 'var(--verde)';
+  const ajuda = el('cex-ajuda');
+  if(ajuda) ajuda.innerHTML = t === 'desconto'
+    ? 'Desconto aplicado pela indústria sobre o repasse — será <strong style="color:var(--vermelho)">abatido (−)</strong> dos totais de comissão.'
+    : 'Premiação, campanha ou bônus pago pela indústria — será <strong style="color:var(--verde)">somado (+)</strong> aos totais de comissão.';
+}
+
+function abrirComExtra(id) {
+  comExtraEditId = id || null;
+  const reg = id ? comissoesExtras.find(x => x.id === id) : null;
+
+  // Meses
+  const selMes = el('cex-mes');
+  if(selMes) selMes.innerHTML = _comExtraMeses().map(m => `<option>${m}</option>`).join('');
+
+  // Indústrias e clientes
+  try { popularSelectsDinamicos(); } catch(e) {}
+
+  el('cex-titulo').textContent = reg ? '✏️ Editar Lançamento ' + reg.id : '🏆 Nova Premiação / Desconto';
+  el('cex-tipo').value   = reg?.tipo   || 'premiacao';
+  el('cex-ind').value    = reg?.industria || '';
+  el('cex-cli').value    = reg?.cliente   || '';
+  el('cex-valor').value  = reg ? reg.valor : '';
+  el('cex-mes').value    = reg?.mes    || _comExtraMesAtual();
+  el('cex-data').value   = reg?.data   || today();
+  el('cex-status').value = reg?.status || 'Recebida';
+  el('cex-desc').value   = reg?.descricao || '';
+  el('cex-obs').value    = reg?.obs    || '';
+  cexTipoChange();
+  openModal('modal-com-extra');
+}
+
+function salvarComExtra() {
+  const tipo  = el('cex-tipo').value;
+  const ind   = el('cex-ind').value;
+  const valor = parseFloat(el('cex-valor').value);
+  const desc  = (el('cex-desc').value || '').trim();
+
+  if(!ind)  { toast('Selecione a indústria.', 'error'); return; }
+  if(!valor || valor <= 0) { toast('Informe um valor maior que zero.', 'error'); return; }
+  if(!desc) { toast('Descreva o lançamento.', 'error'); return; }
+
+  const obj = {
+    id:        comExtraEditId || _gerarIdComExtra(),
+    tipo,
+    industria: ind,
+    cliente:   el('cex-cli').value || '',
+    valor:     parseFloat(valor.toFixed(2)),
+    mes:       el('cex-mes').value || _comExtraMesAtual(),
+    data:      el('cex-data').value || today(),
+    status:    el('cex-status').value || 'Recebida',
+    descricao: desc,
+    obs:       el('cex-obs').value || '',
+    usuario:   usuarioLogado?.login || 'sistema'
+  };
+
+  const rotulo = tipo === 'desconto' ? 'Desconto' : 'Premiação';
+  if(comExtraEditId) {
+    comissoesExtras = comissoesExtras.map(x => x.id === comExtraEditId ? {...x, ...obj} : x);
+    addAudit(obj.usuario, `${rotulo} ${obj.id} editada — ${ind} — ${fmt(obj.valor)}`, '🏆');
+    toast(`${rotulo} ${obj.id} atualizada!`);
+  } else {
+    comissoesExtras.push(obj);
+    addAudit(obj.usuario, `${rotulo} ${obj.id} lançada — ${ind} — ${fmt(obj.valor)} (${obj.mes})`, '🏆');
+    toast(`${rotulo} de ${fmt(obj.valor)} registrada em ${obj.mes}!`);
+  }
+
+  comExtraEditId = null;
+  closeModal('modal-com-extra');
+  renderComissoes();
+  syncAutoSaveHook();
+}
+
+function excluirComExtra(id) {
+  const r = comissoesExtras.find(x => x.id === id);
+  if(!r) return;
+  const rotulo = r.tipo === 'desconto' ? 'desconto' : 'a premiação';
+  if(!confirm(`Excluir ${rotulo} ${id}?\n\n${r.industria} · ${fmt(r.valor)} · ${r.mes}\n\nEsta ação não pode ser desfeita.`)) return;
+  comissoesExtras = comissoesExtras.filter(x => x.id !== id);
+  addAudit(usuarioLogado?.login || 'sistema', `Lançamento ${id} excluído (${r.industria} — ${fmt(r.valor)})`, '🗑️');
+  toast('Lançamento excluído.');
+  renderComissoes();
+  syncAutoSaveHook();
+}
+
+/* Aplica os mesmos filtros do painel de comissões (indústria, mês e busca) */
+function _comExtrasFiltradas() {
+  const busca   = (el('com-busca') || {}).value?.toLowerCase() || '';
+  const filtInd = (el('com-filtro-ind') || {}).value || '';
+  const filtMes = (el('com-filtro-mes-prev') || {}).value || '';
+  return (comissoesExtras || []).filter(r => {
+    if(filtInd && r.industria !== filtInd) return false;
+    if(filtMes && r.mes !== filtMes) return false;
+    if(busca &&
+       !(r.industria || '').toLowerCase().includes(busca) &&
+       !(r.cliente   || '').toLowerCase().includes(busca) &&
+       !(r.descricao || '').toLowerCase().includes(busca) &&
+       !(r.id        || '').toLowerCase().includes(busca)) return false;
+    return true;
+  });
+}
+
+/* Totais assinados: premiação positiva, desconto negativo */
+function _comExtrasTotais(lista) {
+  const l = lista || _comExtrasFiltradas();
+  const t = { premRec:0, descRec:0, premPrev:0, descPrev:0 };
+  l.forEach(r => {
+    const v = parseFloat(r.valor) || 0;
+    const efetivado = r.status !== 'Prevista';
+    if(r.tipo === 'desconto') { if(efetivado) t.descRec += v; else t.descPrev += v; }
+    else                      { if(efetivado) t.premRec += v; else t.premPrev += v; }
+  });
+  t.liquidoRecebido = t.premRec  - t.descRec;    // impacto no Total Recebido
+  t.liquidoPrevisto = t.premPrev - t.descPrev;   // impacto no A Receber
+  return t;
+}
+
+function renderComExtras() {
+  const tbody = el('com-extra-tbody');
+  const lista = _comExtrasFiltradas();
+  const t = _comExtrasTotais(lista);
+
+  // KPIs
+  const kpis = el('com-extra-kpis');
+  if(kpis) kpis.innerHTML = `
+    <div class="kpi-card kpi-verde">
+      <div class="kpi-label">🏆 Premiações</div>
+      <div class="kpi-value" style="color:var(--verde)">${fmt(t.premRec)}</div>
+      <div class="kpi-sub">${t.premPrev > 0 ? fmt(t.premPrev) + ' ainda previsto' : 'valores já efetivados'}</div>
+    </div>
+    <div class="kpi-card kpi-vermelho">
+      <div class="kpi-label">🏷️ Descontos</div>
+      <div class="kpi-value" style="color:var(--vermelho)">${t.descRec > 0 ? '- ' + fmt(t.descRec) : fmt(0)}</div>
+      <div class="kpi-sub ${t.descPrev > 0 ? 'neg' : ''}">${t.descPrev > 0 ? fmt(t.descPrev) + ' ainda previsto' : 'valores já efetivados'}</div>
+    </div>
+    <div class="kpi-card kpi-roxo">
+      <div class="kpi-label">Σ Impacto na Comissão</div>
+      <div class="kpi-value" style="color:${t.liquidoRecebido < 0 ? 'var(--vermelho)' : 'var(--verde)'}">
+        ${(t.liquidoRecebido >= 0 ? '+ ' : '- ') + fmt(Math.abs(t.liquidoRecebido))}
+      </div>
+      <div class="kpi-sub">${lista.length} lançamento${lista.length !== 1 ? 's' : ''} no filtro atual</div>
+    </div>`;
+
+  if(!tbody) return;
+  if(lista.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:#aaa;padding:22px">
+      Nenhuma premiação ou desconto lançado.<br>
+      <span style="font-size:11px">Use o botão “+ Novo lançamento” para registrar valores que chegam fora da comissão por NF.</span>
+    </td></tr>`;
+    return;
+  }
+
+  const ordenada = [...lista].sort((a,b) => (b.data || '').localeCompare(a.data || ''));
+  tbody.innerHTML = ordenada.map(r => {
+    const isDesc = r.tipo === 'desconto';
+    const prev   = r.status === 'Prevista';
+    return `<tr${prev ? ' style="opacity:.72"' : ''}>
+      <td class="mono" style="font-size:11px">${r.id}</td>
+      <td>${isDesc
+        ? '<span class="badge badge-vermelho" style="font-size:10px">🏷️ Desconto</span>'
+        : '<span class="badge badge-verde" style="font-size:10px">🏆 Premiação</span>'}</td>
+      <td><span class="tag" style="font-size:9px">${esc(r.industria)}</span></td>
+      <td style="font-size:12px">${r.cliente ? esc(r.cliente) : '<span style="color:#ccc">—</span>'}</td>
+      <td style="font-size:12px">${esc(r.descricao || '')}${r.obs ? `<div style="font-size:10px;color:#aaa">${esc(r.obs)}</div>` : ''}</td>
+      <td style="font-size:12px;font-weight:600">${esc(r.mes || '')}</td>
+      <td style="font-size:11px;color:#888">${r.data || '—'}</td>
+      <td style="text-align:right;font-weight:700;color:${isDesc ? 'var(--vermelho)' : 'var(--verde)'}">
+        ${(isDesc ? '- ' : '+ ') + fmt(r.valor)}
+      </td>
+      <td>${prev
+        ? '<span class="badge badge-amarelo" style="font-size:10px">⏳ Previsto</span>'
+        : '<span class="badge badge-verde" style="font-size:10px">✅ Efetivado</span>'}</td>
+      <td>
+        <div style="display:flex;gap:3px">
+          <button class="btn btn-outline btn-xs" onclick="abrirComExtra('${r.id}')" title="Editar">✏️</button>
+          <button class="btn btn-danger btn-xs" onclick="excluirComExtra('${r.id}')" title="Excluir">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const totalLinha = `
+    <tr style="background:#f4f3ef;border-top:2px solid var(--cinza-medio)">
+      <td colspan="7" style="font-weight:800">TOTAL — impacto efetivado na comissão</td>
+      <td style="text-align:right;font-weight:800;color:${t.liquidoRecebido < 0 ? 'var(--vermelho)' : 'var(--verde)'}">
+        ${(t.liquidoRecebido >= 0 ? '+ ' : '- ') + fmt(Math.abs(t.liquidoRecebido))}
+      </td>
+      <td colspan="2" style="font-size:11px;color:#888">
+        ${fmt(t.premRec)} em premiações − ${fmt(t.descRec)} em descontos
+      </td>
+    </tr>`;
+  tbody.innerHTML += totalLinha;
+}
+
+function exportarComExtras() {
+  const lista = _comExtrasFiltradas();
+  const t = _comExtrasTotais(lista);
+  const rows = [['PREMIAÇÕES E DESCONTOS — COMERCIAL TRÊS VALES'], [''],
+    ['#','Tipo','Indústria','Cliente','Descrição','Mês','Data','Valor','Valor com sinal','Status','Observação']];
+  lista.forEach(r => {
+    const sinal = r.tipo === 'desconto' ? -1 : 1;
+    rows.push([r.id, r.tipo === 'desconto' ? 'Desconto' : 'Premiação', r.industria, r.cliente || '',
+      r.descricao || '', r.mes || '', r.data || '', r.valor, sinal * r.valor,
+      r.status === 'Prevista' ? 'Previsto' : 'Efetivado', r.obs || '']);
+  });
+  rows.push(['']);
+  rows.push(['', '', '', '', '', '', 'TOTAL PREMIAÇÕES:', t.premRec]);
+  rows.push(['', '', '', '', '', '', 'TOTAL DESCONTOS:',  t.descRec]);
+  rows.push(['', '', '', '', '', '', 'IMPACTO LÍQUIDO:',  t.liquidoRecebido]);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:10},{wch:12},{wch:16},{wch:20},{wch:34},{wch:9},{wch:12},{wch:13},{wch:15},{wch:12},{wch:26}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Premiacoes e Descontos');
+  XLSX.writeFile(wb, 'Premiacoes_Descontos_TresVales.xlsx');
+  toast('Excel exportado!');
+}
+
 function exportarComissoes(){
   const wb = XLSX.utils.book_new();
   const rows = [['COMISSÕES — COMERCIAL TRÊS VALES'],[''],
@@ -8901,8 +9620,26 @@ function exportarComissoes(){
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [{wch:10},{wch:10},{wch:22},{wch:14},{wch:14},{wch:14},{wch:6},{wch:14},{wch:14},{wch:12},{wch:30},{wch:12},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Comissoes');
+
+  // Aba 2 — premiações e descontos avulsos
+  const ext = [['#','Tipo','Indústria','Cliente','Descrição','Mês','Data','Valor','Valor com sinal','Status','Observação']];
+  (comissoesExtras||[]).forEach(r => {
+    const sinal = r.tipo === 'desconto' ? -1 : 1;
+    ext.push([r.id, r.tipo === 'desconto' ? 'Desconto' : 'Premiação', r.industria, r.cliente||'',
+      r.descricao||'', r.mes||'', r.data||'', r.valor, sinal*r.valor,
+      r.status === 'Prevista' ? 'Previsto' : 'Efetivado', r.obs||'']);
+  });
+  const _te = _comExtrasTotais(comissoesExtras||[]);
+  ext.push(['']);
+  ext.push(['','','','','','','TOTAL PREMIAÇÕES:', _te.premRec]);
+  ext.push(['','','','','','','TOTAL DESCONTOS:',  _te.descRec]);
+  ext.push(['','','','','','','IMPACTO LÍQUIDO:',  _te.liquidoRecebido]);
+  const wsExt = XLSX.utils.aoa_to_sheet(ext);
+  wsExt['!cols'] = [{wch:10},{wch:12},{wch:16},{wch:20},{wch:34},{wch:9},{wch:12},{wch:13},{wch:15},{wch:12},{wch:26}];
+  XLSX.utils.book_append_sheet(wb, wsExt, 'Premiacoes e Descontos');
+
   XLSX.writeFile(wb, 'Comissoes_TresVales.xlsx');
-  toast('Excel de comissões exportado!');
+  toast('Excel de comissões exportado — inclui premiações e descontos!');
 }
 
 /* ══════════════════════════
@@ -9947,7 +10684,7 @@ const IMPORT_COLS = {
     {key:'tipo',      label:'Tipo',               req:false, hint:'venda ou bonificacao (padrão: venda)'},
     {key:'data',      label:'Data Pedido',        req:false, hint:'DD/MM/AAAA'},
     {key:'cond',      label:'Condição',           req:false, hint:'Ex: 60D, 90D, 28D'},
-    {key:'status',    label:'Status',             req:false, hint:'Recebido, Implantado...'},
+    {key:'status',    label:'Status',             req:false, hint:'Implantado, Faturado total...'},
     {key:'cod',       label:'Cód. Produto',       req:false, hint:'Uma linha por item — mesmo cliente/indústria vira 1 pedido'},
     {key:'desc',      label:'Descrição Produto',  req:false, hint:'Preenchido automaticamente se produto cadastrado'},
     {key:'qtd',       label:'Qtd',                req:false, hint:'Quantidade do item'},
@@ -10777,7 +11514,7 @@ function confirmarImportNFe() {
 
   pedidos.push(pedObj);
   logisticaData.push({pedId, cliente: cli, industria: ind,
-    data: p.dataNF, transportadora: '', previsao: '', dataEntrega: '', statusLog: 'Faturado', obs: ''});
+    data: p.dataNF, previsao: '', dataEntrega: '', statusLog: 'Faturado', obs: ''});
 
   // Gera comissão automática
   gerarComissaoAuto(pedObj, nfObj.liquida);
@@ -11082,7 +11819,7 @@ function confirmarImport() {
           tipo:      isBonifTipo ? 'bonificacao' : 'venda',
           data:      row.data || today(),
           cond:      row.cond || '',
-          status:    row.status || 'Recebido',
+          status:    _normalizarStatusPedido(row.status, false),
           obs:       row.obs   || '',
           itens:     [],
           _totalBruto: 0,
@@ -11171,7 +11908,7 @@ function confirmarImport() {
       };
       pedidos.push(pedObj);
       logisticaData.push({pedId, cliente: g.cliente, industria: g.industria,
-          data: g.data, transportadora: '', previsao: '', dataEntrega: '',
+          data: g.data, previsao: '', dataEntrega: '',
           statusLog: nfObj ? 'Faturado' : 'Pedido Digitado', obs: ''});
 
       // Gera comissão se tiver NF e for venda
@@ -11456,9 +12193,9 @@ function baixarModeloImport() {
     ],
     pedido: [
       // Cliente       | Indústria | Tipo        | Data       | Condição | Status    | Cód.     | Descrição                   | Qtd | Desconto | Preço Unit | Total
-      ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Recebido', 'LAB-001', 'Shampoo Hidratação 300ml',    '2',  '10',      '18.00',    '32.40'],
-      ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Recebido', 'LAB-002', 'Condicionador Nutrição 250ml','3',  '0',       '18.00',    '54.00'],
-      ['DCA Bahia',        'ZALIKE',   'bonificacao',  '05/03/2026', '90D', 'Recebido', 'ZAL-010', 'Kit Presente Premium',        '1',  '0',       '45.00',    '45.00'],
+      ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Implantado', 'LAB-001', 'Shampoo Hidratação 300ml',    '2',  '10',      '18.00',    '32.40'],
+      ['Farmácia Central', 'LABOTRAT', 'venda',        '01/03/2026', '60D', 'Implantado', 'LAB-002', 'Condicionador Nutrição 250ml','3',  '0',       '18.00',    '54.00'],
+      ['DCA Bahia',        'ZALIKE',   'bonificacao',  '05/03/2026', '90D', 'Implantado', 'ZAL-010', 'Kit Presente Premium',        '1',  '0',       '45.00',    '45.00'],
     ],
   };
   const rows = [header];
@@ -11526,7 +12263,7 @@ function popularSelectsDinamicos() {
 
   // selects de escolha (modal de criação)
   const modalCli = ['orc-cli','ped-cli','regra-cli'];
-  const modalInd = ['orc-ind','ped-ind','meta-ind','regra-ind','so-ind','p-ind','mix-novo-ind'];
+  const modalInd = ['orc-ind','ped-ind','meta-ind','regra-ind','so-ind','p-ind','mix-novo-ind','cex-ind'];
   const modalRede = ['c-rede','mix-novo-rede','regra-rede'];
 
   // so-cli: mostra grupos/redes (igual ao campo Rede/Grupo do cadastro)
@@ -11549,6 +12286,13 @@ function popularSelectsDinamicos() {
     s.innerHTML='<option value="">Selecione...</option>'+optsCli;
     if(cur) s.value=cur;
   });
+  // Cliente do lançamento de premiação/desconto é opcional
+  const _cexCli = el('cex-cli');
+  if(_cexCli) {
+    const _cur = _cexCli.value;
+    _cexCli.innerHTML = '<option value="">— Não se aplica —</option>' + optsCli + optsRede;
+    if(_cur) _cexCli.value = _cur;
+  }
   modalInd.forEach(id=>{
     const s=el(id); if(!s) return;
     const cur=s.value;
@@ -12847,8 +13591,7 @@ function renderLogistica() {
   const filtAlerta = (el('log-filtro-alerta')||{}).value||'';
   const filtMes    = (el('log-filtro-mes')||{}).value||'';
 
-  const statusOpts = ['Pedido Digitado','Pedido Enviado','Em Separação','Faturado',
-    'Aguardando Coleta','Em Transporte','Entregue','Finalizado','Cancelado'];
+  const statusOpts = STATUS_LOG_VALIDOS;
 
   // TODOS os pedidos não excluídos aparecem na logística
   const pedElegiveis = pedidos.filter(p => !p.excluido);
@@ -12860,9 +13603,9 @@ function renderLogistica() {
       // Cria entrada nova apenas se não existia
       const statusInicial = (p.nf && ['Faturado total','Expedido','Agendado','Entregue'].includes(p.status)) ? 'Faturado' : 'Pedido Digitado';
       logisticaData.push({pedId:p.id, cliente:p.cliente, industria:p.industria,
-        data:p.data, transportadora:'', previsao:'', dataEntrega:'', statusLog: statusInicial, obs:''});
+        data:p.data, previsao:'', dataEntrega:'', statusLog: statusInicial, obs:''});
     } else {
-      // Atualiza APENAS cliente/indústria/data (não toca statusLog, previsão, transportadora, etc.)
+      // Atualiza APENAS cliente/indústria/data (não toca statusLog, previsão, etc.)
       logisticaData[idx].cliente = p.cliente;
       logisticaData[idx].industria = p.industria;
       if(!logisticaData[idx].dataEntrega) logisticaData[idx].dataEntrega = '';
@@ -12882,7 +13625,6 @@ function renderLogistica() {
       cliente:           p.cliente,
       industria:         p.industria,
       data:              p.data,
-      transportadora:    l.transportadora || '',
       previsao:          l.previsao       || '',
       dataEntrega:       l.dataEntrega    || '',
       statusLog:         l.statusLog      || 'Pedido Digitado',
@@ -12973,7 +13715,7 @@ function renderLogistica() {
   if(filtAlerta === 'hoje')         list = list.filter(l => _logIsHoje(l));
 
   if(list.length===0){
-    tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;color:#aaa;padding:24px">
+    tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;color:#aaa;padding:24px">
       Nenhum pedido encontrado.<br><span style="font-size:11px">Crie um pedido para que apareça aqui automaticamente.</span>
     </td></tr>`;
     return;
@@ -13026,12 +13768,6 @@ function renderLogistica() {
       <td><strong>${esc(l.cliente)}</strong></td>
       <td><span class="tag">${esc(l.industria)}</span></td>
       <td>${l.data}</td>
-      <td>
-        <input type="text" value="${esc(l.transportadora)}" placeholder="Transportadora"
-          style="${inStyle}width:120px"
-          onfocus="this.style.borderColor='var(--amarelo)'"
-          onblur="this.style.borderColor='var(--cinza-medio)';logSalvarCampo('${l.pedId}','transportadora',this.value)">
-      </td>
       <td>
         <input type="date" value="${l.previsao}"
           style="${inStyle}width:130px${atrasado?';border-color:#fca5a5':''}"
@@ -13102,7 +13838,6 @@ function abrirModalStatusLog(pedId) {
   el('log-status-titulo').textContent = 'Atualizar Status — '+pedId;
   el('log-status-info').innerHTML = `<div class="alert alert-info">Pedido: <strong>${pedId}</strong> · Cliente: <strong>${esc(l.cliente)}</strong> · Indústria: <strong>${l.industria}</strong></div>`;
   el('log-novo-status').value = l.statusLog;
-  el('log-transportadora').value = l.transportadora||'';
   el('log-previsao').value = l.previsao||'';
   if(el('log-data-entrega')) el('log-data-entrega').value = l.dataEntrega||'';
   el('log-obs-status').value = l.obs||'';
@@ -13118,7 +13853,6 @@ function confirmarStatusLogistica() {
   logisticaData = logisticaData.map(l=>{
     if(l.pedId===logEditId) return {...l,
       statusLog: novoStatus,
-      transportadora: el('log-transportadora').value,
       previsao: el('log-previsao').value,
       dataEntrega: autoDataEntrega,
       obs: el('log-obs-status').value
@@ -13133,7 +13867,7 @@ function confirmarStatusLogistica() {
 
 function exportarLogistica() {
   const wb = XLSX.utils.book_new();
-  const rows = [['Pedido','Nº Ped. Cliente','Nº NF','Val. NF','Data NF','Cliente','Indústria','Data Pedido','Transportadora','Previsão Entrega','Data Entregue','Status','Observação']];
+  const rows = [['Pedido','Nº Ped. Cliente','Nº NF','Val. NF','Data NF','Cliente','Indústria','Data Pedido','Previsão Entrega','Data Entregue','Status','Observação']];
   pedidos.filter(p=>!p.excluido).forEach(p => {
     const l = logisticaData.find(x=>x.pedId===p.id) || {};
     rows.push([
@@ -13143,7 +13877,7 @@ function exportarLogistica() {
       p.nf?.valorNF || '',
       p.nf?.data    || '',
       p.cliente, p.industria, p.data,
-      l.transportadora||'', l.previsao||'', l.dataEntrega||'',
+      l.previsao||'', l.dataEntrega||'',
       l.statusLog||'', l.obs||''
     ]);
   });
@@ -13733,8 +14467,8 @@ function exportarTudo(){
   const r5=[['#','Pedido','Cliente','Indústria','Data','NF','Valor Pedido','Valor NF','Mês','Status']];
   bonificacoesData.forEach(b=>r5.push([b.id,b.pedido,b.cliente,b.industria,b.data,b.nf||'',b.valorPedido,b.valorNF,b.mes,b.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r5),'Bonificacoes');
-  const r4=[['Pedido','Cliente','Indústria','Data','Transportadora','Previsão','Status Log.']];
-  logisticaData.forEach(l=>r4.push([l.pedId,l.cliente,l.industria,l.data,l.transportadora||'',l.previsao||'',l.statusLog]));
+  const r4=[['Pedido','Cliente','Indústria','Data','Previsão','Status Log.']];
+  logisticaData.forEach(l=>r4.push([l.pedId,l.cliente,l.industria,l.data,l.previsao||'',l.statusLog]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r4),'Logistica');
   XLSX.writeFile(wb,'GestCom_TresVales_v4_Completo.xlsx');
   toast('Relatório completo exportado!');
@@ -15049,6 +15783,7 @@ function coletarDadosParaSync() {
     industrias:     JSON.parse(JSON.stringify(industrias)),
     redes:          JSON.parse(JSON.stringify(redes)),
     comissoes_data: JSON.parse(JSON.stringify(comissoes_data)),
+    comissoesExtras: JSON.parse(JSON.stringify(typeof comissoesExtras!=='undefined'?comissoesExtras:[])),
     logisticaData:  JSON.parse(JSON.stringify(logisticaData)),
     sellOutData:    JSON.parse(JSON.stringify(sellOutData)),
     metasData:      JSON.parse(JSON.stringify(metasData)),
@@ -15112,6 +15847,7 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(Array.isArray(dados.industrias)) industrias = dados.industrias;
   if(Array.isArray(dados.redes)) redes = dados.redes;
   if(Array.isArray(dados.comissoes_data)) comissoes_data = dados.comissoes_data;
+  if(Array.isArray(dados.comissoesExtras)) comissoesExtras = dados.comissoesExtras;
   if(Array.isArray(dados.logisticaData)) logisticaData = dados.logisticaData;
   if(Array.isArray(dados.sellOutData)) sellOutData = dados.sellOutData;
   if(Array.isArray(dados.metasData)) metasData = dados.metasData;
@@ -15148,6 +15884,7 @@ const _loginAtual = usuarioLogado?.login;
     usuarios = dados.usuarios;
     if(_usrAtual && !usuarios.find(u=>u.login===_loginAtual)) usuarios.push(_usrAtual);
   }
+  try { migrarStatusV30(); } catch(e) {}
   try { _resetSnapshot(); } catch(e) {}
   try { if(_purgarDemo()) _salvarLocal(); } catch(e) { console.warn('[GestCom] limpeza demo:', e.message); }
   if(!silencioso) {
@@ -15233,7 +15970,8 @@ function syncAgora(){syncPull();}
 async function syncResetCloud(){if(!confirm('Apagar nuvem e enviar dados locais?'))return;await syncPush(false);toast('Nuvem resetada!');}
 async function tentarReconexaoAuto(){if(configSync.dbUrl&&!configSync.conectado){try{await firebaseConectar();}catch(e){}}}
 (function(){try{const _rawSU=localStorage.getItem('gestcom_saldousos');if(_rawSU)window.saldoUsosData=JSON.parse(_rawSU);}catch(e){}try{if(typeof _carregarLocal==='function'&&_carregarLocal()){try{popularSelectsDinamicos();}catch(e){}try{renderDashboard();}catch(e){}}}catch(e){}})();
-pedidos.filter(p=>!p.excluido).forEach(p=>{if(!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,transportadora:'',previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''}); });
+pedidos.filter(p=>!p.excluido).forEach(p=>{if(!logisticaData.find(l=>l.pedId===p.id))logisticaData.push({pedId:p.id,cliente:p.cliente,industria:p.industria,data:p.data,previsao:'',dataEntrega:'',statusLog:'Pedido Digitado',obs:''}); });
+try{migrarStatusV30();}catch(e){}
 try{const ts=document.getElementById('sync-ts');if(ts)ts.textContent='Sistema ativo · '+new Date().toLocaleString('pt-BR');}catch(e){}
 try{atualizarBadgeTratativas();}catch(e){}
 try{_atualizarBadgeCtrlSaldo();}catch(e){}
@@ -16385,7 +17123,7 @@ function confirmarImportFaturados() {
     pedidos.push(pedObj);
     logisticaData.push({
       pedId, cliente: r.cli, industria: r.ind,
-      data: r.data, transportadora: '', previsao: '', dataEntrega: '',
+      data: r.data, previsao: '', dataEntrega: '',
       statusLog: 'Faturado', obs: ''
     });
 
