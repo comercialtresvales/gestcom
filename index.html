@@ -1471,6 +1471,9 @@ tr:last-child td{border-bottom:none;}
         </label>
         <button id="btn-limpar-excluidos" class="btn btn-danger btn-sm" style="display:none" onclick="limparTodosExcluidos()">🗑️ Excluir todos permanentemente</button>
       </div>
+      <div class="kpi-grid" style="grid-template-columns:minmax(220px,320px);margin-bottom:12px">
+        <div class="kpi-card kpi-azul"><div class="kpi-label">Total Pedidos</div><div class="kpi-value" id="ped-kpi-total">R$ 0,00</div><div class="kpi-sub" id="ped-kpi-total-sub">0 pedidos</div></div>
+      </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr><th>#</th><th>Nº Ped. Cliente</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Condição</th><th>Itens</th><th>Total Pedido</th><th>NF Líquida</th><th>Status</th><th>Ações</th></tr></thead>
@@ -5854,6 +5857,10 @@ function renderPedidos() {
     }
     return true;
   });
+  // Totalizador da coluna "Total Pedido" (respeita busca e filtros, todas as páginas)
+  const _totPed = list.filter(p=>!p.excluido).reduce((s,p)=>s+(parseFloat(p.total)||0),0);
+  if(el('ped-kpi-total')) el('ped-kpi-total').textContent = fmt(_totPed);
+  if(el('ped-kpi-total-sub')) el('ped-kpi-total-sub').textContent = list.length+(list.length===1?' pedido':' pedidos')+(busca||filtSt||filtInd||filtTipo||filtMes?' (filtrados)':'');
   // Paginação — 50 por página
   window._pedPag = window._pedPag || 1;
   const _ppSize = 50;
