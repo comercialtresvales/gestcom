@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1263,7 +1262,7 @@ tr:last-child td{border-bottom:none;}
     <div class="nav-item" onclick="showPanel('orcamentos',this)"><span class="nav-icon">📝</span> Orçamentos</div>
     <div class="nav-item" onclick="showPanel('pedidos',this)"><span class="nav-icon">📋</span> Pedidos</div>
     <div class="nav-item" onclick="showPanel('faturamento',this)"><span class="nav-icon">🧾</span> Faturamento / NF</div>
-    <div class="nav-item" onclick="showPanel('nfcompare',this)"><span class="nav-icon">⚖️</span> Pedido × NF</div>
+    <div class="nav-item" data-modulo="nfcompare" style="display:none" onclick="showPanel('nfcompare',this)"><span class="nav-icon">⚖️</span> Pedido × NF</div>
     <div class="nav-item" onclick="showPanel('logistica',this)"><span class="nav-icon">🚚</span> Logística</div>
     <div class="nav-item" onclick="showPanel('tratativas',this)"><span class="nav-icon">🔁</span> Tratativas <span class="nav-badge" id="badge-tratativas">0</span></div>
     <div class="nav-item" onclick="showPanel('bonificacoes',this)"><span class="nav-icon">🎁</span> Bonificações</div>
@@ -1491,7 +1490,7 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="alert alert-info">ℹ️ O <strong>valor líquido da NF</strong> (após todos os abatimentos) é a base de cálculo das comissões. NFD, bonificações sem comissão e devoluções reduzem a base.<br>
-      🛒 <strong>Venda</strong> e 🎁 <strong>Bonificação</strong> aparecem separados nos indicadores, na coluna <strong>Tipo</strong> e no quadro <strong>mês a mês</strong> no fim da página.</div>
+      🛒 <strong>Venda</strong> e 🎁 <strong>Bonificação</strong> aparecem separados nos indicadores acima e na coluna <strong>Tipo</strong>. O acompanhamento <strong>mês a mês</strong> está em <strong>Relatórios / KPIs</strong> e em <strong>Fat. Mensal por Indústria</strong>.</div>
 
       <!-- KPIs: faturado de VENDA x faturado de BONIFICAÇÃO -->
       <div class="kpi-grid" id="fat-kpi-grid" style="margin-bottom:16px"></div>
@@ -1538,42 +1537,6 @@ tr:last-child td{border-bottom:none;}
         </table>
       </div>
 
-      <!-- ===== FATURADO MÊS A MÊS: VENDA x BONIFICAÇÃO ===== -->
-      <div class="card" style="margin-top:18px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-          <div>
-            <div class="card-title">📅 Faturado Mês a Mês — Venda × Bonificação</div>
-            <div style="font-size:11px;color:#888;margin-top:3px">
-              Acompanha os filtros de <strong>cliente</strong>, <strong>indústria</strong> e <strong>tipo</strong>. Não é afetado pelo filtro de mês acima.
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="fat-resumo-ano" onchange="renderFatResumoMensal()"
-              style="padding:5px 9px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff"></select>
-            <button class="btn btn-info btn-sm" onclick="exportarFatResumoMensal()">📤 Exportar</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th>Mês</th>
-              <th style="text-align:right">NFs Venda</th>
-              <th style="text-align:right">Venda — Bruto</th>
-              <th style="text-align:right" class="bold">Venda — Líquido</th>
-              <th style="text-align:right">NFs Bonif.</th>
-              <th style="text-align:right" class="bold">Bonificação</th>
-              <th style="text-align:right">Total Faturado</th>
-              <th style="text-align:right">% Bonif.</th>
-            </tr></thead>
-            <tbody id="fat-resumo-tbody"></tbody>
-          </table>
-        </div>
-        <div style="font-size:10.5px;color:#999;margin-top:10px;line-height:1.6">
-          <strong>Venda — Bruto:</strong> valor cheio da NF de venda ·
-          <strong>Venda — Líquido:</strong> valor da NF de venda após abatimentos, devoluções, desconto financeiro, NFD e bonificação sem comissão (é a base da comissão) ·
-          <strong>Bonificação:</strong> NFs de pedidos do tipo bonificação + a parcela "Bonif. s/ Comissão" lançada dentro das NFs de venda.
-        </div>
-      </div>
     </div>
 
     <!-- ===== PEDIDO × NF ===== -->
@@ -4292,7 +4255,7 @@ let configSistema = {
   lembReuniaoDia:     true,          // e-mail no dia, X horas antes da reunião
   lembReuniaoHorasAntes: 2,          // quantas horas antes do horário da reunião
   lembReuniaoDias:    [1,2,3,4,5],   // dias em que é permitido enviar
-  modulosAtivos: ['dashboard','orcamentos','pedidos','faturamento','nfcompare','logistica',
+  modulosAtivos: ['dashboard','orcamentos','pedidos','faturamento','logistica',
     'tratativas','saldo','ctrlsaldo','comissoes','fatmensal','sellinout','metas','relatorios',
     'mix','redes','clientes','industrias','produtos','regras','usuarios','configuracoes','importexport','sync']
 };
@@ -4585,6 +4548,15 @@ function _migrarConfigLembretes() {
   });
   if(!Array.isArray(configSistema.lembTarefasDias)) configSistema.lembTarefasDias = [1,2,3,4,5];
   if(!Array.isArray(configSistema.lembReuniaoDias)) configSistema.lembReuniaoDias = [1,2,3,4,5];
+  /* v32 — módulo "Pedido × NF" desativado por padrão (a NF é lançada direto no
+     pedido, então a comparação já acontece lá). Roda uma única vez; o usuário
+     pode reativar o módulo em Configurações › Módulos do Sistema. */
+  if(!configSistema._v32OcultarNfcompare) {
+    if(Array.isArray(configSistema.modulosAtivos)) {
+      configSistema.modulosAtivos = configSistema.modulosAtivos.filter(function(k){ return k !== 'nfcompare'; });
+    }
+    configSistema._v32OcultarNfcompare = true;
+  }
   /* Webmail: quem tinha o endereço antigo (GoDaddy / myprofessionalmail) passa para o Titan */
   if(!configSistema.webmailUrl || /myprofessionalmail|godaddy/i.test(configSistema.webmailUrl)) {
     configSistema.webmailUrl = WEBMAIL_PADRAO;
@@ -5179,6 +5151,9 @@ function showPanel(name, navEl) {
   const nivel = nivelAcesso(name);
   if(usuarioLogado && nivel === 'nenhum') {
     toast('⛔ Sem permissão para acessar este módulo.','error'); return;
+  }
+  if(typeof moduloAtivo === 'function' && !moduloAtivo(name)) {
+    toast('Este módulo está desativado. Ative em Configurações › Módulos do Sistema.','error'); return;
   }
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   const p = el('panel-'+name); if(p) p.classList.add('active');
@@ -7381,9 +7356,6 @@ function renderFaturamento() {
       <div class="kpi-sub ${pctBon>15?'neg':''}">sobre o total faturado</div>
     </div>`;
 
-  // ── Quadro mês a mês ──
-  try { renderFatResumoMensal(); } catch(e) {}
-
   // ── Tabela de NFs ──
   if(list.length === 0) {
     tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';
@@ -7449,79 +7421,11 @@ function _fatResumoMensalDados(ano) {
   return { ano, venda, bonif, bruto, qVenda, qBonif };
 }
 
-function renderFatResumoMensal() {
-  const tbody = el('fat-resumo-tbody'); if(!tbody) return;
-
-  // Popula o seletor de ano preservando a escolha atual
-  const selAno = el('fat-resumo-ano');
-  const anos = _fatAnosDisponiveis();
-  if(selAno) {
-    const atual = selAno.value && anos.includes(selAno.value) ? selAno.value : anos[0];
-    selAno.innerHTML = anos.map(a => `<option value="${a}" ${a===atual?'selected':''}>${a}</option>`).join('');
-    selAno.value = atual;
-  }
-  const ano = (selAno && selAno.value) || anos[0];
-  const d = _fatResumoMensalDados(ano);
-
-  const tVenda = d.venda.reduce((a,b)=>a+b,0);
-  const tBonif = d.bonif.reduce((a,b)=>a+b,0);
-  const tBruto = d.bruto.reduce((a,b)=>a+b,0);
-  const tQV    = d.qVenda.reduce((a,b)=>a+b,0);
-  const tQB    = d.qBonif.reduce((a,b)=>a+b,0);
-
-  if(tVenda === 0 && tBonif === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF registrada em ${ano} para os filtros selecionados</td></tr>`;
-    return;
-  }
-
-  const linhas = d.venda.map((_, i) => {
-    const tot = d.venda[i] + d.bonif[i];
-    const pct = tot > 0 ? (d.bonif[i] / tot * 100) : 0;
-    const vazio = tot === 0 && d.bruto[i] === 0;
-    return `<tr style="${vazio?'opacity:.4':''}">
-      <td style="font-weight:600">${FAT_MESES[i]}</td>
-      <td style="text-align:right;color:#888">${d.qVenda[i]||'—'}</td>
-      <td style="text-align:right">${d.bruto[i] ? fmt(d.bruto[i]) : '—'}</td>
-      <td style="text-align:right" class="bold verde">${d.venda[i] ? fmt(d.venda[i]) : '—'}</td>
-      <td style="text-align:right;color:#888">${d.qBonif[i]||'—'}</td>
-      <td style="text-align:right;font-weight:700;color:#b8900a">${d.bonif[i] ? fmt(d.bonif[i]) : '—'}</td>
-      <td style="text-align:right;font-weight:600">${tot ? fmt(tot) : '—'}</td>
-      <td style="text-align:right;font-size:11px;color:${pct>15?'var(--vermelho)':'#888'}">${tot ? pct.toFixed(1).replace('.',',')+'%' : '—'}</td>
-    </tr>`;
-  }).join('');
-
-  const totGeral = tVenda + tBonif;
-  const pctGeral = totGeral > 0 ? (tBonif/totGeral*100) : 0;
-  tbody.innerHTML = linhas + `
-    <tr style="background:#f4f3ef;border-top:2px solid var(--cinza-medio)">
-      <td style="font-weight:800">TOTAL ${ano}</td>
-      <td style="text-align:right;font-weight:700">${tQV}</td>
-      <td style="text-align:right;font-weight:700">${fmt(tBruto)}</td>
-      <td style="text-align:right;font-weight:800" class="verde">${fmt(tVenda)}</td>
-      <td style="text-align:right;font-weight:700">${tQB}</td>
-      <td style="text-align:right;font-weight:800;color:#b8900a">${fmt(tBonif)}</td>
-      <td style="text-align:right;font-weight:800">${fmt(totGeral)}</td>
-      <td style="text-align:right;font-weight:700;font-size:11px">${pctGeral.toFixed(1).replace('.',',')}%</td>
-    </tr>`;
-}
-
-function exportarFatResumoMensal() {
-  const ano = (el('fat-resumo-ano')||{}).value || String(new Date().getFullYear());
-  const d = _fatResumoMensalDados(ano);
-  const rows = [['Mês','NFs Venda','Venda - Bruto','Venda - Líquido','NFs Bonificação','Bonificação','Total Faturado','% Bonificação']];
-  d.venda.forEach((_, i) => {
-    const tot = d.venda[i] + d.bonif[i];
-    rows.push([FAT_MESES[i], d.qVenda[i], d.bruto[i], d.venda[i], d.qBonif[i], d.bonif[i], tot,
-      tot > 0 ? +(d.bonif[i]/tot*100).toFixed(2) : 0]);
-  });
-  const tV = d.venda.reduce((a,b)=>a+b,0), tB = d.bonif.reduce((a,b)=>a+b,0);
-  rows.push(['TOTAL ' + ano, d.qVenda.reduce((a,b)=>a+b,0), d.bruto.reduce((a,b)=>a+b,0), tV,
-    d.qBonif.reduce((a,b)=>a+b,0), tB, tV + tB, (tV+tB) > 0 ? +(tB/(tV+tB)*100).toFixed(2) : 0]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Venda x Bonif ' + ano);
-  XLSX.writeFile(wb, 'Faturamento_Venda_x_Bonificacao_' + ano + '.xlsx');
-  toast('Excel exportado!');
-}
+/* renderFatResumoMensal() e exportarFatResumoMensal() removidos na v32 —
+   o quadro 'Faturado Mês a Mês' saiu do painel de Faturamento/NF.
+   Os dados continuam disponíveis em Relatórios/KPIs, em Fat. Mensal por
+   Indústria e na aba 'Venda x Bonificação' do Exportar Excel (que usa
+   _fatResumoMensalDados, mantida abaixo). */
 
 function exportarFaturamento(){
   const wb = XLSX.utils.book_new();
@@ -13470,6 +13374,20 @@ function recuperarAcesso() {
   alert('✅ Acesso recuperado!\n\nUse:\n  Usuário: admin\n  Senha: admin123\n\nClique em Entrar.');
 }
 
+/* v32 — módulo ligado/desligado em Configurações › Módulos do Sistema.
+   Chaves que não aparecem na lista de módulos configuráveis continuam
+   sempre disponíveis (submenus internos, telas de sistema etc.). */
+function moduloAtivo(key) {
+  if(!key) return true;
+  const lista = (typeof configSistema !== 'undefined' && Array.isArray(configSistema.modulosAtivos))
+    ? configSistema.modulosAtivos : null;
+  if(!lista) return true;
+  const configuravel = (typeof TODOS_MODULOS !== 'undefined')
+    ? TODOS_MODULOS.some(m => m.key === key) : false;
+  if(!configuravel) return true;
+  return lista.includes(key);
+}
+
 function aplicarVisibilidadeSidebar() {
   if(!usuarioLogado) return;
   const perms = getPerms(usuarioLogado.id);
@@ -13479,7 +13397,7 @@ function aplicarVisibilidadeSidebar() {
     if(!match) return;
     const key   = match[1];
     const nivel = perms[key]||'nenhum';
-    item.style.display = nivel==='nenhum' ? 'none' : '';
+    item.style.display = (nivel==='nenhum' || !moduloAtivo(key)) ? 'none' : '';
     // Indicador visual de somente leitura na sidebar
     const existing = item.querySelector('.nav-readonly-badge');
     if(existing) existing.remove();
@@ -18262,7 +18180,8 @@ function gcOpenMenuSheet() {
 
   MODULOS.forEach(group => {
     const acessiveis = group.items.filter(it =>
-      typeof hasAccess === 'function' ? hasAccess(it.panel) : true
+      (typeof hasAccess === 'function' ? hasAccess(it.panel) : true) &&
+      (typeof moduloAtivo === 'function' ? moduloAtivo(it.panel) : true)
     );
     if (acessiveis.length === 0) return;
 
