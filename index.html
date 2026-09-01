@@ -2376,10 +2376,39 @@ tr:last-child td{border-bottom:none;}
         <button class="btn btn-primary btn-sm" onclick="openModal('modal-regra');popularSelectsDinamicos()">+ Nova Regra</button>
       </div>
       <div class="alert alert-warning">⚠️ Alterações nas regras recalculam automaticamente as comissões futuras. Comissões já recebidas não são afetadas.</div>
+
+      <div class="search-bar">
+        <input id="regra-busca" placeholder="🔍 Indústria, rede, cliente, perfil, prazo..." oninput="renderRegras()">
+        <select id="regra-filtro-ind" onchange="renderRegras()">
+          <option value="">Todas as indústrias</option>
+        </select>
+        <select id="regra-filtro-vinculo" onchange="renderRegras()">
+          <option value="">Todos os vínculos</option>
+          <option value="global">Global (todos os clientes)</option>
+          <option value="rede">🔗 Rede</option>
+          <option value="cliente">👤 Cliente</option>
+        </select>
+        <select id="regra-filtro-tipo" onchange="renderRegras()">
+          <option value="">Faturamento + Liquidez</option>
+          <option value="Faturamento">Faturamento</option>
+          <option value="Liquidez">Liquidez</option>
+        </select>
+        <select id="regra-filtro-ativo" onchange="renderRegras()">
+          <option value="">Ativas + inativas</option>
+          <option value="ativa">✅ Somente ativas</option>
+          <option value="inativa">⏸️ Somente inativas</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="limparFiltrosRegras()" title="Limpar todos os filtros">✕ Limpar</button>
+      </div>
+
+      <div id="regra-contador" style="font-size:11.5px;color:#888;margin-bottom:8px"></div>
+
       <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr><th>Indústria</th><th>Vínculo</th><th>Rede / Cliente</th><th>Perfil</th><th>Prazo</th><th>Tipo Comissão</th><th>% Comissão</th><th>Base Cálculo</th><th>Ativo</th><th>Ações</th></tr></thead>
-        <tbody id="regras-tbody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table><thead><tr><th>Indústria</th><th>Vínculo</th><th>Rede / Cliente</th><th>Perfil</th><th>Prazo</th><th>Tipo Comissão</th><th>% Comissão</th><th>Base Cálculo</th><th>Ativo</th><th>Ações</th></tr></thead>
+          <tbody id="regras-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -15201,13 +15230,82 @@ function confirmarSolucaoTratativa() {
 /* ══════════════════════════
    REGRAS COMERCIAIS
 ══════════════════════════ */
+/* Classifica o vínculo de uma regra: global, rede ou cliente */
+function _regraVinculo(r) {
+  if(r.rede) return 'rede';
+  if(r.cliente && r.cliente !== 'Todos') return 'cliente';
+  return 'global';
+}
+
+/* Aplica os filtros da barra de busca do painel de Regras Comerciais */
+function _regrasFiltradas() {
+  const busca   = (el('regra-busca')||{}).value?.toLowerCase()||'';
+  const filtInd = (el('regra-filtro-ind')||{}).value||'';
+  const filtVin = (el('regra-filtro-vinculo')||{}).value||'';
+  const filtTip = (el('regra-filtro-tipo')||{}).value||'';
+  const filtAtv = (el('regra-filtro-ativo')||{}).value||'';
+
+  return (regrasComerciais||[]).filter(r => {
+    if(filtInd && r.industria !== filtInd) return false;
+    if(filtVin && _regraVinculo(r) !== filtVin) return false;
+    if(filtTip && r.tipo !== filtTip) return false;
+    if(filtAtv === 'ativa'   && !r.ativo) return false;
+    if(filtAtv === 'inativa' &&  r.ativo) return false;
+    if(busca) {
+      const alvo = [r.industria, r.rede, r.cliente, r.perfil, r.prazo, r.tipo, r.base, r.id]
+        .filter(Boolean).join(' ').toLowerCase();
+      if(!alvo.includes(busca)) return false;
+    }
+    return true;
+  });
+}
+
+function limparFiltrosRegras() {
+  ['regra-busca','regra-filtro-ind','regra-filtro-vinculo','regra-filtro-tipo','regra-filtro-ativo']
+    .forEach(id => { const e = el(id); if(e) e.value = ''; });
+  renderRegras();
+}
+
 function renderRegras() {
   const tbody = el('regras-tbody'); if(!tbody) return;
-  if(regrasComerciais.length===0) {
+
+  // Preenche o filtro de indústria com o que existe nas regras (preserva a seleção)
+  const selInd = el('regra-filtro-ind');
+  if(selInd) {
+    const nomes = [...new Set((regrasComerciais||[]).map(r => r.industria).filter(Boolean))].sort();
+    const cur = selInd.value;
+    selInd.innerHTML = '<option value="">Todas as indústrias</option>' +
+      nomes.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    selInd.value = nomes.includes(cur) ? cur : '';
+  }
+
+  const total = (regrasComerciais||[]).length;
+  const list  = _regrasFiltradas();
+
+  // Contador / resumo
+  const cont = el('regra-contador');
+  if(cont) {
+    if(total === 0) {
+      cont.textContent = '';
+    } else {
+      const ativas = list.filter(r => r.ativo).length;
+      const filtrando = list.length !== total;
+      cont.innerHTML = `<strong>${list.length}</strong> de ${total} regra${total!==1?'s':''}`
+        + ` · ${ativas} ativa${ativas!==1?'s':''}`
+        + (filtrando ? ' · <span style="color:var(--amarelo-mid,#b8900a);font-weight:600">filtro aplicado</span>' : '');
+    }
+  }
+
+  if(total === 0) {
     tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhuma regra cadastrada. Clique em "+ Nova Regra".</td></tr>';
     return;
   }
-  tbody.innerHTML = regrasComerciais.map(r=>{
+  if(list.length === 0) {
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhuma regra encontrada para os filtros selecionados.<br><span style="font-size:11px">Use “✕ Limpar” para ver todas as ' + total + ' regras.</span></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(r=>{
     const vinculo = r.rede ? `<span class="badge badge-roxo">🔗 ${esc(r.rede)}</span>` :
                     r.cliente&&r.cliente!=='Todos' ? `<span class="badge badge-azul">👤 ${esc(r.cliente)}</span>` :
                     `<span class="badge badge-cinza">Todos</span>`;
