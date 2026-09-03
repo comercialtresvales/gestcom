@@ -10,6 +10,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 /* Se o CDN principal falhar, tenta outros automaticamente */
@@ -3216,7 +3218,7 @@ tr:last-child td{border-bottom:none;}
       <input type="file" id="import-file" accept=".xlsx,.xls,.pdf,.csv" style="display:none" onchange="handleImportFile(this)">
       <div class="import-icon">📂</div>
       <div class="import-title">Clique para selecionar ou arraste o arquivo</div>
-      <div class="import-sub" id="import-file-name">.xlsx, .xls, .csv, .pdf — máx. 10MB</div>
+      <div class="import-sub" id="import-file-name">.xlsx, .xls, .csv, .pdf, .xml — máx. 10MB</div>
     </div>
     <div id="import-preview" style="display:none">
       <div class="alert" id="import-preview-msg" style="margin-bottom:10px">Arquivo lido!</div>
@@ -6401,7 +6403,7 @@ function pedNFAnexarArquivo(tipo, input) {
     reader.readAsText(file, 'UTF-8');
   }
 
-  // PDF: salva como base64 para exibição
+  // PDF: salva como base64 para exibição e lê os dados do DANFE
   if(tipo === 'pdf') {
     const reader = new FileReader();
     reader.onload = e => {
@@ -6409,6 +6411,20 @@ function pedNFAnexarArquivo(tipo, input) {
       if(nomeEl) nomeEl.innerHTML = `✓ ${file.name} <a href="${e.target.result}" target="_blank" style="font-size:10px;color:var(--azul);margin-left:6px">👁️ Ver PDF</a>`;
     };
     reader.readAsDataURL(file);
+
+    _extrairTextoPDF(file).then(({texto, linhas}) => {
+      const d = _parseDANFE(texto, linhas);
+      let n = 0;
+      if(d.nNF && el('ped-nf-num'))     { el('ped-nf-num').value   = d.nNF; n++; }
+      if(d.dataNF && el('ped-nf-data')) { el('ped-nf-data').value  = d.dataNF; n++; }
+      if(d.vNF > 0 && el('ped-nf-valor')) { el('ped-nf-valor').value = d.vNF.toFixed(2); n++; }
+      if(n && el('ped-nf-abat')) el('ped-nf-abat').value = 0;
+      pedCalcNFInline();
+      if(n) toast('✅ PDF lido! '+n+' campo(s) preenchido(s) — confira os valores.', 'success');
+      else toast('PDF anexado, mas não foi possível identificar os dados da NF. Preencha manualmente.', 'warning');
+    }).catch(err => {
+      toast('PDF anexado. Não foi possível ler o conteúdo: ' + err.message, 'warning');
+    });
   }
 }
 
@@ -10779,7 +10795,7 @@ function importarCadastro(tipo, modoLacunas) {
                    cc:'Conta Corrente',crm:'CRM (Clientes, Indústrias e Responsáveis)'};
   el('import-modal-titulo').textContent = 'Importar ' + (titulos[tipo]||tipo);
   el('import-preview').style.display = 'none';
-  el('import-file-name').textContent = '.xlsx, .xls, .csv, .pdf — máx. 10MB';
+  el('import-file-name').textContent = '.xlsx, .xls, .csv, .pdf, .xml — máx. 10MB';
   el('import-confirm-btn').style.display = 'none';
   el('import-modelo-btn').style.display = 'inline-flex';
   importDados = [];
@@ -11117,17 +11133,17 @@ function _confirmarOrcImport() {
 }
 function importarNF(){
   importTipo='nf';
-  el('import-modal-titulo').textContent='Importar Nota Fiscal (XML NFe)';
+  el('import-modal-titulo').textContent='Importar Nota Fiscal (XML ou PDF)';
   el('import-preview').style.display='none';
   const tpl = el('import-template-info');
   if(tpl) tpl.innerHTML = `
     <div class="alert alert-info" style="margin-bottom:8px">
-      🧾 <strong>Selecione o arquivo XML da NF-e</strong> — o sistema lê automaticamente todos os dados:<br>
+      🧾 <strong>Selecione o XML ou o PDF (DANFE) da NF-e</strong> — o sistema lê automaticamente:<br>
       número, data, emitente, destinatário, itens, valores e condição de pagamento.<br>
       Em seguida confirme a indústria e o cliente para criar o pedido.
     </div>
     <div class="alert alert-warning" style="font-size:11px">
-      ⚠️ Para PDF use a importação via planilha Excel. O XML é o formato oficial da NF-e e garante leitura 100% precisa.
+      ⚠️ O XML é o formato oficial e garante leitura 100% precisa. No PDF a leitura é feita pelo texto do DANFE — confira os dados no preview (PDFs escaneados/imagem não são lidos).
     </div>`;
   el('import-confirm-btn').style.display = 'none';
   el('import-confirm-btn').textContent = '✅ Criar Pedido com esta NF';
@@ -11371,101 +11387,7 @@ function _handleXMLNFe(file) {
         return { cod, desc, qtd, precoUnit, total, ean, precoTab, descPct:0, ind:'' };
       });
 
-      // ── Tentativa de match com cadastros ──────────────
-      const normStr = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-      const emitN = normStr(emitNomeEx);
-      const destN = normStr(destNome);
-
-      const indMatch = industrias.find(i => {
-        const n = normStr(i.nome);
-        return emitN.includes(n.substring(0,8)) || n.includes(emitN.substring(0,8));
-      });
-      const cliMatch = clientes.find(c => {
-        const n = normStr(c.nome);
-        return destN.includes(n.substring(0,8)) || n.includes(destN.substring(0,8));
-      });
-
-      // ── Monta options dos selects ─────────────────────
-      const indOpts = '<option value="">-- Selecione --</option>' +
-        industrias.map(i=>`<option value="${esc(i.nome)}" ${indMatch?.nome===i.nome?'selected':''}>${esc(i.nome)}</option>`).join('');
-      const cliOpts = '<option value="">-- Selecione --</option>' +
-        clientes.map(c=>`<option value="${esc(c.nome)}" ${cliMatch?.nome===c.nome?'selected':''}>${esc(c.nome)}</option>`).join('');
-
-      // ── Preview HTML ──────────────────────────────────
-      el('import-preview-table').innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-          <div class="card" style="padding:12px">
-            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Identificação</div>
-            <div style="font-size:12px;line-height:2">
-              <b>NF:</b> ${esc(nNF)} ${serie?'(Série '+esc(serie)+')':''}<br>
-              <b>Data:</b> ${dataNF ? new Date(dataNF+'T12:00:00').toLocaleDateString('pt-BR') : '—'}<br>
-              ${vProd>0?`<b>Produtos:</b> ${fmt(vProd)}<br>`:''}
-              ${vDesc>0?`<b>Desconto:</b> <span class="vermelho">- ${fmt(vDesc)}</span> <span style="font-size:10px;color:#888">(já incluso no total)</span><br>`:''}
-              <b>Valor Total NF (base comissão):</b> <span class="bold verde">${fmt(vNF)}</span><br>
-              ${cond?`<b>Cond. Pgto:</b> ${esc(cond)}<br>`:''}
-              ${chNFe?`<b>Chave:</b> <span style="font-size:9px;color:#aaa">${esc(chNFe.substring(0,20))}...</span>`:''}
-            </div>
-          </div>
-          <div class="card" style="padding:12px">
-            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏭 Emitente → Indústria</div>
-            <div style="font-size:11px;color:#555;margin-bottom:6px">${esc(emitNomeEx)} ${emitCNPJ?'<br><span style="color:#aaa">CNPJ: '+esc(emitCNPJ)+'</span>':''}</div>
-            <select id="nfe-ind-sel" style="width:100%;padding:6px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px">
-              ${indOpts}
-            </select>
-            ${!indMatch?'<div style="font-size:10px;color:var(--laranja);margin-top:4px">⚠️ Indústria não encontrada — selecione manualmente</div>':'<div style="font-size:10px;color:var(--verde);margin-top:4px">✅ Indústria identificada automaticamente</div>'}
-          </div>
-        </div>
-        <div class="card" style="padding:12px;margin-bottom:14px">
-          <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">👥 Destinatário → Cliente</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center">
-            <div style="font-size:11px;color:#555">${esc(destNome)} ${destCNPJ?'<br><span style="color:#aaa">CNPJ/CPF: '+esc(destCNPJ)+'</span>':''}</div>
-            <div>
-              <select id="nfe-cli-sel" style="width:100%;padding:6px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px">
-                ${cliOpts}
-              </select>
-              ${!cliMatch?'<div style="font-size:10px;color:var(--laranja);margin-top:4px">⚠️ Cliente não encontrado — selecione manualmente</div>':'<div style="font-size:10px;color:var(--verde);margin-top:4px">✅ Cliente identificado automaticamente</div>'}
-            </div>
-          </div>
-        </div>
-        <div class="card" style="padding:0;overflow:hidden">
-          <div style="padding:10px 12px;background:#fafafa;font-size:11px;font-weight:700;color:#888;border-bottom:1px solid var(--cinza-medio)">
-            📦 ITENS DA NOTA FISCAL (${itens.length} item${itens.length!==1?'s':''})
-          </div>
-          <table style="width:100%;font-size:11px">
-            <thead><tr>
-              <th>Código</th><th>Descrição</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th>
-            </tr></thead>
-            <tbody>
-              ${itens.map(it=>`<tr>
-                <td class="mono">${esc(it.cod)}</td>
-                <td>${esc(it.desc)}</td>
-                <td style="text-align:right">${it.qtd}</td>
-                <td style="text-align:right">${fmt(it.precoUnit)}</td>
-                <td class="bold" style="text-align:right">${fmt(it.total)}</td>
-              </tr>`).join('')}
-              <tr style="background:#f4f3ef;font-weight:700">
-                <td colspan="4" style="text-align:right">TOTAL NF</td>
-                <td class="bold verde" style="text-align:right">${fmt(vNF)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="margin-top:12px;padding:10px 12px;background:#e3f2fd;border-radius:6px;font-size:12px;color:#1a5fa8">
-          ℹ️ Ao confirmar, o sistema criará um <strong>pedido + NF</strong> já vinculados e gerará a <strong>comissão automaticamente</strong> conforme as regras cadastradas.
-        </div>`;
-
-      // Salva dados parseados para o confirmar
-      window._nfeParsed = { nNF, serie, dataNF, emitNomeEx, emitCNPJ, destNome, destCNPJ, vNF, vDesc, cond, itens, chNFe };
-
-      _importPreviewMsg(
-        `✅ NF-e lida com sucesso! ${itens.length} item(s) · Valor: ${fmt(vNF)}` +
-        ((!indMatch||!cliMatch)?' <strong>— Selecione a(s) inconsistência(s) acima antes de confirmar.</strong>':''),
-        (!indMatch||!cliMatch) ? 'warning' : 'success'
-      );
-
-      el('import-confirm-btn').style.display = 'inline-flex';
-      el('import-confirm-btn').textContent = '✅ Criar Pedido com esta NF';
-      el('import-confirm-btn').onclick = confirmarImportNFe;
+      _nfeRenderPreview({ nNF, serie, dataNF, chNFe, emitNomeEx, emitCNPJ, destNome, destCNPJ, vNF, vProd, vDesc, cond, itens, origem:'XML' });
 
     } catch(err) {
       _importPreviewMsg('❌ Erro ao processar XML: ' + err.message, 'danger');
@@ -11473,6 +11395,280 @@ function _handleXMLNFe(file) {
     }
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+function _nfeRenderPreview(d) {
+  const { nNF, serie, dataNF, chNFe, emitNomeEx, emitCNPJ, destNome, destCNPJ, vNF, vProd, vDesc, cond, itens } = d;
+  const soDigitos = v => (v||'').replace(/\D/g,'');
+    // ── Tentativa de match com cadastros ──────────────
+    const normStr = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+    const emitN = normStr(emitNomeEx);
+    const destN = normStr(destNome);
+
+    const indMatch = industrias.find(i => {
+      const n = normStr(i.nome);
+      return emitN.includes(n.substring(0,8)) || n.includes(emitN.substring(0,8));
+    });
+    const cliMatch = clientes.find(c => {
+      const n = normStr(c.nome);
+      return destN.includes(n.substring(0,8)) || n.includes(destN.substring(0,8));
+    });
+
+    // ── Monta options dos selects ─────────────────────
+    const indOpts = '<option value="">-- Selecione --</option>' +
+      industrias.map(i=>`<option value="${esc(i.nome)}" ${indMatch?.nome===i.nome?'selected':''}>${esc(i.nome)}</option>`).join('');
+    const cliOpts = '<option value="">-- Selecione --</option>' +
+      clientes.map(c=>`<option value="${esc(c.nome)}" ${cliMatch?.nome===c.nome?'selected':''}>${esc(c.nome)}</option>`).join('');
+
+    // ── Preview HTML ──────────────────────────────────
+    el('import-preview-table').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="card" style="padding:12px">
+          <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Identificação</div>
+          <div style="font-size:12px;line-height:2">
+            <b>NF:</b> ${esc(nNF)} ${serie?'(Série '+esc(serie)+')':''}<br>
+            <b>Data:</b> ${dataNF ? new Date(dataNF+'T12:00:00').toLocaleDateString('pt-BR') : '—'}<br>
+            ${vProd>0?`<b>Produtos:</b> ${fmt(vProd)}<br>`:''}
+            ${vDesc>0?`<b>Desconto:</b> <span class="vermelho">- ${fmt(vDesc)}</span> <span style="font-size:10px;color:#888">(já incluso no total)</span><br>`:''}
+            <b>Valor Total NF (base comissão):</b> <span class="bold verde">${fmt(vNF)}</span><br>
+            ${cond?`<b>Cond. Pgto:</b> ${esc(cond)}<br>`:''}
+            ${chNFe?`<b>Chave:</b> <span style="font-size:9px;color:#aaa">${esc(chNFe.substring(0,20))}...</span>`:''}
+          </div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🏭 Emitente → Indústria</div>
+          <div style="font-size:11px;color:#555;margin-bottom:6px">${esc(emitNomeEx)} ${emitCNPJ?'<br><span style="color:#aaa">CNPJ: '+esc(emitCNPJ)+'</span>':''}</div>
+          <select id="nfe-ind-sel" style="width:100%;padding:6px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px">
+            ${indOpts}
+          </select>
+          ${!indMatch?'<div style="font-size:10px;color:var(--laranja);margin-top:4px">⚠️ Indústria não encontrada — selecione manualmente</div>':'<div style="font-size:10px;color:var(--verde);margin-top:4px">✅ Indústria identificada automaticamente</div>'}
+        </div>
+      </div>
+      <div class="card" style="padding:12px;margin-bottom:14px">
+        <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">👥 Destinatário → Cliente</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center">
+          <div style="font-size:11px;color:#555">${esc(destNome)} ${destCNPJ?'<br><span style="color:#aaa">CNPJ/CPF: '+esc(destCNPJ)+'</span>':''}</div>
+          <div>
+            <select id="nfe-cli-sel" style="width:100%;padding:6px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px">
+              ${cliOpts}
+            </select>
+            ${!cliMatch?'<div style="font-size:10px;color:var(--laranja);margin-top:4px">⚠️ Cliente não encontrado — selecione manualmente</div>':'<div style="font-size:10px;color:var(--verde);margin-top:4px">✅ Cliente identificado automaticamente</div>'}
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:10px 12px;background:#fafafa;font-size:11px;font-weight:700;color:#888;border-bottom:1px solid var(--cinza-medio)">
+          📦 ITENS DA NOTA FISCAL (${itens.length} item${itens.length!==1?'s':''})
+        </div>
+        <table style="width:100%;font-size:11px">
+          <thead><tr>
+            <th>Código</th><th>Descrição</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th>
+          </tr></thead>
+          <tbody>
+            ${itens.map(it=>`<tr>
+              <td class="mono">${esc(it.cod)}</td>
+              <td>${esc(it.desc)}</td>
+              <td style="text-align:right">${it.qtd}</td>
+              <td style="text-align:right">${fmt(it.precoUnit)}</td>
+              <td class="bold" style="text-align:right">${fmt(it.total)}</td>
+            </tr>`).join('')}
+            <tr style="background:#f4f3ef;font-weight:700">
+              <td colspan="4" style="text-align:right">TOTAL NF</td>
+              <td class="bold verde" style="text-align:right">${fmt(vNF)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:#e3f2fd;border-radius:6px;font-size:12px;color:#1a5fa8">
+        ℹ️ Ao confirmar, o sistema criará um <strong>pedido + NF</strong> já vinculados e gerará a <strong>comissão automaticamente</strong> conforme as regras cadastradas.
+      </div>`;
+
+    // Salva dados parseados para o confirmar
+    window._nfeParsed = d;
+
+    _importPreviewMsg(
+      `✅ NF-e lida com sucesso (${d.origem||'XML'})! ${itens.length} item(s) · Valor: ${fmt(vNF)}` +
+    (d.aviso ? '<br>'+d.aviso : '') +
+      ((!indMatch||!cliMatch)?' <strong>— Selecione a(s) inconsistência(s) acima antes de confirmar.</strong>':''),
+      (!indMatch||!cliMatch||d.aviso) ? 'warning' : 'success'
+    );
+
+    el('import-confirm-btn').style.display = 'inline-flex';
+    el('import-confirm-btn').textContent = '✅ Criar Pedido com esta NF';
+    el('import-confirm-btn').onclick = confirmarImportNFe;
+}
+
+/* ── Leitura de PDF (DANFE) via pdf.js ─────────────────────── */
+async function _extrairTextoPDF(file) {
+  if(typeof pdfjsLib === 'undefined') throw new Error('Biblioteca pdf.js não carregada (verifique a conexão com a internet).');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const linhas = [];
+  for(let pg=1; pg<=pdf.numPages; pg++) {
+    const page = await pdf.getPage(pg);
+    const tc = await page.getTextContent();
+    // agrupa por coordenada Y (linha) e ordena por X
+    const rows = {};
+    tc.items.forEach(it => {
+      if(!it.str || !it.str.trim()) return;
+      const y = Math.round(it.transform[5]/3)*3; // tolerância de ~3pt
+      (rows[y] = rows[y] || []).push({x: it.transform[4], t: it.str});
+    });
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y => {
+      const ln = rows[y].sort((a,b)=>a.x-b.x).map(o=>o.t.trim()).join(' ').replace(/\s+/g,' ').trim();
+      if(ln) linhas.push(ln);
+    });
+    linhas.push('');
+  }
+  const texto = linhas.join('\n');
+  if(texto.replace(/\s/g,'').length < 20) throw new Error('O PDF não contém texto (provavelmente é uma imagem escaneada).');
+  return { linhas, texto };
+}
+
+function _parseDANFE(texto, linhas) {
+  const numBR = v => { if(!v) return 0; v=String(v).replace(/[R$\s]/g,''); if(/,\d{1,2}$/.test(v)) v=v.replace(/\./g,'').replace(',','.'); else if(/\.\d{1,2}$/.test(v)&&!v.includes(',')) v=v.replace(/,/g,''); const n=parseFloat(v); return isFinite(n)?n:0; };
+  const dataISO = d => { const m=(d||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+  const normStr = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const T = texto; const TN = normStr(T);
+
+  // ── Chave de acesso (44 dígitos) → nNF, série, CNPJ emitente
+  let chNFe='';
+  const mCh = T.replace(/[\s.\-]/g,'').match(/\d{44}/);
+  if(mCh) chNFe = mCh[0];
+  let nNF='', serie='', emitCNPJ='';
+  if(chNFe.length===44) {
+    emitCNPJ = chNFe.substring(6,20);
+    serie    = String(parseInt(chNFe.substring(22,25),10));
+    nNF      = String(parseInt(chNFe.substring(25,34),10));
+  }
+  // fallback nNF: "Nº 000.123.456" / "N. 123456"
+  if(!nNF) {
+    const m = T.match(/N[º°o]?\.?\s*[:\-]?\s*(\d{1,3}(?:\.\d{3}){1,2}|\d{4,9})\b/i);
+    if(m) nNF = String(parseInt(m[1].replace(/\./g,''),10));
+  }
+  if(!serie) { const m = T.match(/S[ÉE]RIE\s*[:\-]?\s*(\d{1,3})/i); if(m) serie = String(parseInt(m[1],10)); }
+
+  // ── Data de emissão
+  let dataNF='';
+  const mEmi = T.match(/DATA\s+(?:DA\s+|DE\s+)?EMISS[ÃA]O[\s\S]{0,80}?(\d{2}\/\d{2}\/\d{4})/i);
+  if(mEmi) dataNF = dataISO(mEmi[1]);
+  if(!dataNF && chNFe.length===44) dataNF = `20${chNFe.substring(2,4)}-${chNFe.substring(4,6)}-01`;
+  if(!dataNF) { const m = T.match(/\d{2}\/\d{2}\/\d{4}/); if(m) dataNF = dataISO(m[0]); }
+
+  // ── Valores: procura o rótulo e pega o número (formato BR) mais próximo
+  const NUM = '(\\d{1,3}(?:\\.\\d{3})*,\\d{2}|\\d+,\\d{2})';
+  const valorApos = (rotulos, janela=400) => {
+    for(const r of rotulos) {
+      const re = new RegExp(r + '[\\s\\S]{0,'+janela+'}?' + NUM, 'i');
+      const m = T.match(re); if(m) return numBR(m[1]);
+    }
+    return 0;
+  };
+  // Em DANFE os rótulos ficam numa linha e os valores na linha de baixo, na mesma ordem.
+  // Estratégia: localizar a linha do rótulo, identificar a posição do rótulo entre os rótulos da linha,
+  // e pegar o número de mesma posição na linha seguinte.
+  const valorPorColuna = (rotuloRe) => {
+    for(let i=0;i<linhas.length-1;i++){
+      const L = linhas[i]; if(!rotuloRe.test(L)) continue;
+      // rótulos separados por 2+ espaços não existem (já normalizamos) → usa lista conhecida
+      const rots = ['BASE DE C[ÁA]LCULO DO ICMS','VALOR DO ICMS','BASE DE C[ÁA]LC(?:ULO)?\\.? ?(?:DO )?ICMS S(?:UBSTITUIÇÃO|T|\\.T\\.)','VALOR DO ICMS S(?:UBSTITUIÇÃO|T|\\.T\\.)','VALOR TOTAL DOS PRODUTOS','VALOR DO FRETE','VALOR DO SEGURO','DESCONTO','OUTRAS DESPESAS(?: ACESS[ÓO]RIAS)?','VALOR (?:TOTAL )?DO IPI','VALOR TOTAL DA NOTA','V\\. ?TOTAL (?:DA )?NOTA'];
+      const found = [];
+      rots.forEach(r=>{ const m = L.match(new RegExp(r,'i')); if(m) found.push({idx:m.index, r}); });
+      found.sort((a,b)=>a.idx-b.idx);
+      const pos = found.findIndex(f => rotuloRe.test(f.r.replace(/\\/g,'')) || new RegExp(f.r,'i').test(L.match(rotuloRe)[0]));
+      if(pos<0) continue;
+      // próxima linha com números
+      for(let k=i+1;k<Math.min(i+4,linhas.length);k++){
+        const nums = linhas[k].match(new RegExp(NUM,'g'));
+        if(nums && nums.length>=found.length-1) return numBR(nums[Math.min(pos, nums.length-1)]);
+      }
+    }
+    return 0;
+  };
+  let vNF   = valorPorColuna(/VALOR TOTAL DA NOTA|V\. ?TOTAL (?:DA )?NOTA/i) || valorApos(['VALOR TOTAL DA NOTA','V\\. ?TOTAL (?:DA )?NOTA','TOTAL DA NOTA']);
+  let vProd = valorPorColuna(/VALOR TOTAL DOS PRODUTOS/i) || valorApos(['VALOR TOTAL DOS PRODUTOS','TOTAL DOS PRODUTOS']);
+  let vDesc = valorPorColuna(/^DESCONTO$|DESCONTO/i) || 0;
+  if(vDesc >= vNF && vNF>0) vDesc = 0; // leitura errada
+  if(!vNF && vProd) vNF = vProd;
+
+  // ── CNPJs presentes no PDF (emitente = da chave; destinatário = 1º diferente)
+  const fmtCNPJ = c => c.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+  let cnpjs = [...new Set((T.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g)||[]).map(c=>c.replace(/\D/g,'')))];
+  if(!cnpjs.length) cnpjs = [...new Set((T.match(/(?<!\d)\d{14}(?!\d)/g)||[]))];
+  if(!emitCNPJ && cnpjs.length) emitCNPJ = cnpjs[0];
+  let destCNPJ = cnpjs.find(c => c!==emitCNPJ) || '';
+  if(!destCNPJ) { const m = T.match(/\d{3}\.\d{3}\.\d{3}-\d{2}/); if(m) destCNPJ = m[0].replace(/\D/g,''); }
+
+  // ── Nomes: 1º casa com cadastros (CNPJ ou nome contido no texto), depois heurística de layout
+  const soDig = v => (v||'').replace(/\D/g,'');
+  let emitNomeEx = (industrias.find(i => soDig(i.cnpj) && soDig(i.cnpj)===emitCNPJ) ||
+                    industrias.find(i => (i.razao && TN.includes(normStr(i.razao))) || (i.nome && i.nome.length>=4 && TN.includes(normStr(i.nome)))))?.nome || '';
+  let destNome   = (clientes.find(c => soDig(c.cnpj) && soDig(c.cnpj)===destCNPJ) ||
+                    clientes.find(c => c.nome && c.nome.length>=4 && TN.includes(normStr(c.nome))))?.nome || '';
+  if(!destNome) {
+    const m = T.match(/DESTINAT[ÁA]RIO[^\n]*\n(?:[^\n]*(?:NOME|RAZ[ÃA]O SOCIAL)[^\n]*\n)?([^\n]{4,80}?)\s+(?:\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/i);
+    if(m) destNome = m[1].trim();
+  }
+  if(!emitNomeEx) {
+    // Emitente costuma aparecer nas primeiras linhas, antes de "DANFE"
+    const idx = linhas.findIndex(l=>/DANFE/i.test(l));
+    const cand = linhas.slice(0, idx>0?idx:6).find(l => /[A-Za-z]{3,}/.test(l) && !/\d{2}\/\d{2}\/\d{4}|CNPJ|CHAVE|RECEBEMOS/i.test(l) && l.length>=5 && l.length<=90);
+    if(cand) emitNomeEx = cand;
+  }
+
+  // ── Itens (DADOS DO PRODUTO): linha = COD DESC NCM CST CFOP UN QTD VUNIT VTOTAL ...
+  const itens = [];
+  let inItens = false;
+  for(const L of linhas) {
+    if(/DADOS DO(?:S)? PRODUTO|DADOS DOS PRODUTOS\s*\/\s*SERVI/i.test(L)) { inItens = true; continue; }
+    if(inItens && /C[ÁA]LCULO DO ISSQN|DADOS ADICIONAIS|INFORMA[ÇC][ÕO]ES COMPLEMENTARES/i.test(L)) { inItens = false; continue; }
+    if(!inItens) continue;
+    if(/C[ÓO]D(?:IGO)?\.?\s+(?:PROD|DESCRI)/i.test(L)) continue; // cabeçalho
+    const m = L.match(/^(\S+)\s+(.+?)\s+(\d{8})\s+(\d{2,4})\s+(\d{4})\s+([A-Z]{1,6})\s+(\d[\d.]*,\d+)\s+(\d[\d.]*,\d+)\s+(\d[\d.]*,\d+)/i);
+    if(!m) continue;
+    const cod = m[1], desc = m[2], qtd = numBR(m[7]), precoUnit = numBR(m[8]), total = numBR(m[9]);
+    const prodCat = (typeof PRODUTOS_CAT!=='undefined') ? (PRODUTOS_CAT[cod] || PRODUTOS_CAT[cod.replace(/^0+/,'')] || null) : null;
+    itens.push({ cod, desc, qtd, precoUnit, total, ean:'', precoTab: prodCat?.preco||0, descPct:0, ind:'' });
+  }
+
+  // ── Condição de pagamento (duplicatas / faturas)
+  let cond='';
+  const dupDates = [];
+  const mFat = T.match(/FATURA|DUPLICATA/i);
+  if(mFat && dataNF) {
+    const seg = T.substring(mFat.index, mFat.index+1500);
+    (seg.match(/\d{2}\/\d{2}\/\d{4}/g)||[]).forEach(d=>{ const iso=dataISO(d); if(iso && iso>dataNF) dupDates.push(iso); });
+  }
+  if(dupDates.length) {
+    const prazos=[...new Set(dupDates.map(d=>Math.round((new Date(d)-new Date(dataNF))/86400000)).filter(n=>n>0))];
+    if(prazos.length) cond = prazos.join('/').replace(/(\d+)/g,'$1D');
+  }
+
+  const faltas=[];
+  if(!nNF) faltas.push('número da NF'); if(!vNF) faltas.push('valor total'); if(!itens.length) faltas.push('itens');
+  const aviso = '📄 Lido a partir do PDF (DANFE) — confira os dados antes de confirmar.' + (faltas.length? ' Não foi possível identificar: <b>'+faltas.join(', ')+'</b>. Se possível, prefira o XML.' : '');
+
+  return { nNF, serie, dataNF, chNFe, emitNomeEx, emitCNPJ: emitCNPJ?fmtCNPJ(emitCNPJ):'', destNome, destCNPJ: destCNPJ.length===14?fmtCNPJ(destCNPJ):destCNPJ, vNF, vProd, vDesc, cond, itens, origem:'PDF', aviso };
+}
+
+async function _handlePDFNFe(file) {
+  _importPreviewMsg('📄 Lendo PDF da Nota Fiscal (DANFE)...', 'info');
+  el('import-preview').style.display = 'block';
+  el('import-mapeamento').innerHTML = '';
+  el('import-preview-table').innerHTML = '';
+  el('import-confirm-btn').style.display = 'none';
+  try {
+    const { texto, linhas } = await _extrairTextoPDF(file);
+    const d = _parseDANFE(texto, linhas);
+    if(!d.nNF && !d.vNF) {
+      _importPreviewMsg('⚠️ Não foi possível identificar uma NF-e neste PDF. Verifique se é um DANFE com texto (não escaneado) ou use o XML.', 'warning');
+      return;
+    }
+    _nfeRenderPreview(d);
+  } catch(err) {
+    _importPreviewMsg('❌ Erro ao ler PDF: ' + err.message, 'danger');
+    console.error('[NFe PDF]', err);
+  }
 }
 
 function confirmarImportNFe() {
@@ -11495,7 +11691,7 @@ function confirmarImportNFe() {
     devolucoes:  0, descFin: 0, nfd: 0, bonif: 0,
     liquida:     p.vNF,
     pdf: null, xml: null,
-    obs: 'Importado via XML NFe' + (p.chNFe ? ' · Chave: '+p.chNFe : '')
+    obs: 'Importado via '+(p.origem||'XML')+' NFe' + (p.chNFe ? ' · Chave: '+p.chNFe : '')
   };
 
   // Ajusta ind nos itens
@@ -11504,7 +11700,7 @@ function confirmarImportNFe() {
   const pedObj = {
     id: pedId, tipo: 'venda', cliente: cli, industria: ind,
     data: p.dataNF, cond: p.cond, status: 'Faturado total',
-    itens: itensAdj, total, obs: 'NF '+p.nNF+' importada via XML',
+    itens: itensAdj, total, obs: 'NF '+p.nNF+' importada via '+(p.origem||'XML'),
     orcOrigem: '', nf: nfObj, _importado: true
   };
 
@@ -11516,7 +11712,7 @@ function confirmarImportNFe() {
   gerarComissaoAuto(pedObj, nfObj.liquida);
 
   addAudit(usuarioLogado?.login||'admin',
-    `NF-e ${p.nNF} importada via XML → Pedido ${pedId} criado (${cli} / ${ind} / ${fmt(p.vNF)})`, '🧾');
+    `NF-e ${p.nNF} importada via ${p.origem||'XML'} → Pedido ${pedId} criado (${cli} / ${ind} / ${fmt(p.vNF)})`, '🧾');
   syncAutoSaveHook();
   closeModal('modal-import');
   renderPedidos(); renderFaturamento(); renderComissoes(); renderSaldo();
@@ -11526,23 +11722,14 @@ function confirmarImportNFe() {
 }
 
 function _handlePDFImport(file) {
+  if(importTipo === 'nf') { _handlePDFNFe(file); return; }
   // Para PDF, tentar extrair texto e parsear como tabela
   el('import-preview').style.display = 'block';
   el('import-mapeamento').innerHTML = '';
   _importPreviewMsg('📄 PDF detectado. Tentando extrair tabela...', 'info');
 
-  const reader = new FileReader();
-  reader.onload = e => {
-    // Sem pdfjsLib, usamos heurística básica via texto
+  const processar = (text) => {
     try {
-      // Tenta ler como texto bruto (funciona para PDFs simples não-escaneados)
-      const bytes = new Uint8Array(e.target.result);
-      let text = '';
-      for(let i=0;i<bytes.length;i++) {
-        const c = bytes[i];
-        if(c>=32&&c<127) text += String.fromCharCode(c);
-        else if(c===10||c===13) text += '\n';
-      }
       // Procurar linhas que parecem dados tabulares
       const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
 
@@ -11570,7 +11757,21 @@ function _handlePDFImport(file) {
       _importPreviewMsg('❌ Não foi possível processar o PDF. Use Excel (.xlsx).', 'danger');
     }
   };
-  reader.readAsArrayBuffer(file);
+  // Extrai texto real com pdf.js; se falhar, cai na leitura bruta de bytes
+  _extrairTextoPDF(file).then(r => processar(r.linhas.map(l=>l.replace(/ {2,}/g,'  ')).join('\n'))).catch(() => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const bytes = new Uint8Array(e.target.result);
+      let text = '';
+      for(let i=0;i<bytes.length;i++) {
+        const c = bytes[i];
+        if(c>=32&&c<127) text += String.fromCharCode(c);
+        else if(c===10||c===13) text += '\n';
+      }
+      processar(text);
+    };
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 function _importPreviewMsg(msg, tipo='success') {
