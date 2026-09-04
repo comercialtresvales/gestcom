@@ -1650,6 +1650,7 @@ tr:last-child td{border-bottom:none;}
         <div class="tab" id="tab-saldo-industria" onclick="showSaldoTab('industria',this)">🏭 Análise por Indústria</div>
         <div class="tab" id="tab-saldo-cliente" onclick="showSaldoTab('cliente',this)">👥 Análise por Cliente</div>
         <div class="tab" id="tab-saldo-ranking" onclick="showSaldoTab('ranking',this)">🏆 Ranking</div>
+        <div class="tab" id="tab-saldo-zeramentos" onclick="showSaldoTab('zeramentos',this)">🔄 Zeramentos <span class="badge badge-cinza" id="saldo-zer-badge" style="margin-left:4px">0</span></div>
       </div>
 
       <!-- TAB: Detalhe por Cliente (existente) -->
@@ -1734,6 +1735,22 @@ tr:last-child td{border-bottom:none;}
             </div>
             <div id="saldo-rank-cli-fat"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- TAB: Zeramentos (v36) — histórico dos saldos zerados manualmente -->
+      <div id="saldo-tab-zeramentos" style="display:none">
+        <div class="alert alert-info">🔄 Aqui ficam os <strong>zeramentos manuais de saldo</strong> (diferença Pedido × NF ajustada). Eles não aparecem mais misturados com as tratativas. Reverter um zeramento devolve o saldo à tela.</div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+          <div class="kpi-card kpi-verde"><div class="kpi-label">Zeramentos ativos</div><div class="kpi-value" id="saldo-zer-kpi-qtd">0</div><div class="kpi-sub" id="saldo-zer-kpi-qtd-sub">registros</div></div>
+          <div class="kpi-card kpi-azul"><div class="kpi-label">Valor ajustado</div><div class="kpi-value" id="saldo-zer-kpi-val">R$ 0</div><div class="kpi-sub">Diferença zerada</div></div>
+          <div class="kpi-card kpi-roxo"><div class="kpi-label">Revertidos</div><div class="kpi-value" id="saldo-zer-kpi-rev">0</div><div class="kpi-sub">Saldo devolvido</div></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table>
+            <thead><tr><th>ID</th><th>Cliente</th><th>Indústria</th><th style="text-align:right">Valor ajustado</th><th>Pedidos</th><th>Observação</th><th>Usuário</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="saldo-zer-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2102,9 +2119,30 @@ tr:last-child td{border-bottom:none;}
           <option value="solucionada">Solucionada</option>
           <option value="cancelada">Cancelada</option>
         </select>
+        <select id="trat-filtro-mes" onchange="renderTratativas()" title="Mês de abertura da tratativa">
+          <option value="">📅 Todos os meses</option>
+        </select>
+        <select id="trat-filtro-prazo" onchange="renderTratativas()" title="Situação em relação ao prazo da empresa">
+          <option value="">⏱️ Prazo: todos</option>
+          <option value="noprazo">🟢 Ativa dentro do prazo</option>
+          <option value="vencendo">🟡 Ativa vencendo (≤ 3 dias)</option>
+          <option value="atrasada">🔴 Ativa fora do prazo</option>
+          <option value="sol-ok">✅ Solucionada no prazo</option>
+          <option value="sol-fora">⚠️ Solucionada fora do prazo</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;cursor:pointer;white-space:nowrap" title="Zeramentos de saldo agora ficam na aba 🔄 Zeramentos do módulo Saldo Cli. × Indústria">
+          <input type="checkbox" id="trat-show-zeramento" onchange="renderTratativas()" style="cursor:pointer"> Incluir zeramentos
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="limparFiltrosTratativas()" title="Limpar filtros">✕ Limpar</button>
       </div>
 
       <!-- KPIs Tratativas -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">
+        <div class="kpi-card kpi-verde"><div class="kpi-label">Ativas no prazo</div><div class="kpi-value" id="trat-kpi-noprazo">0</div><div class="kpi-sub" id="trat-kpi-noprazo-sub">meta: 15 dias</div></div>
+        <div class="kpi-card kpi-amarelo"><div class="kpi-label">Vencendo (≤ 3 dias)</div><div class="kpi-value" id="trat-kpi-vencendo">0</div><div class="kpi-sub">Atenção</div></div>
+        <div class="kpi-card kpi-vermelho"><div class="kpi-label">Fora do prazo</div><div class="kpi-value" id="trat-kpi-atrasadas">0</div><div class="kpi-sub">Ativas há mais que a meta</div></div>
+        <div class="kpi-card kpi-azul"><div class="kpi-label">% Solucionadas no prazo</div><div class="kpi-value" id="trat-kpi-pct">—</div><div class="kpi-sub" id="trat-kpi-pct-sub">tempo médio: —</div></div>
+      </div>
       <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
         <div class="kpi-card kpi-amarelo"><div class="kpi-label">Bonificações</div><div class="kpi-value" id="trat-kpi-bon">R$ 0</div><div class="kpi-sub">Não geram comissão</div></div>
         <div class="kpi-card kpi-vermelho"><div class="kpi-label">Devoluções</div><div class="kpi-value" id="trat-kpi-dev">R$ 0</div><div class="kpi-sub">Reduzem faturamento</div></div>
@@ -2115,7 +2153,7 @@ tr:last-child td{border-bottom:none;}
 
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>ID</th><th>Tipo</th><th>Pedido / NF</th><th>Cliente</th><th>Indústria</th><th>Valor</th><th>Motivo / Tipo Erro</th><th>Usuário</th><th>Data/Hora</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>ID</th><th>Tipo</th><th>Pedido / NF</th><th>Cliente</th><th>Indústria</th><th>Valor</th><th>Motivo / Tipo Erro</th><th>Usuário</th><th>Abertura</th><th>Prazo</th><th>Solucionada em</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="trat-tbody"></tbody>
         </table>
       </div>
@@ -2565,6 +2603,10 @@ tr:last-child td{border-bottom:none;}
           </div>
           <div class="form-group"><label>Alerta comissão em atraso (dias)</label>
             <input type="number" id="cfg-dias-alerta" value="5" min="1" max="60">
+          </div>
+          <div class="form-group"><label>⏱️ Prazo para solucionar tratativas (dias)</label>
+            <input type="number" id="cfg-prazo-trat" value="15" min="1" max="90">
+            <div style="font-size:11px;color:#888;margin-top:3px">Meta da empresa. Tratativas ativas além deste prazo ficam em vermelho.</div>
           </div>
           <div class="form-group"><label>E-mail do Administrador</label>
             <input type="email" id="cfg-email-admin" placeholder="admin@empresa.com">
@@ -7050,21 +7092,45 @@ function _dateToMesLabel(date) {
 // recebida por completo, continua no mês de previsão.
 function _r2(v){ return Math.round(((parseFloat(v)||0) + Number.EPSILON) * 100) / 100; }
 
-// ─── v34: quanto da comissão conta como PREVISTO num determinado mês ─────────
-// • Recebida  → valor inteiro no mês efetivo (mês do recebimento)
-// • Parcial   → parcelas recebidas contam no mês em que entraram; o RESTANTE
-//               (valor − recebido) fica no mês de previsão
-// • Prevista/Atrasada → valor inteiro no mês de previsão
+// ─── v36: parcelas efetivamente recebidas (valor > 0) ────────────────────────
+function _parcelasReais(c){ return (c && c.parcelas ? c.parcelas : []).filter(p => (parseFloat(p.valor)||0) > 0); }
+function _recTotalComissao(c){
+  const reais = _parcelasReais(c);
+  return _r2(reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0));
+}
+// ─── v36: quanto foi RECEBIDO num determinado mês ────────────────────────────
+// Cada baixa (parcela) conta no mês em que foi recebida — independente do
+// status da comissão. Metade em Ago e metade em Set → Ago mostra a metade de
+// Ago e Set mostra a metade de Set. Sem filtro de mês → total recebido.
+function _recebidoNoMes(c, mes) {
+  if(!c) return 0;
+  const reais = _parcelasReais(c);
+  if(!mes) return _recTotalComissao(c);
+  if(reais.length) {
+    let v = reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+    // parcelas antigas sem mês gravado caem no mês de recebimento/previsão da comissão
+    const semMes = reais.filter(p => !p.mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+    if(semMes > 0 && ((c.mesRecebimento||c.mesPrevisao)||'') === mes) v += semMes;
+    return _r2(v);
+  }
+  // sem parcelas: o valor recebido pertence ao mês de recebimento (ou previsão)
+  return ((c.mesRecebimento||c.mesPrevisao)||'') === mes ? _r2(c.valorRecebido||0) : 0;
+}
+// ─── v36: quanto da comissão conta como PREVISTO num determinado mês ─────────
+// • Parcelas recebidas contam no mês em que entraram (qualquer status)
+// • O RESTANTE (valor − recebido) fica no mês de previsão; se a comissão já foi
+//   encerrada como Recebida com desconto aceito, a diferença fica no mês da
+//   última baixa (apenas informativo)
 // Sem filtro de mês (mes vazio) → valor inteiro.
 function _previstoNoMes(c, mes) {
   if(!c) return 0;
   if(!mes) return _r2(c.valor);
-  if(c.status === 'Recebida') return _mesEfetivoComissao(c) === mes ? _r2(c.valor) : 0;
-  const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
-  const recTotal = reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0);
-  const recMes   = reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
-  let v = recMes;
-  if((c.mesPrevisao||'') === mes) v += Math.max(0, _r2(c.valor) - recTotal);
+  let v = _recebidoNoMes(c, mes);
+  const restante = Math.max(0, _r2(c.valor) - _recTotalComissao(c));
+  if(restante > 0.001) {
+    const mesRest = c.status === 'Recebida' ? _mesEfetivoComissao(c) : (c.mesPrevisao||'');
+    if(mesRest === mes) v += restante;
+  }
   return _r2(v);
 }
 // Saldo que ainda falta receber e que pertence ao mês (só no mês de previsão)
@@ -7853,7 +7919,7 @@ function limparFiltrosSaldo() {
 let _saldoTabAtiva = 'detalhe';
 function showSaldoTab(tab, btnEl) {
   _saldoTabAtiva = tab;
-  ['detalhe','industria','cliente','ranking'].forEach(t=>{
+  ['detalhe','industria','cliente','ranking','zeramentos'].forEach(t=>{
     const d = el('saldo-tab-'+t); if(d) d.style.display = t===tab ? '' : 'none';
     const b = el('tab-saldo-'+t); if(b) b.classList.toggle('active', t===tab);
   });
@@ -7865,6 +7931,8 @@ function renderSaldoAtivo() {
   else if(_saldoTabAtiva==='industria') renderSaldoAnaliseIndustria();
   else if(_saldoTabAtiva==='cliente')   renderSaldoAnaliseCliente();
   else if(_saldoTabAtiva==='ranking')   renderSaldoRanking();
+  else if(_saldoTabAtiva==='zeramentos') renderSaldoZeramentos();
+  atualizarBadgeZeramentos();
 }
 function _saldoMostraZerados() {
   return !!((el('saldo-show-zerados')||{}).checked);
@@ -8379,6 +8447,48 @@ function _registrarZeramentoSaldo(cli, ind, dif, pedIds) {
   toast(`✅ Saldo zerado: ${fmt(Math.abs(dif))} em ${_zerados.length} pedido(s)`);
 }
 
+/* ══ v36 — ABA ZERAMENTOS (Saldo Cli. × Indústria) ═════════════════════════ */
+function atualizarBadgeZeramentos(){
+  const b=el('saldo-zer-badge'); if(!b) return;
+  const n=tratativas.filter(t=>t.tipo==='zeramento'&&t.status==='ativa').length;
+  b.textContent=n; b.className='badge '+(n?'badge-verde':'badge-cinza');
+}
+function renderSaldoZeramentos(){
+  const tbody=el('saldo-zer-tbody'); if(!tbody) return;
+  const filtCli=(el('saldo-cli')||{}).value||'';
+  const filtInd=(el('saldo-ind')||{}).value||'';
+  const filtMes=(el('saldo-mes')||{}).value||'';
+  const list=tratativas.filter(t=>t.tipo==='zeramento').filter(t=>{
+    if(filtCli && t.cliente!==filtCli && t.cliente!=='todos os clientes') return false;
+    if(filtInd && t.industria!==filtInd && t.industria!=='todas as indústrias') return false;
+    if(filtMes && _tratMesLabel(t)!==filtMes) return false;
+    return true;
+  }).sort((a,b)=>(_tratParseData(b.dataHora)||0)-(_tratParseData(a.dataHora)||0));
+  const ativos=list.filter(t=>t.status==='ativa');
+  if(el('saldo-zer-kpi-qtd')) el('saldo-zer-kpi-qtd').textContent=ativos.length;
+  if(el('saldo-zer-kpi-qtd-sub')) el('saldo-zer-kpi-qtd-sub').textContent=`${ativos.reduce((s,t)=>s+((t.pedidosZerados||[]).length),0)} pedido(s) ajustado(s)`;
+  if(el('saldo-zer-kpi-val')) el('saldo-zer-kpi-val').textContent=fmt(ativos.reduce((s,t)=>s+(t.valor||0),0));
+  if(el('saldo-zer-kpi-rev')) el('saldo-zer-kpi-rev').textContent=list.filter(t=>t.status==='cancelada').length;
+  tbody.innerHTML = list.length===0
+    ? '<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px">Nenhum zeramento registrado para os filtros selecionados</td></tr>'
+    : list.map(t=>{
+        const peds=(t.pedidosZerados&&t.pedidosZerados.length)?t.pedidosZerados:String(t.pedido||'').split(',').map(x=>x.trim()).filter(Boolean);
+        const pedsHtml=peds.length>3?`<span title="${esc(peds.join(', '))}">${peds.slice(0,3).map(esc).join(', ')} +${peds.length-3}</span>`:peds.map(esc).join(', ');
+        return `<tr style="${t.status==='cancelada'?'opacity:.5':''}">
+          <td class="mono bold">${t.id}</td>
+          <td><strong>${esc(t.cliente)}</strong></td>
+          <td><span class="tag" style="font-size:9px">${esc(t.industria)}</span></td>
+          <td class="bold" style="text-align:right">${fmt(t.valor)}</td>
+          <td class="mono" style="font-size:11px">${pedsHtml}</td>
+          <td style="font-size:11px;max-width:220px">${esc(t.obs||t.motivo||'')}</td>
+          <td style="font-size:11px">${esc(t.usuario)}</td>
+          <td style="font-size:11px;white-space:nowrap">${t.dataHora}</td>
+          <td><span class="badge ${t.status==='ativa'?'badge-verde':'badge-cinza'}">${t.status==='ativa'?'ativo':'revertido'}</span></td>
+          <td>${t.status==='ativa'?`<button class="btn btn-danger btn-xs" onclick="cancelarTratativa('${t.id}');renderSaldoAtivo()" title="Desfaz o zeramento e devolve o saldo à tela">↩️ Reverter</button>`:''}</td>
+        </tr>`;
+      }).join('');
+}
+
 function exportarSaldo(){
   const wb=XLSX.utils.book_new();
   const rows=[['SALDO POR CLIENTE × INDÚSTRIA'],[''],
@@ -8460,13 +8570,11 @@ function renderComissoes() {
       // parcela recebida naquele mês (recebimentos podem cair em meses
       // diferentes do previsto).
       // v34: comissão RECEBIDA fica só no mês em que foi recebida (não continua no mês previsto)
-      const mesEf = _mesEfetivoComissao(c);
-      if(c.status === 'Recebida') {
-        if(mesEf !== filtMes) return false;
-      } else {
-        const temParcelaNoMes = (c.parcelas||[]).some(p => (parseFloat(p.valor)||0) > 0 && p.mes === filtMes);
-        if(mesEf !== filtMes && !temParcelaNoMes) return false;
-      }
+      // v36: aparece no mês se recebeu algo nele, se tem previsto nele, ou se
+      // (ainda em aberto) o mês de previsão é este.
+      const temAlgo = _recebidoNoMes(c, filtMes) > 0.001 || _previstoNoMes(c, filtMes) > 0.001
+                   || (c.status !== 'Recebida' && (c.mesPrevisao||'') === filtMes);
+      if(!temAlgo) return false;
     }
     return true;
   });
@@ -8475,20 +8583,7 @@ function renderComissoes() {
   // Quando há filtro de MÊS, "Total Recebido" considera apenas as parcelas
   // recebidas NAQUELE mês (cada parcela guarda o seu próprio mês); sem filtro,
   // usa o total recebido acumulado da comissão.
-  const _recNoMes = (c, mes) => {
-    const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
-    if(mes){
-      // v34: comissão Recebida já foi movida inteira para o mês do recebimento → conta tudo
-      if(c.status === 'Recebida' && _mesEfetivoComissao(c) === mes) {
-        return reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0) : (c.valorRecebido||0);
-      }
-      // soma só as parcelas cujo mês bate com o filtro
-      return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
-    }
-    // sem filtro de mês: usa o acumulado (ou a soma das parcelas, se houver)
-    if(reais.length) return reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
-    return c.valorRecebido||0;
-  };
+  const _recNoMes = (c, mes) => _recebidoNoMes(c, mes); // v36: parcela conta no seu mês
 
   // v34: Previsto do mês = parcelas recebidas no mês + restante (só no mês de previsão)
   const totPrev = _r2(list.reduce((s,c)=>s+_previstoNoMes(c, filtMes), 0));
@@ -8572,7 +8667,7 @@ function renderComissoes() {
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
           <td style="font-size:12px">${fmt(c.baseLiq)}</td>
           <td style="font-size:12px">${c.pct}%</td>
-          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)} · restante em ${c.mesPrevisao||'—'}</div>` : fmt(c.valor);})()}</td>
+          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
           <td class="bold verde" style="font-size:12px">
             ${(()=>{const rm=_recNoMes(c,filtMes); return rm>0 ? (filtMes && Math.abs(rm-recebido)>0.001 ? `${fmt(rm)}<div style="font-size:10px;color:#888;font-weight:400">total ${fmt(recebido)}</div>` : fmt(recebido)) : '<span style="color:#aaa">—</span>';})()}
           </td>
@@ -8585,7 +8680,10 @@ function renderComissoes() {
               : '<span style="color:#aaa">—</span>'
             }
           </td>
-          <td style="font-size:12px">${(()=>{const me=_mesEfetivoComissao(c); return me && me!==c.mesPrevisao ? `<strong>${me}</strong><div style="font-size:10px;color:#888">prev. ${c.mesPrevisao||'—'}</div>` : (c.mesPrevisao||'—');})()}</td>
+          <td style="font-size:12px">${(()=>{
+            const mesesRec=[...new Set(_parcelasReais(c).map(p=>p.mes).filter(Boolean))];
+            if(mesesRec.length>1) return `<strong>${mesesRec.join(' + ')}</strong><div style="font-size:10px;color:#888">${c.status==='Recebida'?'recebida em partes':'parcial'} · prev. ${c.mesPrevisao||'—'}</div>`;
+            const me=_mesEfetivoComissao(c); return me && me!==c.mesPrevisao ? `<strong>${me}</strong><div style="font-size:10px;color:#888">prev. ${c.mesPrevisao||'—'}</div>` : (c.mesPrevisao||'—');})()}</td>
           <td><span class="badge ${statusCor[c.status]||'badge-cinza'}">${c.status}</span></td>
           <td>
             <div style="display:flex;gap:3px;flex-wrap:wrap">
@@ -14315,9 +14413,9 @@ function renderRelatorios() {
   const comTable = el('rel-comissao-table');
   const comsFiltradas = mesFiltro==='todos'
     ? comissoes_data.filter(c=>!c.excluido)
-    : comissoes_data.filter(c=>!c.excluido && _previstoNoMes(c, mesFiltro) > 0); // v34: mês efetivo / parcelas por mês
+    : comissoes_data.filter(c=>!c.excluido && (_previstoNoMes(c, mesFiltro) > 0 || _recebidoNoMes(c, mesFiltro) > 0)); // v36: parcelas por mês
   const _pm = c => _previstoNoMes(c, mesFiltro==='todos' ? '' : mesFiltro);
-  const _rm = c => { const reais=(c.parcelas||[]).filter(p=>(parseFloat(p.valor)||0)>0); if(mesFiltro==='todos') return reais.length?reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0):(c.valorRecebido||0); if(c.status==='Recebida') return _mesEfetivoComissao(c)===mesFiltro?_r2(c.valor):0; return reais.filter(p=>p.mes===mesFiltro).reduce((s,p)=>s+(parseFloat(p.valor)||0),0); };
+  const _rm = c => _recebidoNoMes(c, mesFiltro==='todos' ? '' : mesFiltro); // v36: cada parcela no seu mês
   const totRec  = _r2(comsFiltradas.reduce((s,c)=>s+_rm(c),0));
   const totAtr  = _r2(comsFiltradas.filter(c=>c.status==='Atrasada').reduce((s,c)=>s+(_pm(c)-_rm(c)),0));
   const totPrev = _r2(comsFiltradas.reduce((s,c)=>s+_pm(c),0) - totRec - totAtr);
@@ -14769,6 +14867,7 @@ function salvarConfig(){
   configSistema.layoutPdf    = (el('cfg-layout-pdf')||{}).value || configSistema.layoutPdf;
   configSistema.moeda        = (el('cfg-moeda')||{}).value || configSistema.moeda;
   configSistema.diasAlerta   = parseInt((el('cfg-dias-alerta')||{}).value)||5;
+  configSistema.prazoTratDias = parseInt((el('cfg-prazo-trat')||{}).value)||15;
   configSistema.emailAdmin   = (el('cfg-email-admin')||{}).value || configSistema.emailAdmin;
   if(el('cfg-webmail-url')) configSistema.webmailUrl = (el('cfg-webmail-url').value || '').trim() || WEBMAIL_PADRAO;
   if(el('cfg-webmail-compor')) configSistema.webmailComporUrl = (el('cfg-webmail-compor').value || '').trim();
@@ -15198,25 +15297,117 @@ function aplicarImpactoTratativa(trat, ped) {
   }
 }
 
+/* ══ v36 — PRAZO DAS TRATATIVAS ══════════════════════════════════════════════
+   A empresa tem meta de solucionar cada tratativa em N dias (padrão 15,
+   configurável em Configurações). Aqui ficam os utilitários de data/prazo.  */
+function _tratPrazoDias(){ return (typeof configSistema!=='undefined' && parseInt(configSistema.prazoTratDias)) || 15; }
+// "04/09/2026, 14:35" → Date local (só a parte da data)
+function _tratParseData(str){
+  if(!str) return null;
+  const m = String(str).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if(!m) return null;
+  return new Date(+m[3], +m[2]-1, +m[1]);
+}
+function _tratMesLabel(t){ const d=_tratParseData(t.dataHora); return d ? _dateToMesLabel(d) : ''; }
+function _diasEntre(a,b){ return Math.floor((b - a) / 86400000); }
+// Situação da tratativa em relação ao prazo
+function _tratPrazoInfo(t){
+  const prazo = _tratPrazoDias();
+  const ab = _tratParseData(t.dataHora);
+  if(!ab) return {tipo:'', dias:0, limite:null, restam:0};
+  const limite = new Date(ab); limite.setDate(limite.getDate()+prazo);
+  if(t.status==='solucionada'){
+    const sol = _tratParseData(t.dataSolucao) || ab;
+    const dias = _diasEntre(ab, sol);
+    return {tipo: dias<=prazo ? 'sol-ok' : 'sol-fora', dias, limite, restam: prazo-dias};
+  }
+  if(t.status==='cancelada') return {tipo:'cancelada', dias:0, limite, restam:0};
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dias = _diasEntre(ab, hoje);
+  const restam = prazo - dias;
+  return {tipo: restam<0 ? 'atrasada' : (restam<=3 ? 'vencendo' : 'noprazo'), dias, limite, restam};
+}
+function _tratPrazoHtml(t){
+  const i = _tratPrazoInfo(t);
+  const lim = i.limite ? i.limite.toLocaleDateString('pt-BR') : '—';
+  switch(i.tipo){
+    case 'noprazo':  return `<span class="badge badge-verde" title="Limite: ${lim}">🟢 ${i.restam}d restantes</span><div style="font-size:10px;color:#888">até ${lim}</div>`;
+    case 'vencendo': return `<span class="badge badge-amarelo" title="Limite: ${lim}">🟡 ${i.restam===0?'vence hoje':i.restam+'d restantes'}</span><div style="font-size:10px;color:#888">até ${lim}</div>`;
+    case 'atrasada': return `<span class="badge badge-vermelho" title="Limite era ${lim}">🔴 ${Math.abs(i.restam)}d em atraso</span><div style="font-size:10px;color:#888">limite ${lim}</div>`;
+    case 'sol-ok':   return `<span class="badge badge-verde">✅ ${i.dias}d · no prazo</span>`;
+    case 'sol-fora': return `<span class="badge badge-vermelho">⚠️ ${i.dias}d · fora do prazo</span>`;
+    default:         return '<span style="color:#aaa">—</span>';
+  }
+}
+function popularTratMeses(){
+  const sel = el('trat-filtro-mes'); if(!sel) return;
+  const atual = sel.value;
+  const meses = [...new Set(tratativas.map(_tratMesLabel).filter(Boolean))];
+  const ordem = m => { const [mm,aa]=m.split('/'); const idx=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].indexOf(mm); return (+aa)*100+idx; };
+  meses.sort((a,b)=>ordem(b)-ordem(a));
+  sel.innerHTML = '<option value="">📅 Todos os meses</option>' + meses.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if(meses.includes(atual)) sel.value = atual;
+}
+function limparFiltrosTratativas(){
+  ['trat-busca','trat-filtro-tipo','trat-filtro-status','trat-filtro-mes','trat-filtro-prazo'].forEach(id=>{ if(el(id)) el(id).value=''; });
+  if(el('trat-show-zeramento')) el('trat-show-zeramento').checked=false;
+  renderTratativas();
+}
+
 function renderTratativas() {
   const tbody = el('trat-tbody'); if(!tbody) return;
+  popularTratMeses();
   const busca  = (el('trat-busca')||{}).value?.toLowerCase()||'';
   const filtTipo = (el('trat-filtro-tipo')||{}).value||'';
   const filtSt   = (el('trat-filtro-status')||{}).value||'';
+  const filtMes  = (el('trat-filtro-mes')||{}).value||'';
+  const filtPz   = (el('trat-filtro-prazo')||{}).value||'';
+  const showZer  = !!((el('trat-show-zeramento')||{}).checked);
+  const prazo    = _tratPrazoDias();
 
-  let list = tratativas.filter(t=>{
-    if(busca&&!t.pedido.toLowerCase().includes(busca)&&!t.cliente.toLowerCase().includes(busca)&&!t.nfOriginal.toLowerCase().includes(busca)) return false;
+  // v36: zeramentos de saldo têm a sua própria aba no módulo Saldo — aqui só
+  // entram se o usuário marcar "Incluir zeramentos".
+  const base = tratativas.filter(t => showZer || t.tipo!=='zeramento');
+
+  let list = base.filter(t=>{
+    if(busca&&!(t.pedido||'').toLowerCase().includes(busca)&&!(t.cliente||'').toLowerCase().includes(busca)&&!(t.nfOriginal||'').toLowerCase().includes(busca)&&!(t.id||'').toLowerCase().includes(busca)) return false;
     if(filtTipo&&t.tipo!==filtTipo) return false;
     if(filtSt&&t.status!==filtSt) return false;
+    if(filtMes&&_tratMesLabel(t)!==filtMes) return false;
+    if(filtPz&&_tratPrazoInfo(t).tipo!==filtPz) return false;
     return true;
   });
+  // Ordena: atrasadas primeiro, depois vencendo, depois mais recentes
+  const peso = {atrasada:0, vencendo:1, noprazo:2, 'sol-fora':3, 'sol-ok':4, cancelada:5, '':6};
+  list.sort((a,b)=>{
+    const pa=peso[_tratPrazoInfo(a).tipo]??6, pb=peso[_tratPrazoInfo(b).tipo]??6;
+    if(pa!==pb) return pa-pb;
+    return (_tratParseData(b.dataHora)||0) - (_tratParseData(a.dataHora)||0);
+  });
 
-  // Update KPIs
-  const bon  = tratativas.filter(t=>t.tipo==='bonificacao'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
-  const dev  = tratativas.filter(t=>t.tipo==='devolucao'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
-  const abat = tratativas.filter(t=>t.tipo==='abatimento'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
-  const errs = tratativas.filter(t=>t.tipo==='erro'&&t.status==='ativa').length;
-  const sols = tratativas.filter(t=>t.status==='solucionada').length;
+  // KPIs de prazo (respeitam o filtro de mês, ignoram os demais filtros)
+  const kpiBase = base.filter(t => !filtMes || _tratMesLabel(t)===filtMes);
+  const infos = kpiBase.map(t=>({t, i:_tratPrazoInfo(t)}));
+  const nNo  = infos.filter(x=>x.i.tipo==='noprazo').length;
+  const nVen = infos.filter(x=>x.i.tipo==='vencendo').length;
+  const nAtr = infos.filter(x=>x.i.tipo==='atrasada').length;
+  const sol  = infos.filter(x=>x.i.tipo==='sol-ok'||x.i.tipo==='sol-fora');
+  const solOk= sol.filter(x=>x.i.tipo==='sol-ok').length;
+  const pct  = sol.length ? Math.round(solOk/sol.length*100) : null;
+  const tmed = sol.length ? (sol.reduce((s,x)=>s+x.i.dias,0)/sol.length).toFixed(1) : null;
+  if(el('trat-kpi-noprazo'))     el('trat-kpi-noprazo').textContent = nNo;
+  if(el('trat-kpi-noprazo-sub')) el('trat-kpi-noprazo-sub').textContent = `meta: ${prazo} dias${filtMes?' · '+filtMes:''}`;
+  if(el('trat-kpi-vencendo'))    el('trat-kpi-vencendo').textContent = nVen;
+  if(el('trat-kpi-atrasadas'))   el('trat-kpi-atrasadas').textContent = nAtr;
+  if(el('trat-kpi-pct'))         el('trat-kpi-pct').textContent = pct===null ? '—' : pct+'%';
+  if(el('trat-kpi-pct-sub'))     el('trat-kpi-pct-sub').textContent = tmed===null ? 'nenhuma solucionada' : `${solOk}/${sol.length} · tempo médio ${tmed} dias`;
+
+  // KPIs financeiros
+  const bon  = kpiBase.filter(t=>t.tipo==='bonificacao'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
+  const dev  = kpiBase.filter(t=>t.tipo==='devolucao'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
+  const abat = kpiBase.filter(t=>t.tipo==='abatimento'&&t.status==='ativa').reduce((s,t)=>s+t.valor,0);
+  const errs = kpiBase.filter(t=>t.tipo==='erro'&&t.status==='ativa').length;
+  const sols = kpiBase.filter(t=>t.status==='solucionada').length;
   if(el('trat-kpi-bon'))  el('trat-kpi-bon').textContent  = fmt(bon);
   if(el('trat-kpi-dev'))  el('trat-kpi-dev').textContent  = fmt(dev);
   if(el('trat-kpi-abat')) el('trat-kpi-abat').textContent = fmt(abat);
@@ -15233,13 +15424,15 @@ function renderTratativas() {
   };
 
   tbody.innerHTML = list.length===0
-    ? `<tr><td colspan="11" style="text-align:center;color:#aaa;padding:20px">Nenhuma tratativa encontrada</td></tr>`
+    ? `<tr><td colspan="13" style="text-align:center;color:#aaa;padding:20px">Nenhuma tratativa encontrada${!showZer && tratativas.some(t=>t.tipo==='zeramento') ? '<div style="font-size:11px;margin-top:6px">Zeramentos de saldo ficam na aba <strong>🔄 Zeramentos</strong> do módulo Saldo Cli. × Indústria (ou marque "Incluir zeramentos").</div>':''}</td></tr>`
     : list.map(t=>{
         const ti = tipoInfo[t.tipo]||{label:t.tipo,cls:'badge-cinza'};
-        return `<tr style="${t.status==='cancelada'?'opacity:.5':''}">
+        const pi = _tratPrazoInfo(t);
+        const rowStyle = t.status==='cancelada' ? 'opacity:.5' : (pi.tipo==='atrasada' ? 'background:#fff5f5' : (pi.tipo==='vencendo' ? 'background:#fffbe6' : ''));
+        return `<tr style="${rowStyle}">
           <td class="mono bold">${t.id}</td>
           <td><span class="badge ${ti.cls}">${ti.label}</span></td>
-          <td><span class="mono">${t.pedido}</span>${t.nfOriginal?` / <span class="mono">${t.nfOriginal}</span>`:''}</td>
+          <td><span class="mono">${esc(t.tipo==='zeramento' && (t.pedido||'').length>40 ? (t.pedido.split(',').length+' pedidos') : t.pedido)}</span>${t.nfOriginal&&t.nfOriginal!=='—'?` / <span class="mono">${esc(t.nfOriginal)}</span>`:''}</td>
           <td><strong>${esc(t.cliente)}</strong></td>
           <td><span class="tag" style="font-size:9px">${esc(t.industria)}</span></td>
           <td class="bold ${t.tipo==='bonificacao'?'amarelo':t.tipo==='prorrogacao'?'azul':'vermelho'}">${
@@ -15250,6 +15443,8 @@ function renderTratativas() {
           <td style="max-width:160px;font-size:11px">${esc(t.tipoErro||t.motivo)}</td>
           <td style="font-size:11px">${esc(t.usuario)}</td>
           <td style="font-size:11px;white-space:nowrap">${t.dataHora}</td>
+          <td style="font-size:11px;white-space:nowrap">${_tratPrazoHtml(t)}</td>
+          <td style="font-size:11px;white-space:nowrap">${t.status==='solucionada' ? `<strong>${t.dataSolucao||'—'}</strong>${t.usuarioSolucao?`<div style="font-size:10px;color:#888">por ${esc(t.usuarioSolucao)}</div>`:''}` : '<span style="color:#aaa">—</span>'}</td>
           <td><span class="badge ${t.status==='ativa'?'badge-verde':t.status==='solucionada'?'badge-preto':'badge-cinza'}">${t.status}</span></td>
           <td>
             ${t.status==='ativa'?`
@@ -15329,7 +15524,7 @@ function cancelarTratativa(id) {
 
 function atualizarBadgeTratativas() {
   const b=el('badge-tratativas');
-  if(b) b.textContent=tratativas.filter(t=>t.status==='ativa').length;
+  if(b) b.textContent=tratativas.filter(t=>t.status==='ativa' && t.tipo!=='zeramento').length;
 }
 
 /* ===== ACOMPANHAMENTO DE TRATATIVAS ===== */
@@ -15357,7 +15552,9 @@ function abrirAcompTratativa(id) {
     <div class="mini-row"><span>Cliente</span><strong>${esc(t.cliente)}</strong></div>
     <div class="mini-row"><span>Indústria</span><strong>${esc(t.industria)}</strong></div>
     <div class="mini-row"><span>Motivo</span><span>${esc(t.tipoErro||t.motivo)}</span></div>
-    ${t.status==='solucionada'&&t.solucao?`<div class="mini-row" style="background:#e8f5e9;border-radius:4px;padding:6px 8px;margin-top:4px"><span>✅ Solução</span><span style="color:var(--verde)">${esc(t.solucao)}</span></div>`:''}
+    ${t.status==='solucionada'&&t.solucao?`<div class="mini-row" style="background:#e8f5e9;border-radius:4px;padding:6px 8px;margin-top:4px"><span>✅ Solução</span><span style="color:var(--verde)">${esc(t.solucao)}</span></div>
+    <div class="mini-row"><span>📅 Solucionada em</span><span>${t.dataSolucao||'—'}${t.usuarioSolucao?' · '+esc(t.usuarioSolucao):''}</span></div>`:''}
+    <div class="mini-row"><span>⏱️ Prazo (meta ${_tratPrazoDias()} dias)</span><span>${_tratPrazoHtml(t)}</span></div>
   `;
   el('modal-trat-acomp-notas').innerHTML = notasHtml;
   el('trat-nova-nota').value = '';
@@ -15402,7 +15599,7 @@ function confirmarSolucaoTratativa() {
     dataHora: new Date().toLocaleString('pt-BR').slice(0,14),
     texto: `✅ SOLUCIONADA: ${solucao}`
   });
-  tratativas = tratativas.map(x=>x.id===id?{...x,status:'solucionada',solucao,dataSolucao:new Date().toLocaleString('pt-BR').slice(0,14)}:x);
+  tratativas = tratativas.map(x=>x.id===id?{...x,status:'solucionada',solucao,dataSolucao:new Date().toLocaleString('pt-BR').slice(0,17),usuarioSolucao:usuarioLogado?.login||'admin'}:x);
   addAudit(usuarioLogado?.login||'admin', `Tratativa ${id} solucionada: ${solucao}`, '✅');
   closeModal('modal-trat-solucao');
   syncAutoSaveHook();
@@ -15637,6 +15834,7 @@ function renderConfiguracoes() {
   if(el('cfg-layout-pdf'))  el('cfg-layout-pdf').value  = configSistema.layoutPdf  || 'padrao';
   if(el('cfg-moeda'))       el('cfg-moeda').value        = configSistema.moeda      || 'BRL';
   if(el('cfg-dias-alerta')) el('cfg-dias-alerta').value  = configSistema.diasAlerta || 5;
+  if(el('cfg-prazo-trat'))  el('cfg-prazo-trat').value   = configSistema.prazoTratDias || 15;
   if(el('cfg-email-admin')) el('cfg-email-admin').value  = configSistema.emailAdmin || '';
   if(el('cfg-webmail-url')) el('cfg-webmail-url').value  = configSistema.webmailUrl || WEBMAIL_PADRAO;
   if(el('cfg-webmail-compor')) el('cfg-webmail-compor').value = configSistema.webmailComporUrl || '';
