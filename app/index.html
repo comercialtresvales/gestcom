@@ -120,7 +120,7 @@ button{cursor:pointer;border:none;background:none;}
 .card-id{font-family:'Syne',sans-serif;font-weight:700;font-size:13.5px;}
 .card-status{font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
 .st-green{background:#e8f5e9;color:var(--verde);}.st-yellow{background:var(--amarelo-claro);color:#8a6d00;}
-.st-blue{background:#e3f2fd;color:var(--azul);}.st-red{background:#fef2f2;color:var(--vermelho);}.st-gray{background:var(--cinza);color:#777;}
+.st-blue{background:#e3f2fd;color:var(--azul);}.st-orange{background:#fff7ed;color:var(--laranja);}.st-red{background:#fef2f2;color:var(--vermelho);}.st-gray{background:var(--cinza);color:#777;}
 .card-cli{font-size:14px;font-weight:600;margin-bottom:2px;}
 .card-meta{font-size:11.5px;color:#999;margin-bottom:11px;}
 .card-r2{display:flex;justify-content:space-between;align-items:center;padding-top:11px;border-top:1px dashed #eee;}
@@ -133,15 +133,10 @@ button{cursor:pointer;border:none;background:none;}
 /* ══════════ BOTTOM SHEET ══════════ */
 #sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s;}
 #sheet-backdrop.open{opacity:1;pointer-events:auto;}
-#sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:8px 20px calc(28px + var(--safe-bot));box-shadow:0 -10px 40px rgba(0,0,0,.2);z-index:301;transform:translateY(100%);transition:transform .28s ease;
-  /* Lista longa (ex.: indústrias) não pode estourar a tela — limita a altura e rola por dentro */
-  max-height:85vh;max-height:85dvh;display:flex;flex-direction:column;}
+#sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;padding:8px 20px calc(28px + var(--safe-bot));box-shadow:0 -10px 40px rgba(0,0,0,.2);z-index:301;transform:translateY(100%);transition:transform .28s ease;}
 #sheet.open{transform:translateY(0);}
-.sheet-handle{width:40px;height:4px;background:#ddd;border-radius:4px;margin:6px auto 18px;flex-shrink:0;}
-.sheet-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:16px;text-align:center;flex-shrink:0;}
-.sheet-search{flex-shrink:0;width:100%;background:var(--cinza);border:1px solid var(--cinza-medio);border-radius:12px;padding:12px 14px;font-size:15px;margin-bottom:12px;display:none;}
-#sheet-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:4px;}
-.sheet-empty{text-align:center;color:#999;font-size:12.5px;padding:18px 0;}
+.sheet-handle{width:40px;height:4px;background:#ddd;border-radius:4px;margin:6px auto 18px;}
+.sheet-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;margin-bottom:16px;text-align:center;}
 .sheet-opt{display:flex;align-items:center;gap:14px;padding:15px;border-radius:14px;background:var(--cinza);margin-bottom:10px;transition:transform .1s;}
 .sheet-opt:active{transform:scale(.98);}
 .so-ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
@@ -231,7 +226,10 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
 .app-kpi{background:#fff;border-radius:14px;padding:13px;border:1px solid #eee;box-shadow:0 2px 6px rgba(0,0,0,.04);}
 .app-kpi .l{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
 .app-kpi .v{font-family:'Syne',sans-serif;font-weight:700;font-size:19px;margin-top:4px;line-height:1.1;}
-.app-kpi .v.sm{font-size:14.5px;}
+.app-kpi .v.sm{font-size:13px;}
+.app-kpi .v{overflow-wrap:anywhere;letter-spacing:-.2px;}
+.app-kpis.k3 .app-kpi .v{font-size:13px;}
+.app-kpis.k3 .app-kpi .v.sm{font-size:11.5px;}
 .app-kpi .s{font-size:9px;color:#aaa;margin-top:2px;}
 .app-kpi.hl{background:var(--preto);}
 .app-kpi.hl .l{color:#bbb;}.app-kpi.hl .v{color:var(--amarelo);}.app-kpi.hl .s{color:#888;}
@@ -410,7 +408,6 @@ select.ed-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg 
 <div id="sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title" id="sheet-title">Importar / Exportar</div>
-  <input class="sheet-search" id="sheet-search" type="search" placeholder="Buscar..." oninput="filtrarOpcoesSheet()" autocomplete="off">
   <div id="sheet-body"></div>
 </div>
 
@@ -492,10 +489,6 @@ const OCULTAR_HOME = ['crm'];
 /* Sem extras: Sell Out como no site */
 const HOME_EXTRA = [];
 
-/* true  = módulos sem permissão aparecem com cadeado (o usuário vê que existem)
-   false = módulos sem permissão somem da home (comportamento antigo) */
-const MOSTRAR_BLOQUEADOS = true;
-
 function defaultPerms(perfil){
   const allEdit = Object.fromEntries(TODOS_MODULOS.map(m=>[m.key,'editar']));
   const map = {
@@ -534,31 +527,11 @@ function defaultPerms(perfil){
   return Object.fromEntries(TODOS_MODULOS.map(m=>[m.key, base[m.key]||'nenhum']));
 }
 
-/* Normaliza valores vindos da nuvem (o site pode gravar true/'edit'/'view'/1 etc.) */
-function normalizarNivel(v){
-  if(v===true || v===1) return 'editar';
-  if(v===false || v===0 || v==null || v==='') return null;   // null = "não informado"
-  const s = String(v).toLowerCase().trim();
-  if(['editar','edit','total','full','rw','escrita'].includes(s)) return 'editar';
-  if(['ver','view','read','leitura','ro','somente ver'].includes(s)) return 'ver';
-  if(['nenhum','none','bloqueado','no','sem'].includes(s)) return 'nenhum';
-  return null;
-}
-
 function getPerms(userId){
-  const u = (DADOS?.usuarios||[]).find(x=>x.id===userId) || usuarioLogado;
-  const base = defaultPerms(u?.perfil || 'representante');
-  const nuvem = USERPERMS[userId];
-  if(!nuvem) return base;
-  // MESCLA: o que veio da nuvem manda, mas chave ausente/vazia cai no padrão do perfil.
-  // (O Firebase não grava chaves com valor vazio/null, então o objeto costuma vir incompleto —
-  //  antes isso derrubava módulos como Logística para 'nenhum' e sumia da home.)
-  const out = {...base};
-  Object.keys(nuvem).forEach(k=>{
-    const n = normalizarNivel(nuvem[k]);
-    if(n) out[k] = n;
-  });
-  return out;
+  // Prioriza permissões granulares salvas na nuvem (userPerms), senão usa padrão do perfil
+  if(USERPERMS[userId]) return USERPERMS[userId];
+  const u = (DADOS?.usuarios||[]).find(x=>x.id===userId);
+  return defaultPerms(u?.perfil || 'representante');
 }
 function nivelDoModulo(permKey){
   if(!usuarioLogado) return 'nenhum';
@@ -835,6 +808,8 @@ function entrarNoApp(){
   atualizarPerfil();
   if(ehGestor()){ atualizarSync(); montarPainel(); }
   switchTab('home');
+  _rtdbUltimoTs = DADOS?._ts || 0;
+  ativarAtualizacaoAutomatica(); // v36
 }
 
 function iniciais(nome){
@@ -875,22 +850,18 @@ function montarHome(){
 
   combinado.forEach(m=>{
     const nivel = nivelDoModulo(m._perm);
-    const bloqueado = (nivel==='nenhum');
-    if(bloqueado && !MOSTRAR_BLOQUEADOS) return;
-
-    const el = document.createElement('div');
-    let badge='';
-    if(bloqueado){
-      el.className='mod locked';
-      el.onclick = ()=>toast(`"${m.label}" não está liberado para o seu perfil`,'err');
-      badge = `<div class="lock-i">🔒</div>`;
-    } else {
-      visiveis++;
-      el.className='mod';
-      el.onclick = ()=>abrirModulo(m);
-      // badge de contagem para pedidos/orçamentos pendentes
-      if(m.key==='pedidos'){ const n=contarPendentes('pedidos'); if(n>0) badge=`<div class="mod-badge">${n}</div>`; }
+    if(nivel==='nenhum'){
+      // Mostra bloqueado apenas para perfis de gestão (diretoria/admin veem tudo liberado, então nunca cai aqui).
+      // Para os demais: ocultar. (Decisão: ocultar em vez de cadeado, mais limpo.)
+      return;
     }
+    visiveis++;
+    const el = document.createElement('div');
+    el.className='mod';
+    el.onclick = ()=>abrirModulo(m);
+    let badge='';
+    // badge de contagem para pedidos/orçamentos pendentes
+    if(m.key==='pedidos'){ const n=contarPendentes('pedidos'); if(n>0) badge=`<div class="mod-badge">${n}</div>`; }
     el.innerHTML = `<div class="mod-ic ${m.cls}">${m.icone}</div><div class="mod-nm">${m.label}</div>${badge}`;
     grid.appendChild(el);
   });
@@ -989,16 +960,19 @@ function dadosDoModulo(key){
    Onde não há esquema, o editor deduz os campos do 1º registro.
 ════════════════════════════════════════════════ */
 const STATUS_OPCOES = {
-  orcamentos: ['Rascunho','Enviado','Em análise','Aprovado','Recusado','Convertido em pedido'],
-  pedidos:    ['Recebido','Em separação','Faturado','Em trânsito','Entregue','Cancelado'],
-  comissoes:  ['Pendente','Pago','Cancelado'],
+  /* v36: mesmos status do sistema web — evita gravar valores que o site não reconhece */
+  orcamentos: ['Rascunho','Em análise','Enviado','Aprovado','Reprovado','Cancelado','Convertido em pedido'],
+  pedidos:    ['Implantado','Faturado total','Cancelado','Excluído'],
+  comissoes:  ['Prevista','Parcial','Recebida','Atrasada'],
+  tipoCom:    ['Faturamento','Liquidez'],
+  tipoMeta:   ['faturamento','pedidos','clientes','implantado'],
   clientes:   ['Ativo','Inativo'],
   crm:        ['Ativo','Inativo'],
   industrias: ['Ativo','Inativo'],
   produtos:   ['Ativo','Inativo'],
   tarefas:    ['Aberta','Em andamento','Concluída'],
   atas:       ['Agendada','Realizada','Cancelada'],
-  logistica:  ['Pedido Digitado','Faturado','Em trânsito','Entregue'],
+  logistica:  ['Pedido Digitado','Faturado','Em Transporte','Entregue','Cancelado'],
 };
 
 const CAMPOS_MODULO = {
@@ -1055,19 +1029,25 @@ const CAMPOS_MODULO = {
     {k:'status', l:'Status', t:'select', opts:'produtos'},
   ],
   comissoes: [
+    /* v36: mesmos nomes de campo do sistema web (pct / baseLiq / tipo / mesPrevisao) */
     {k:'cliente', l:'Cliente', t:'text', req:true},
     {k:'industria', l:'Indústria', t:'text'},
-    {k:'valor', l:'Valor da comissão', t:'money'},
-    {k:'percentual', l:'Percentual (%)', t:'number'},
-    {k:'data', l:'Data', t:'date'},
+    {k:'nf', l:'Nº NF', t:'text'},
+    {k:'baseLiq', l:'Base líquida da NF (R$)', t:'money'},
+    {k:'pct', l:'% Comissão', t:'number'},
+    {k:'valor', l:'Valor previsto da comissão (R$)', t:'money'},
+    {k:'tipo', l:'Tipo de comissão', t:'select', opts:'tipoCom'},
+    {k:'mesPrevisao', l:'Mês de previsão (ex: Fev/26)', t:'text'},
     {k:'status', l:'Status', t:'select', opts:'comissoes'},
   ],
   metas: [
-    {k:'descricao', l:'Descrição', t:'text', req:true},
-    {k:'industria', l:'Indústria', t:'text'},
-    {k:'mes', l:'Mês/Período', t:'text'},
-    {k:'meta', l:'Valor da meta', t:'money'},
-    {k:'realizado', l:'Realizado', t:'money'},
+    /* v36: mesmos campos do site (industria / mes / tipo / valor / realizado / obs) */
+    {k:'industria', l:'Indústria', t:'text', req:true},
+    {k:'mes', l:'Mês (ex: Set/26)', t:'text', req:true},
+    {k:'tipo', l:'Tipo de meta', t:'select', opts:'tipoMeta'},
+    {k:'valor', l:'Valor da meta (R$ ou quantidade)', t:'money'},
+    {k:'realizado', l:'Realizado no mês', t:'money'},
+    {k:'obs', l:'Observações', t:'textarea'},
   ],
   tarefas: [
     {k:'titulo', l:'Título', t:'text', req:true},
@@ -1301,6 +1281,12 @@ async function salvarRegistro(){
 
   const chave = CHAVE_DADOS[modKey];
   if(!chave){ toast('Módulo sem gravação','err'); return; }
+
+  // v36: o app grava a base INTEIRA (PUT). Se a cópia local estiver velha,
+  // apagaria o que outra pessoa lançou no site. Por isso, antes de gravar,
+  // busca a versão mais nova da nuvem e só então aplica esta edição.
+  saveBtn.disabled = true;
+  try{ if(RTDB) await puxarSeMudou(); }catch(e){ /* sem rede: segue com a cópia local */ }
   if(!Array.isArray(DADOS[chave])) DADOS[chave] = [];
 
   if(editId){
@@ -1322,7 +1308,6 @@ async function salvarRegistro(){
   DADOS._usuario = usuarioLogado?.login || 'app';
 
   // Grava
-  saveBtn.disabled = true;
   const oldTxt = saveBtn.textContent;
   saveBtn.innerHTML = '<span class="ed-saving"><span class="spinner"></span></span>';
 
@@ -1337,6 +1322,7 @@ async function salvarRegistro(){
     }
     // atualiza cache local também
     try{ localStorage.setItem('gestcom_cache', JSON.stringify(DADOS)); }catch(e){}
+    _rtdbUltimoTs = DADOS._ts;
 
     saveBtn.disabled=false; saveBtn.textContent=oldTxt;
     closeEditor();
@@ -1430,15 +1416,11 @@ const MESES_CURTO = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 const MESES_LONGO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 /* Moeda idêntica ao site: R$ 12.400,00 (com centavos) */
+function num(v){ return parseFloat(v)||0; } // v36: soma segura (site usa parseFloat)
 function fmtBRL(n){ return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-/* Versão compacta pra KPI apertado: R$ 284,5 mil / R$ 1,2 mi */
-function fmtCompacto(n){
-  n = Number(n||0);
-  const abs = Math.abs(n);
-  if(abs >= 1e6) return 'R$ '+(n/1e6).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' mi';
-  if(abs >= 1e3) return 'R$ '+(n/1e3).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:1})+' mil';
-  return fmtBRL(n);
-}
+/* v36: valores COMPLETOS, iguais ao site (R$ 284.512,37) — antes arredondava
+   para "R$ 284,5 mil" e os KPIs não batiam com o sistema web. */
+function fmtCompacto(n){ return fmtBRL(n); }
 
 /* Extrai chave AAAA-MM de uma data em qualquer formato (ISO ou dd/mm/aaaa) — igual ao site */
 function chaveMes(dataStr){
@@ -1467,9 +1449,12 @@ function grupoCliente(nomeCliente){
   if(!nomeCliente) return nomeCliente;
   const cli = (DADOS.clientes||[]).find(c => c.nome === nomeCliente);
   if(cli && cli.rede) return cli.rede;
-  const n = String(nomeCliente).toUpperCase();
-  if(n.includes('COELHO DINIZ')) return 'COELHO DINIZ';
-  if(n.includes('LOJAS REDE')) return 'LOJAS REDE';
+  // v36: igual ao site — rede cujo nome esteja contido no nome do cliente
+  const up = String(nomeCliente).toUpperCase();
+  const redeMatch = (DADOS.redes||[]).find(r => r && r.nome && up.includes(String(r.nome).toUpperCase()));
+  if(redeMatch) return redeMatch.nome;
+  if(up.includes('COELHO DINIZ')) return 'COELHO DINIZ';
+  if(up.includes('LOJAS REDE')) return 'LOJAS REDE';
   return nomeCliente;
 }
 
@@ -1567,26 +1552,11 @@ function abrirFiltro(id){
   if(!def) return;
   document.getElementById('sheet-title').textContent = def.titulo || 'Filtrar';
   document.getElementById('sheet-body').innerHTML = def.options.map(o=>`
-    <div class="sheet-opt" data-busca="${esc(String(o.label||'').toLowerCase())}" onclick="aplicarFiltro('${def.campo}','${esc(String(o.v))}')">
+    <div class="sheet-opt" onclick="aplicarFiltro('${def.campo}','${esc(String(o.v))}')">
       <div class="so-ic ${o.v===def.value?'i-yellow':'i-gray'}">${o.v===def.value?'✓':'○'}</div>
       <div class="so-tx"><div class="t">${esc(o.label)}</div></div>
-    </div>`).join('') + `<div class="sheet-empty" id="sheet-empty" style="display:none">Nenhum resultado</div>`;
-  abrirSheet(def.options.length > 8);   // lista longa ganha campo de busca
-}
-
-/* Filtra as opções visíveis do sheet pelo texto digitado */
-function filtrarOpcoesSheet(){
-  const termo = (document.getElementById('sheet-search').value||'').toLowerCase().trim();
-  const opts = document.querySelectorAll('#sheet-body .sheet-opt');
-  let achou = 0;
-  opts.forEach(el=>{
-    const txt = el.dataset.busca || el.textContent.toLowerCase();
-    const ok = !termo || txt.includes(termo);
-    el.style.display = ok ? '' : 'none';
-    if(ok) achou++;
-  });
-  const vazio = document.getElementById('sheet-empty');
-  if(vazio) vazio.style.display = (achou===0 && termo) ? 'block' : 'none';
+    </div>`).join('');
+  abrirSheet();
 }
 function aplicarFiltro(campo, valor){
   FILTROS[campo] = valor;
@@ -1616,9 +1586,9 @@ function renderDashboardApp(){
   const agora = new Date();
 
   const pedsMes = peds.filter(p => chaveMes(p.data)===prefix && (p.tipo||'venda')==='venda');
-  const fatLiq  = peds.filter(p => p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+(p.nf.liquida||0),0);
+  const fatLiq  = peds.filter(p => p.nf && (p.tipo||'venda')==='venda').reduce((s,p)=>s+num(p.nf.liquida),0);
   const nfCount = peds.filter(p => p.nf && (p.tipo||'venda')==='venda').length;
-  const comPrev = (DADOS.comissoes_data||[]).filter(c=>!c.excluido&&(c.status==='Prevista'||c.status==='Atrasada')).reduce((s,c)=>s+(c.valor||0),0);
+  const comPrev = (DADOS.comissoes_data||[]).filter(c=>!c.excluido&&(c.status==='Prevista'||c.status==='Atrasada')).reduce((s,c)=>s+num(c.valor),0);
   const orcAbertos = (DADOS.orcamentos||[]).filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
   const podeDinheiro = ['editar','ver'].includes(nivelDoModulo('faturamento')) || ['editar','ver'].includes(nivelDoModulo('comissoes'));
 
@@ -1698,7 +1668,7 @@ function renderPedidosApp(){
 
   // Opções de filtro
   const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(peds,'data').map(m=>({v:m,label:rotuloMes(m)})));
-  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Recebido','Em digitação','Implantado','Faturado parcial','Faturado total','Expedido','Agendado','Entregue','Cancelado'].map(s=>({v:s,label:s})));
+  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Implantado','Faturado total','Cancelado','Excluído'].map(s=>({v:s,label:s})));
   const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(peds.map(p=>p.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
   const tipoOpt = [{v:'',label:'Todos os tipos'},{v:'venda',label:'🛒 Venda'},{v:'bonificacao',label:'🎁 Bonificação'}];
   _filtroDefs = {
@@ -1715,8 +1685,8 @@ function renderPedidosApp(){
   if(FILTROS.tipo)   peds = peds.filter(p=>(p.tipo||'venda')===FILTROS.tipo);
   if(q) peds = peds.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
 
-  const total   = peds.reduce((s,p)=>s+(p.total||0),0);
-  const fatLiq  = peds.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0),0);
+  const total   = peds.reduce((s,p)=>s+num(p.total),0);
+  const fatLiq  = peds.filter(p=>p.nf).reduce((s,p)=>s+num(p.nf.liquida),0);
   const podeDinheiro = ['editar','ver'].includes(nivelDoModulo('faturamento'));
 
   let kpis = [{l:'Pedidos', v:peds.length}];
@@ -1772,7 +1742,7 @@ function renderOrcamentosApp(){
   if(FILTROS.ind)    arr = arr.filter(o=>o.industria===FILTROS.ind);
   if(q) arr = arr.filter(o=>JSON.stringify(o).toLowerCase().includes(q));
 
-  const total = arr.reduce((s,o)=>s+(o.total||0),0);
+  const total = arr.reduce((s,o)=>s+num(o.total),0);
   const abertos = arr.filter(o=>!['Cancelado','Convertido em pedido','Reprovado'].includes(o.status)).length;
 
   const filtros = filtrosHTML([
@@ -1805,44 +1775,62 @@ function renderOrcamentosApp(){
 /* ════════════════════════════════════════════════
    4) FATURAMENTO / NF — lista de NFs com valor líquido
 ════════════════════════════════════════════════ */
+function _fatEhBonificacao(p){ return p.tipo === 'bonificacao'; }
+function _fatValores(p){
+  // idêntico ao site: NF de bonificação conta inteira como bonificação;
+  // NF de venda: venda = líquida, bonif = bonificação dentro da NF
+  const n = p.nf || {};
+  if(_fatEhBonificacao(p)){ const v = num(n.valorNF) || num(p.total); return {bruto:0, venda:0, bonif:v, total:v}; }
+  const bruto = num(n.valorNF), venda = num(n.liquida), bonif = num(n.bonif);
+  return {bruto, venda, bonif, total: venda + bonif};
+}
 function renderFaturamentoApp(){
   const list = document.getElementById('dt-list');
   const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
-  // Só pedidos que têm NF
+  // Só pedidos que têm NF (inclui NFs sem pedido, como no site)
   let arr = pedidosValidos().filter(p=>p.nf);
 
   const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(arr,p=>p.nf&&p.nf.data).map(m=>({v:m,label:rotuloMes(m)})));
   const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(p=>p.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
+  const tipoOpt = [{v:'',label:'Todos os tipos'},{v:'venda',label:'🛒 Venda'},{v:'bonificacao',label:'🎁 Bonificação'}];
   _filtroDefs = {
     fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
     find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
+    ftipo:{campo:'tipo',value:FILTROS.tipo,options:tipoOpt,titulo:'Filtrar por tipo'},
   };
-  if(FILTROS.mes) arr = arr.filter(p=>chaveMes(p.nf.data)===FILTROS.mes);
-  if(FILTROS.ind) arr = arr.filter(p=>p.industria===FILTROS.ind);
-  if(q) arr = arr.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
+  if(FILTROS.mes)  arr = arr.filter(p=>chaveMes(p.nf.data)===FILTROS.mes);
+  if(FILTROS.ind)  arr = arr.filter(p=>p.industria===FILTROS.ind);
+  if(FILTROS.tipo==='venda')       arr = arr.filter(p=>!_fatEhBonificacao(p));
+  if(FILTROS.tipo==='bonificacao') arr = arr.filter(p=> _fatEhBonificacao(p));
+  if(q) arr = arr.filter(p=>[(p.nf.numero||''),p.id,p.cliente].join(' ').toLowerCase().includes(q));
 
-  const totLiq = arr.reduce((s,p)=>s+(p.nf.liquida||0),0);
-  const totBruto = arr.reduce((s,p)=>s+(p.nf.valorNF||0),0);
+  let kVenda=0, kBonif=0, kBruto=0, nVenda=0, nBonif=0;
+  arr.forEach(p=>{ const v=_fatValores(p); kVenda+=v.venda; kBonif+=v.bonif; kBruto+=v.bruto; if(_fatEhBonificacao(p)) nBonif++; else nVenda++; });
+  const kTotal = kVenda + kBonif;
+  const pctBon = kTotal>0 ? (kBonif/kTotal*100) : 0;
 
   const filtros = filtrosHTML([
     {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
     {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+    {type:'select',id:'ftipo',label:'Tipo',value:FILTROS.tipo},
   ]);
   const kpis = [
-    {l:'NFs', v:arr.length},
-    {l:'NF Líquida', v:fmtCompacto(totLiq), sm:true, hl:true, s:'Base comissão'},
-    {l:'NF Bruta', v:fmtCompacto(totBruto), sm:true},
+    {l:'🛒 Faturado — Vendas', v:fmtCompacto(kVenda), sm:true, cor:'var(--verde)', s:nVenda+' NF'+(nVenda!==1?'s':'')+' · bruto '+fmtBRL(kBruto)},
+    {l:'🎁 Faturado — Bonificação', v:fmtCompacto(kBonif), sm:true, cor:'#b8900a', s:nBonif+' NF'+(nBonif!==1?'s':'')+' de bonif. + bonif. em vendas'},
+    {l:'Σ Total Faturado', v:fmtCompacto(kTotal), sm:true, hl:true, s:'Venda + bonificação'},
+    {l:'% Bonificação', v:pctBon.toFixed(1).replace('.',',')+'%', s:'sobre o total faturado', cor: pctBon>15?'var(--vermelho)':''},
   ];
   const cards = arr.length===0
     ? `<div class="list-empty"><div class="ic">🧾</div>Nenhuma NF com esses filtros.</div>`
     : [...arr].sort((a,b)=>String(b.nf.data||'').localeCompare(String(a.nf.data||''))).slice(0,150).map(p=>{
-        const n=p.nf;
-        const temAbat = (n.abatimentos||0)+(n.devolucoes||0)+(n.descFin||0)+(n.nfd||0)+(n.bonif||0) > 0;
+        const n=p.nf; const isBon=_fatEhBonificacao(p); const v=_fatValores(p);
+        const abat = num(n.abatimentos)+num(n.devolucoes)+num(n.descFin)+num(n.nfd)+num(n.bonif);
         return cardHTML({
-          id:'NF '+(n.numero||'—'), status: temAbat?'C/ abatimento':'Sem abatimento', statusCls: temAbat?'st-yellow':'st-green',
+          id:'NF '+(n.numero||'—'), status: isBon?'🎁 Bonif.':'🛒 Venda', statusCls: isBon?'st-orange':'st-blue',
           titulo:p.cliente||'—',
-          meta:[p.industria, 'Ped '+p.id, rotuloMes(chaveMes(n.data))].filter(Boolean).join(' · '),
-          valor:fmtBRL(n.liquida),
+          meta:[p.industria, p._semPedido?'Sem pedido':('Ped '+p.id), rotuloMes(chaveMes(n.data)), abat>0?('abat. '+fmtBRL(abat)):''].filter(Boolean).join(' · '),
+          valor: isBon ? fmtBRL(v.bonif) : fmtBRL(n.liquida),
+          valorCor: isBon ? '#b8900a' : undefined,
           direita: n.valorNF?('Bruto '+fmtBRL(n.valorNF)):'',
           onclick:`abrirVisualizacao('faturamento','${esc(String(p.id))}')`
         });
@@ -1853,20 +1841,82 @@ function renderFaturamentoApp(){
 /* ════════════════════════════════════════════════
    5) COMISSÕES — 4 KPIs (Previsto/Recebido/A Receber/Diferença) + filtro mês previsão
 ════════════════════════════════════════════════ */
+/* v36: MESMA MATEMÁTICA DO SITE (renderComissoes / _previstoNoMes / _recNoMes /
+   _restanteNoMes / _mesEfetivoComissao / premiações e descontos). Antes o app
+   somava valor cheio de tudo que tinha mesPrevisao no mês, e por isso os KPIs
+   de ZALIKE em Set/26 (e outros) não batiam com o sistema web. */
+function _r2(v){ return Math.round(((parseFloat(v)||0) + Number.EPSILON) * 100) / 100; }
+function _parcReais(c){ return (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0); }
+function _recTotal(c){ const r=_parcReais(c); return r.length ? r.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0); }
+// Mês efetivo: se já Recebida, vale o mês do recebimento; senão, o mês de previsão
+function _mesEfetivoComissao(c){
+  if(!c) return '';
+  if(c.status === 'Recebida'){
+    const parcs = _parcReais(c).filter(p=>p.mes);
+    if(parcs.length) return parcs[parcs.length-1].mes;
+    if(c.mesRecebimento) return c.mesRecebimento;
+  }
+  return c.mesPrevisao || '';
+}
+// Status exibido igual ao site: Prevista com mês já passado aparece como Atrasada
+function _statusExibicao(c){
+  if(!c.mesPrevisao || (c.status!=='Prevista' && c.status!=='Atrasada')) return c.status;
+  const [m,a] = c.mesPrevisao.split('/'); const mi = MESES_CURTO.indexOf(m);
+  if(mi<0) return c.status;
+  const ano = 2000+parseInt(a,10), hj=new Date();
+  const passou = ano<hj.getFullYear() || (ano===hj.getFullYear() && mi<hj.getMonth());
+  return passou ? 'Atrasada' : 'Prevista';
+}
+function _previstoNoMes(c, mes){
+  if(!c) return 0;
+  if(!mes) return _r2(c.valor);
+  if(c.status === 'Recebida') return _mesEfetivoComissao(c) === mes ? _r2(c.valor) : 0;
+  const recTotal = _recTotal(c);
+  const recMes = _parcReais(c).filter(p=>p.mes===mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  let v = recMes;
+  if((c.mesPrevisao||'') === mes) v += Math.max(0, _r2(c.valor) - recTotal);
+  return _r2(v);
+}
+function _restanteNoMes(c, mes){
+  if(!c || c.status === 'Recebida') return 0;
+  if(mes && (c.mesPrevisao||'') !== mes) return 0;
+  return _r2(Math.max(0, _r2(c.valor) - _recTotal(c)));
+}
 function _recNoMes(c, mes){
-  const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
-  if(mes) return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
-  if(reais.length) return reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
-  return c.valorRecebido||0;
+  const reais = _parcReais(c);
+  if(mes){
+    if(c.status === 'Recebida' && _mesEfetivoComissao(c) === mes) return _recTotal(c);
+    return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
+  }
+  return _recTotal(c);
+}
+// Premiações / descontos (comissoesExtras) — mesmo filtro e sinal do site
+function _comExtrasTotais(filtInd, filtMes, q){
+  const l = (DADOS.comissoesExtras||[]).filter(r=>{
+    if(filtInd && r.industria !== filtInd) return false;
+    if(filtMes && r.mes !== filtMes) return false;
+    if(q && !JSON.stringify([r.industria,r.cliente,r.descricao,r.id]).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const t = { premRec:0, descRec:0, premPrev:0, descPrev:0, qtd:l.length };
+  l.forEach(r=>{
+    const v = parseFloat(r.valor)||0, efet = r.status !== 'Prevista';
+    if(r.tipo === 'desconto'){ if(efet) t.descRec += v; else t.descPrev += v; }
+    else { if(efet) t.premRec += v; else t.premPrev += v; }
+  });
+  t.liquidoRecebido = t.premRec - t.descRec;
+  t.liquidoPrevisto = t.premPrev - t.descPrev;
+  return t;
 }
 function renderComissoesApp(){
   const list = document.getElementById('dt-list');
   const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
   let arr = (DADOS.comissoes_data||[]).filter(c=>!c.excluido);
 
-  // Meses de previsão disponíveis (formato "Jul/26")
+  // Meses disponíveis (formato "Jul/26")
   const mesesSet = new Set();
-  arr.forEach(c=>{ if(c.mesPrevisao) mesesSet.add(c.mesPrevisao); (c.parcelas||[]).forEach(p=>{if(p.mes)mesesSet.add(p.mes);}); });
+  arr.forEach(c=>{ if(c.mesPrevisao) mesesSet.add(c.mesPrevisao); const me=_mesEfetivoComissao(c); if(me) mesesSet.add(me); (c.parcelas||[]).forEach(p=>{if(p.mes)mesesSet.add(p.mes);}); });
+  (DADOS.comissoesExtras||[]).forEach(r=>{ if(r.mes) mesesSet.add(r.mes); });
   const ordenarMesPt = (a,b)=>{ const pa=a.split('/'),pb=b.split('/'); const va=parseInt(pa[1])*12+MESES_CURTO.indexOf(pa[0]); const vb=parseInt(pb[1])*12+MESES_CURTO.indexOf(pb[0]); return vb-va; };
   const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(Array.from(mesesSet).sort(ordenarMesPt).map(m=>({v:m,label:m})));
   const statusOpt = [{v:'',label:'Todos os status'}].concat(['Prevista','Parcial','Recebida','Atrasada'].map(s=>({v:s,label:s})));
@@ -1876,19 +1926,25 @@ function renderComissoesApp(){
     fstatus:{campo:'status',value:FILTROS.status,options:statusOpt,titulo:'Filtrar por status'},
     find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
   };
-  if(FILTROS.status) arr = arr.filter(c=>c.status===FILTROS.status);
+  const filtMes = FILTROS.mes;
+  if(q) arr = arr.filter(c=>[c.cliente,c.industria,c.nf,c.pedido,c.id].join(' ').toLowerCase().includes(q));
   if(FILTROS.ind)    arr = arr.filter(c=>c.industria===FILTROS.ind);
-  if(FILTROS.mes)    arr = arr.filter(c=>{
-    const temParc = (c.parcelas||[]).some(p=>(parseFloat(p.valor)||0)>0 && p.mes===FILTROS.mes);
-    return c.mesPrevisao===FILTROS.mes || temParc;
+  if(FILTROS.status) arr = arr.filter(c=>_statusExibicao(c)===FILTROS.status);
+  if(filtMes) arr = arr.filter(c=>{
+    // igual ao site: Recebida só no mês efetivo; as demais no mês de previsão OU com parcela no mês
+    const mesEf = _mesEfetivoComissao(c);
+    if(c.status === 'Recebida') return mesEf === filtMes;
+    const temParc = _parcReais(c).some(p=>p.mes===filtMes);
+    return mesEf === filtMes || temParc;
   });
-  if(q) arr = arr.filter(c=>JSON.stringify(c).toLowerCase().includes(q));
 
-  const totPrev = arr.reduce((s,c)=>s+(c.valor||0),0);
-  const totRec  = arr.reduce((s,c)=>s+_recNoMes(c,FILTROS.mes),0);
-  const totRecAcum = arr.reduce((s,c)=>s+_recNoMes(c,''),0);
-  const totDif  = totPrev - totRecAcum;
-  const totRest = arr.filter(c=>c.status!=='Recebida').reduce((s,c)=>s+((c.valor||0)-_recNoMes(c,'')),0);
+  const totPrev = _r2(arr.reduce((s,c)=>s+_previstoNoMes(c,filtMes),0));
+  const totRec  = _r2(arr.reduce((s,c)=>s+_recNoMes(c,filtMes),0));
+  const totDif  = _r2(totPrev - totRec);
+  const totRest = _r2(arr.reduce((s,c)=>s+_restanteNoMes(c,filtMes),0));
+  const ext = _comExtrasTotais(FILTROS.ind, filtMes, q);
+  const totRecExt  = _r2(totRec  + ext.liquidoRecebido);
+  const totRestExt = _r2(totRest + ext.liquidoPrevisto);
 
   const filtros = filtrosHTML([
     {type:'select',id:'fmes',label:'Mês prev.',value:FILTROS.mes,mes:true,icon:'📅'},
@@ -1897,24 +1953,38 @@ function renderComissoesApp(){
   ]);
   const kpis = [
     {l:'Total previsto', v:fmtCompacto(totPrev), sm:true},
-    {l:'Total recebido', v:fmtCompacto(totRec), sm:true, cor:'var(--verde)'},
-    {l:'A receber', v:fmtCompacto(Math.max(0,totRest)), sm:true, hl:true},
-    {l:'Diferença', v:(totDif<0?'+':'')+fmtCompacto(Math.abs(totDif)), sm:true, cor: totDif>0.01?'var(--vermelho)':'var(--verde)'},
+    {l:'Total recebido', v:fmtCompacto(totRecExt), sm:true, cor:'var(--verde)', s: Math.abs(ext.liquidoRecebido)>0.001 ? ('inclui '+(ext.liquidoRecebido>=0?'+':'−')+fmtBRL(Math.abs(ext.liquidoRecebido))+' de premiações/descontos') : ''},
+    {l:'Diferença', v:fmtCompacto(Math.abs(totDif)), sm:true, cor: totDif>0.01?'var(--vermelho)':'var(--verde)'},
+    {l:'A receber', v:fmtCompacto(Math.max(0,totRestExt)), sm:true, hl:true},
   ];
+  let extrasHTML = '';
+  if(ext.qtd>0){
+    extrasHTML = kpiHTML([
+      {l:'🏆 Premiações', v:fmtBRL(ext.premRec), sm:true, cor:'var(--verde)', s: ext.premPrev>0 ? fmtBRL(ext.premPrev)+' ainda previsto' : 'valores já efetivados'},
+      {l:'🏷️ Descontos', v: ext.descRec>0 ? '- '+fmtBRL(ext.descRec) : fmtBRL(0), sm:true, cor:'var(--vermelho)', s: ext.descPrev>0 ? fmtBRL(ext.descPrev)+' ainda previsto' : 'valores já efetivados'},
+      {l:'Σ Impacto', v:(ext.liquidoRecebido>=0?'+ ':'- ')+fmtBRL(Math.abs(ext.liquidoRecebido)), sm:true, cor: ext.liquidoRecebido<0?'var(--vermelho)':'var(--verde)', s: ext.qtd+' lançamento'+(ext.qtd!==1?'s':'')},
+    ]);
+  }
   const cards = arr.length===0
     ? `<div class="list-empty"><div class="ic">💰</div>Nenhuma comissão com esses filtros.</div>`
     : arr.slice(0,150).map(c=>{
         const editavel = podeEditarModulo('comissoes');
+        const st = _statusExibicao(c);
+        const pm = _previstoNoMes(c, filtMes);
+        const parcial = filtMes && Math.abs(pm-_r2(c.valor))>0.001;
+        const rec = _recNoMes(c, filtMes);
+        const me = _mesEfetivoComissao(c);
+        const mesTxt = me && me!==c.mesPrevisao ? (me+' (prev. '+(c.mesPrevisao||'—')+')') : (c.mesPrevisao||'');
         return cardHTML({
-          id:c.industria||'—', status:c.status, statusCls:statusClsSite(c.status),
+          id:c.industria||'—', status:st, statusCls:statusClsSite(st),
           titulo:c.cliente||'—',
-          meta:[c.nf?('NF '+c.nf):(c.pedido?('Ped '+c.pedido):''), c.percentual?('base '+fmtBRL(c.base||0)+' · '+c.percentual+'%'):''].filter(Boolean).join(' · '),
-          valor:fmtBRL(c.valor),
-          direita:c.mesPrevisao?('Prev: '+esc(c.mesPrevisao)):'',
+          meta:[c.nf?('NF '+c.nf):(c.pedido?('Ped '+c.pedido):''), (c.pct||c.percentual)?('base '+fmtBRL(c.baseLiq??c.base??0)+' · '+(c.pct??c.percentual)+'%'):'', c.tipo||'', rec>0?('rec. '+fmtBRL(rec)):''].filter(Boolean).join(' · '),
+          valor: parcial ? (fmtBRL(pm)+' <span style="font-size:10px;color:#888;font-weight:400">de '+fmtBRL(c.valor)+'</span>') : fmtBRL(c.valor),
+          direita: mesTxt ? ('Prev: '+esc(mesTxt)) : '',
           onclick: editavel?`abrirEdicao('comissoes','${esc(String(c.id))}')`:`abrirVisualizacao('comissoes','${esc(String(c.id))}')`
         });
       }).join('');
-  list.innerHTML = filtros + kpiHTML(kpis) + `<div class="cards-wrap">${cards}</div>`;
+  list.innerHTML = filtros + kpiHTML(kpis) + extrasHTML + `<div class="cards-wrap">${cards}</div>`;
 }
 
 /* ════════════════════════════════════════════════
@@ -1929,7 +1999,7 @@ function montarLogistica(){
       pedId:p.id, numPedidoCliente:p.numPedidoCliente||'', nfNumero:p.nf?.numero||'',
       cliente:p.cliente, industria:p.industria, data:p.data,
       transportadora:l.transportadora||'', previsao:l.previsao||'', dataEntrega:l.dataEntrega||'',
-      statusLog:l.statusLog||(p.nf?'Faturado':'Pedido Digitado'), obs:l.obs||''
+      statusLog:l.statusLog||((p.nf && ['Faturado total','Expedido','Agendado','Entregue'].includes(p.status))?'Faturado':'Pedido Digitado'), obs:l.obs||''
     };
   });
 }
@@ -1939,7 +2009,7 @@ function renderLogisticaApp(){
   let arr = montarLogistica();
 
   const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat(mesesDisponiveis(arr,'data').map(m=>({v:m,label:rotuloMes(m)})));
-  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Pedido Digitado','Pedido Enviado','Em Separação','Faturado','Aguardando Coleta','Em Transporte','Entregue','Finalizado','Cancelado'].map(s=>({v:s,label:s})));
+  const statusOpt = [{v:'',label:'Todos os status'}].concat(['Pedido Digitado','Faturado','Em Transporte','Entregue','Cancelado'].map(s=>({v:s,label:s})));
   const alertaOpt = [{v:'',label:'Todas as situações'},{v:'atrasado',label:'⚠️ Só atrasados'},{v:'sem-previsao',label:'❓ Sem previsão'},{v:'hoje',label:'📅 Entrega hoje'}];
   const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(l=>l.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
   _filtroDefs = {
@@ -1949,11 +2019,7 @@ function renderLogisticaApp(){
     fextra:{campo:'extra',value:FILTROS.extra,options:alertaOpt,titulo:'Situação'},
   };
 
-  // Filtro de indústria aplicado ANTES dos KPIs, para que os números,
-  // o banner de atrasados e a lista reflitam a indústria escolhida.
-  if(FILTROS.ind) arr = arr.filter(l=>l.industria===FILTROS.ind);
-
-  // KPIs (visão geral da indústria selecionada, antes dos demais filtros)
+  // KPIs (antes de filtrar, visão geral)
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const totAtivos = arr.filter(l=>!['Entregue','Finalizado','Cancelado'].includes(l.statusLog)).length;
   const atrasadosAll = arr.filter(_logAtrasado);
@@ -1963,13 +2029,14 @@ function renderLogisticaApp(){
   // Aplica filtros
   if(FILTROS.mes) arr = arr.filter(l=>chaveMes(l.data)===FILTROS.mes);
   if(FILTROS.status) arr = arr.filter(l=>l.statusLog===FILTROS.status);
+  if(FILTROS.ind) arr = arr.filter(l=>l.industria===FILTROS.ind);
   if(FILTROS.extra==='atrasado') arr = arr.filter(_logAtrasado);
   if(FILTROS.extra==='sem-previsao') arr = arr.filter(l=>!l.previsao&&!['Entregue','Finalizado','Cancelado'].includes(l.statusLog));
   if(FILTROS.extra==='hoje') arr = arr.filter(l=>{ if(!l.previsao||['Entregue','Finalizado','Cancelado'].includes(l.statusLog))return false; const pv=new Date(l.previsao+'T00:00:00'); return pv.getTime()===hoje.getTime(); });
   if(q) arr = arr.filter(l=>JSON.stringify(l).toLowerCase().includes(q));
 
   const banner = atrasadosAll.length>0
-    ? `<div class="app-alert a-red big-alert"><span style="font-size:20px">🚨</span> ${atrasadosAll.length} entrega(s) atrasada(s)${FILTROS.ind?' — '+esc(FILTROS.ind):''}</div>`
+    ? `<div class="app-alert a-red big-alert"><span style="font-size:20px">🚨</span> ${atrasadosAll.length} entrega(s) atrasada(s)</div>`
     : '';
   const filtros = filtrosHTML([
     {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
@@ -2041,7 +2108,7 @@ function renderFatMensalApp(){
   INDS.forEach(ind=>{
     matrix[ind] = MESES_CURTO.map((_,i)=>{
       const prefix = `${ano}-${String(i+1).padStart(2,'0')}`;
-      return peds.filter(p=>p.industria===ind && chaveMes(p.nf.data)===prefix).reduce((s,p)=>s+(p.nf.liquida||0),0);
+      return peds.filter(p=>p.industria===ind && chaveMes(p.nf.data)===prefix).reduce((s,p)=>s+num(p.nf.liquida),0);
     });
   });
   const totPorMes = MESES_CURTO.map((_,i)=>INDS.reduce((s,ind)=>s+(matrix[ind][i]||0),0));
@@ -2056,15 +2123,16 @@ function renderFatMensalApp(){
   ]);
 
   // Tabela rolável
-  const thMeses = mesesMostrar.map(x=>`<th>${x.m}</th>`).join('');
+  const thMeses = mesesMostrar.map(x=>`<th>${x.m}</th>`).join('') + `<th>Total ${ano}</th>`;
   const rows = INDS.filter(ind=>matrix[ind].some(v=>v>0)).map((ind,ci)=>{
-    const cells = mesesMostrar.map(x=>{ const v=matrix[ind][x.i]; return `<td>${v>0?fmtCompacto(v).replace('R$ ',''):'—'}</td>`; }).join('');
-    return `<tr><td class="ind">${esc(ind)}</td>${cells}</tr>`;
+    const cells = mesesMostrar.map(x=>{ const v=matrix[ind][x.i]; return `<td>${v>0?fmtBRL(v).replace('R$ ',''):'—'}</td>`; }).join('');
+    const indTot = matrix[ind].reduce((s,v)=>s+v,0);
+    return `<tr><td class="ind">${esc(ind)}</td>${cells}<td><b>${fmtBRL(indTot).replace('R$ ','')}</b></td></tr>`;
   }).join('');
-  const totRow = `<tr><td>TOTAL</td>${mesesMostrar.map(x=>`<td>${fmtCompacto(totPorMes[x.i]).replace('R$ ','')}</td>`).join('')}</tr>`;
+  const totRow = `<tr><td>TOTAL</td>${mesesMostrar.map(x=>`<td>${fmtBRL(totPorMes[x.i]).replace('R$ ','')}</td>`).join('')}<td><b>${fmtBRL(totalGeral).replace('R$ ','')}</b></td></tr>`;
 
   const tabela = rows
-    ? `<div class="note-app">Deslize a tabela para o lado ▸. Valores em R$ (mil).</div>
+    ? `<div class="note-app">Deslize a tabela para o lado ▸. Valores em R$.</div>
        <div class="fatgrid-app"><table><thead><tr><th>Indústria</th>${thMeses}</tr></thead><tbody>${rows}${totRow}</tbody></table></div>`
     : `<div class="list-empty"><div class="ic">📅</div>Sem faturamento em ${ano}.</div>`;
 
@@ -2109,8 +2177,8 @@ function renderSellInOutApp(){
     const grupo=grupoCliente(s.cliente), ind=s.industria, mes=s.mes;
     const k=`${grupo}|${ind}|${mes}`;
     if(!linhasMap[k]) linhasMap[k]={grupo,ind,mes,sellOut:0,positivacao:0};
-    linhasMap[k].sellOut += (s.valor||0);
-    linhasMap[k].positivacao += (s.positivacao||0);
+    linhasMap[k].sellOut += num(s.valor);
+    linhasMap[k].positivacao += num(s.positivacao);
   });
   let linhas = Object.values(linhasMap);
 
@@ -2158,8 +2226,8 @@ function renderMetasApp(){
   const list = document.getElementById('dt-list');
   const q = (document.getElementById('dt-search').value||'').toLowerCase().trim();
   let arr = (DADOS.metasData||[]).slice();
-
-  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat([...new Set(arr.map(m=>m.mes).filter(Boolean))].sort().reverse().map(m=>({v:m,label:m})));
+  const ordM = (a,b)=>{const pa=a.split('/'),pb=b.split('/');return (parseInt(pb[1])*12+MESES_CURTO.indexOf(pb[0]))-(parseInt(pa[1])*12+MESES_CURTO.indexOf(pa[0]));};
+  const mesesOpt = [{v:'',label:'📅 Todos os meses'}].concat([...new Set(arr.map(m=>m.mes).filter(Boolean))].sort(ordM).map(m=>({v:m,label:m})));
   const indOpt = [{v:'',label:'Todas as indústrias'}].concat([...new Set(arr.map(m=>m.industria).filter(Boolean))].sort().map(i=>({v:i,label:i})));
   _filtroDefs = {
     fmes:{campo:'mes',value:FILTROS.mes,options:mesesOpt,titulo:'Filtrar por mês'},
@@ -2169,30 +2237,43 @@ function renderMetasApp(){
   if(FILTROS.ind) arr = arr.filter(m=>m.industria===FILTROS.ind);
   if(q) arr = arr.filter(m=>JSON.stringify(m).toLowerCase().includes(q));
 
-  const totMeta = arr.reduce((s,m)=>s+(Number(m.meta)||0),0);
-  const totReal = arr.reduce((s,m)=>s+(Number(m.realizado)||0),0);
+  // v36: igual ao site — meta fica em m.valor; KPIs em R$ só para metas de faturamento
+  const metaDe = m => num(m.valor ?? m.meta);
+  const listaFat = arr.filter(m=>!m.tipo||m.tipo==='faturamento');
+  const totMeta = listaFat.reduce((s,m)=>s+metaDe(m),0);
+  const totReal = listaFat.reduce((s,m)=>s+num(m.realizado),0);
   const pct = totMeta>0?((totReal/totMeta)*100):0;
+  const hoje = new Date();
+  const mesEncerrado = (mes)=>{ const pt=(mes||'').split('/'); const mi=MESES_CURTO.indexOf(pt[0]); if(mi<0) return false; const ano=2000+parseInt(pt[1],10); return ano<hoje.getFullYear() || (ano===hoje.getFullYear() && mi<hoje.getMonth()); };
+  const fmtTipo = (m,v)=> m.tipo==='pedidos' ? (v+' ped.') : m.tipo==='clientes' ? (v+' cli.') : fmtBRL(v);
+  const tipoLbl = t => t==='pedidos'?'📋 Pedidos':t==='clientes'?'👥 Clientes':t==='implantado'?'📦 Implantado':'💰 Faturamento';
 
   const filtros = filtrosHTML([
     {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
     {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
   ]);
   const kpis = [
-    {l:'Meta total', v:fmtCompacto(totMeta), sm:true},
+    {l:'Meta total', v:fmtCompacto(totMeta), sm:true, s:'metas de faturamento'},
     {l:'Realizado', v:fmtCompacto(totReal), sm:true, cor:'var(--verde)'},
-    {l:'% Atingido', v:pct.toFixed(0)+'%', hl:true},
+    {l:'% Atingido', v:pct.toFixed(1).replace('.',',')+'%', hl:true},
   ];
   const cards = arr.length===0
     ? `<div class="list-empty"><div class="ic">🎯</div>Nenhuma meta com esses filtros.</div>`
     : arr.slice(0,150).map(m=>{
-        const meta=Number(m.meta)||0, real=Number(m.realizado)||0;
+        const meta=metaDe(m), real=num(m.realizado);
         const p = meta>0?((real/meta)*100):0;
+        const saldo = meta-real;
+        let cls,lbl;
+        if(p>=100){cls='st-green';lbl='✅ Atingida';}
+        else if(mesEncerrado(m.mes)){cls='st-red';lbl='❌ Não atingida';}
+        else if(p>=80){cls='st-yellow';lbl='⏳ Em andamento';}
+        else {cls='st-red';lbl='⚠️ Abaixo da meta';}
         const editavel = podeEditarModulo('metas');
         return cardHTML({
-          id:'🎯 '+(m.industria||'—'), status:p.toFixed(0)+'%', statusCls:p>=100?'st-green':(p>=70?'st-yellow':'st-red'),
-          titulo:null, meta:(m.mes||'')+(m.tipo?(' · '+m.tipo):''),
-          valor:fmtBRL(real)+' / '+fmtBRL(meta),
-          direita:'',
+          id:'🎯 '+(m.industria||'—'), status:lbl+' · '+p.toFixed(1).replace('.',',')+'%', statusCls:cls,
+          titulo:null, meta:(m.mes||'')+' · '+tipoLbl(m.tipo||'faturamento'),
+          valor:fmtTipo(m,real)+' / '+fmtTipo(m,meta),
+          direita: saldo<=0 ? ('Superada! +'+fmtTipo(m,Math.abs(saldo))) : ('Falta '+fmtTipo(m,saldo)),
           onclick: editavel?`abrirEdicao('metas','${esc(String(m.id))}')`:`abrirVisualizacao('metas','${esc(String(m.id))}')`
         });
       }).join('');
@@ -2217,21 +2298,27 @@ function renderSaldoApp(){
     find:{campo:'ind',value:FILTROS.ind,options:indOpt,titulo:'Filtrar por indústria'},
   };
 
-  // Monta linhas cliente×indústria com saldo
+  // v36: igual ao site — pedido com saldoZerado conta pelo valor da NF (_pedZ);
+  // linhas zeradas (pedido = NF, sem pedido pendente) ficam ocultas salvo "Mostrar zerados"
+  const zeradosOpt = [{v:'',label:'Ocultar zerados'},{v:'zerados',label:'Mostrar zerados'}];
+  _filtroDefs.fextra = {campo:'extra',value:FILTROS.extra,options:zeradosOpt,titulo:'Linhas zeradas'};
+  const mostrarZerados = FILTROS.extra==='zerados';
+  const _pedZ = p => (!p || !p.saldoZerado) ? p : {...p, total: p.nf ? num(p.nf.valorNF) : 0};
   let linhas = [];
   let totalPed=0, totalNF=0, totalLiq=0, totalSaldo=0;
   clientesNomes.forEach(cli=>{
     if(FILTROS.ind && !indNomes.includes(FILTROS.ind)) return;
     const indsUsar = FILTROS.ind ? [FILTROS.ind] : indNomes;
     indsUsar.forEach(ind=>{
-      let pedsInd = peds.filter(p=>p.cliente===cli && p.industria===ind);
+      let pedsInd = peds.filter(p=>p.cliente===cli && p.industria===ind).map(_pedZ);
       if(FILTROS.mes) pedsInd = pedsInd.filter(p=>{ const ref=(p.nf&&p.nf.data)?p.nf.data:p.data; return chaveMes(ref)===FILTROS.mes; });
       if(pedsInd.length===0) return;
-      const pTot = pedsInd.reduce((s,p)=>s+(p.total||0),0);
-      const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.valorNF||0),0);
-      const liq = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+(p.nf.liquida||0),0);
+      const pTot = pedsInd.reduce((s,p)=>s+num(p.total),0);
+      const nfTot = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+num(p.nf.valorNF),0);
+      const liq = pedsInd.filter(p=>p.nf).reduce((s,p)=>s+num(p.nf.liquida),0);
       const saldo = parseFloat((pTot-nfTot).toFixed(2));
       const semNF = pedsInd.filter(p=>!p.nf).length;
+      if(!mostrarZerados && Math.abs(saldo)<0.01 && semNF===0) return;
       linhas.push({cli, ind, pTot, nfTot, liq, saldo, semNF, nPed:pedsInd.length});
       totalPed+=pTot; totalNF+=nfTot; totalLiq+=liq; totalSaldo+=saldo;
     });
@@ -2242,6 +2329,7 @@ function renderSaldoApp(){
   const filtros = filtrosHTML([
     {type:'select',id:'fmes',label:'Mês',value:FILTROS.mes,mes:true,icon:'📅'},
     {type:'select',id:'find',label:'Indústria',value:FILTROS.ind},
+    {type:'select',id:'fextra',label:'Zerados',value:FILTROS.extra},
   ]);
   const kpis = [
     {l:'Total pedidos', v:fmtCompacto(totalPed), sm:true},
@@ -2254,7 +2342,7 @@ function renderSaldoApp(){
         const zerado = Math.abs(l.saldo)<0.01;
         const cor = zerado?'#aaa':(l.saldo>0?'var(--laranja)':'var(--verde)');
         return `<div class="card">
-          <div class="c-r1"><div class="c-id">${esc(l.cli)}</div><div class="c-st ${zerado?'st-gray':(l.saldo>0?'st-yellow':'st-green')}">${zerado?'Zerado':(l.saldo>0?'Em aberto':'NF > Ped')}</div></div>
+          <div class="c-r1"><div class="c-id">${esc(l.cli)}</div><div class="c-st ${zerado?'st-gray':(l.saldo>0?'st-yellow':'st-green')}">${l.semNF>0?('⚠️ '+l.semNF+' sem NF'):zerado?'✅ Ok':(l.saldo>0?'Saldo aberto':'NF maior que pedido')}</div></div>
           <div class="c-meta">${esc(l.ind)} · ${l.nPed} pedido(s)${l.semNF?(' · '+l.semNF+' sem NF'):''}</div>
           <div class="saldo-linhas">
             <div><span class="sl-l">Pedidos</span><span class="sl-v">${fmtBRL(l.pTot)}</span></div>
@@ -2394,16 +2482,7 @@ function openSheetGlobal(){
   abrirSheet();
 }
 
-function abrirSheet(comBusca){
-  const busca = document.getElementById('sheet-search');
-  busca.value = '';
-  busca.style.display = comBusca ? 'block' : 'none';
-  const body = document.getElementById('sheet-body');
-  body.scrollTop = 0;                                  // sempre começa do topo
-  body.querySelectorAll('.sheet-opt').forEach(el=>el.style.display='');
-  document.getElementById('sheet-backdrop').classList.add('open');
-  document.getElementById('sheet').classList.add('open');
-}
+function abrirSheet(){ document.getElementById('sheet-backdrop').classList.add('open'); document.getElementById('sheet').classList.add('open'); }
 function closeSheet(){ document.getElementById('sheet-backdrop').classList.remove('open'); document.getElementById('sheet').classList.remove('open'); }
 
 function exportarModulo(){
@@ -2614,6 +2693,41 @@ function atualizarSync(){
   }
 }
 
+/* ════════════════════════════════════════════════
+   v36: ATUALIZAÇÃO AUTOMÁTICA — igual ao site
+   A cada 15s consulta só o _ts (poucos bytes). Se alguém gravou algo
+   (no site ou em outro celular), baixa a base e redesenha a tela aberta.
+   Também verifica na hora quando o app volta ao primeiro plano.
+════════════════════════════════════════════════ */
+let _rtdbPoll = null, _rtdbUltimoTs = 0, _rtdbChecando = false;
+async function _verificarNuvemAgora(){
+  if(_rtdbChecando || !RTDB || !usuarioLogado) return;
+  if(document.getElementById('editor')?.classList.contains('open')) return; // não troca dados no meio de uma edição
+  _rtdbChecando = true;
+  try{
+    const rt = await fetch(rtdbUrl('gestcom/dados/_ts'));
+    if(!rt.ok) return;
+    const tsRemoto = await rt.json();
+    const tsLocal = DADOS?._ts || _rtdbUltimoTs || 0;
+    if(!tsRemoto || tsRemoto <= tsLocal) return;
+    const d = await puxarDados();
+    _rtdbUltimoTs = d._ts || Date.now();
+    // Redesenha o que está na tela
+    montarHome();
+    if(ehGestor()){ montarPainel(); atualizarSync(); }
+    if(document.getElementById('detail').classList.contains('open')) renderModuleList();
+    const quem = d._usuario ? ' (por '+d._usuario+')' : '';
+    toast('☁️ Dados atualizados'+quem,'ok');
+  }catch(e){ /* sem rede: tenta no próximo ciclo */ }
+  finally{ _rtdbChecando = false; }
+}
+function ativarAtualizacaoAutomatica(){
+  if(_rtdbPoll) clearInterval(_rtdbPoll);
+  _rtdbPoll = setInterval(_verificarNuvemAgora, 15000);
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') _verificarNuvemAgora(); });
+window.addEventListener('focus', ()=>_verificarNuvemAgora());
+
 async function sincronizarAgora(){
   const btn = document.getElementById('btn-sync-now');
   if(!RTDB){ toast('Sistema não configurado neste aparelho','err'); return; }
@@ -2631,6 +2745,7 @@ function logout(){
   localStorage.removeItem('gestcom_sessao');
   sessionStorage.removeItem('gestcom_sessao');
   usuarioLogado=null;
+  if(_rtdbPoll){ clearInterval(_rtdbPoll); _rtdbPoll=null; }
   document.getElementById('app').style.display='none';
   document.getElementById('login').style.display='flex';
   document.getElementById('in-pass').value='';
