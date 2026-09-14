@@ -7093,21 +7093,45 @@ function _dateToMesLabel(date) {
 // recebida por completo, continua no mês de previsão.
 function _r2(v){ return Math.round(((parseFloat(v)||0) + Number.EPSILON) * 100) / 100; }
 
-// ─── v34: quanto da comissão conta como PREVISTO num determinado mês ─────────
-// • Recebida  → valor inteiro no mês efetivo (mês do recebimento)
-// • Parcial   → parcelas recebidas contam no mês em que entraram; o RESTANTE
-//               (valor − recebido) fica no mês de previsão
-// • Prevista/Atrasada → valor inteiro no mês de previsão
+// ─── v36: parcelas efetivamente recebidas (valor > 0) ────────────────────────
+function _parcelasReais(c){ return (c && c.parcelas ? c.parcelas : []).filter(p => (parseFloat(p.valor)||0) > 0); }
+function _recTotalComissao(c){
+  const reais = _parcelasReais(c);
+  return _r2(reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0));
+}
+// ─── v36: quanto foi RECEBIDO num determinado mês ────────────────────────────
+// Cada baixa (parcela) conta no mês em que foi recebida — independente do
+// status da comissão. Metade em Ago e metade em Set → Ago mostra a metade de
+// Ago e Set mostra a metade de Set. Sem filtro de mês → total recebido.
+function _recebidoNoMes(c, mes) {
+  if(!c) return 0;
+  const reais = _parcelasReais(c);
+  if(!mes) return _recTotalComissao(c);
+  if(reais.length) {
+    let v = reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+    // parcelas antigas sem mês gravado caem no mês de recebimento/previsão da comissão
+    const semMes = reais.filter(p => !p.mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+    if(semMes > 0 && ((c.mesRecebimento||c.mesPrevisao)||'') === mes) v += semMes;
+    return _r2(v);
+  }
+  // sem parcelas: o valor recebido pertence ao mês de recebimento (ou previsão)
+  return ((c.mesRecebimento||c.mesPrevisao)||'') === mes ? _r2(c.valorRecebido||0) : 0;
+}
+// ─── v36: quanto da comissão conta como PREVISTO num determinado mês ─────────
+// • Parcelas recebidas contam no mês em que entraram (qualquer status)
+// • O RESTANTE (valor − recebido) fica no mês de previsão; se a comissão já foi
+//   encerrada como Recebida com desconto aceito, a diferença fica no mês da
+//   última baixa (apenas informativo)
 // Sem filtro de mês (mes vazio) → valor inteiro.
 function _previstoNoMes(c, mes) {
   if(!c) return 0;
   if(!mes) return _r2(c.valor);
-  if(c.status === 'Recebida') return _mesEfetivoComissao(c) === mes ? _r2(c.valor) : 0;
-  const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
-  const recTotal = reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0);
-  const recMes   = reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
-  let v = recMes;
-  if((c.mesPrevisao||'') === mes) v += Math.max(0, _r2(c.valor) - recTotal);
+  let v = _recebidoNoMes(c, mes);
+  const restante = Math.max(0, _r2(c.valor) - _recTotalComissao(c));
+  if(restante > 0.001) {
+    const mesRest = c.status === 'Recebida' ? _mesEfetivoComissao(c) : (c.mesPrevisao||'');
+    if(mesRest === mes) v += restante;
+  }
   return _r2(v);
 }
 // Saldo que ainda falta receber e que pertence ao mês (só no mês de previsão)
@@ -8572,13 +8596,11 @@ function renderComissoes() {
       // parcela recebida naquele mês (recebimentos podem cair em meses
       // diferentes do previsto).
       // v34: comissão RECEBIDA fica só no mês em que foi recebida (não continua no mês previsto)
-      const mesEf = _mesEfetivoComissao(c);
-      if(c.status === 'Recebida') {
-        if(mesEf !== filtMes) return false;
-      } else {
-        const temParcelaNoMes = (c.parcelas||[]).some(p => (parseFloat(p.valor)||0) > 0 && p.mes === filtMes);
-        if(mesEf !== filtMes && !temParcelaNoMes) return false;
-      }
+      // v36: aparece no mês se recebeu algo nele, se tem previsto nele, ou se
+      // (ainda em aberto) o mês de previsão é este.
+      const temAlgo = _recebidoNoMes(c, filtMes) > 0.001 || _previstoNoMes(c, filtMes) > 0.001
+                   || (c.status !== 'Recebida' && (c.mesPrevisao||'') === filtMes);
+      if(!temAlgo) return false;
     }
     return true;
   });
@@ -8587,20 +8609,7 @@ function renderComissoes() {
   // Quando há filtro de MÊS, "Total Recebido" considera apenas as parcelas
   // recebidas NAQUELE mês (cada parcela guarda o seu próprio mês); sem filtro,
   // usa o total recebido acumulado da comissão.
-  const _recNoMes = (c, mes) => {
-    const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
-    if(mes){
-      // v34: comissão Recebida já foi movida inteira para o mês do recebimento → conta tudo
-      if(c.status === 'Recebida' && _mesEfetivoComissao(c) === mes) {
-        return reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0) : (c.valorRecebido||0);
-      }
-      // soma só as parcelas cujo mês bate com o filtro
-      return reais.filter(p => p.mes === mes).reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
-    }
-    // sem filtro de mês: usa o acumulado (ou a soma das parcelas, se houver)
-    if(reais.length) return reais.reduce((s,p)=>s+(parseFloat(p.valor)||0), 0);
-    return c.valorRecebido||0;
-  };
+  const _recNoMes = (c, mes) => _recebidoNoMes(c, mes); // v36: parcela conta no seu mês
 
   // v34: Previsto do mês = parcelas recebidas no mês + restante (só no mês de previsão)
   const totPrev = _r2(list.reduce((s,c)=>s+_previstoNoMes(c, filtMes), 0));
@@ -8684,7 +8693,7 @@ function renderComissoes() {
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
           <td style="font-size:12px">${fmt(c.baseLiq)}</td>
           <td style="font-size:12px">${c.pct}%</td>
-          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)} · restante em ${c.mesPrevisao||'—'}</div>` : fmt(c.valor);})()}</td>
+          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
           <td class="bold verde" style="font-size:12px">
             ${(()=>{const rm=_recNoMes(c,filtMes); return rm>0 ? (filtMes && Math.abs(rm-recebido)>0.001 ? `${fmt(rm)}<div style="font-size:10px;color:#888;font-weight:400">total ${fmt(recebido)}</div>` : fmt(recebido)) : '<span style="color:#aaa">—</span>';})()}
           </td>
@@ -8697,7 +8706,10 @@ function renderComissoes() {
               : '<span style="color:#aaa">—</span>'
             }
           </td>
-          <td style="font-size:12px">${(()=>{const me=_mesEfetivoComissao(c); return me && me!==c.mesPrevisao ? `<strong>${me}</strong><div style="font-size:10px;color:#888">prev. ${c.mesPrevisao||'—'}</div>` : (c.mesPrevisao||'—');})()}</td>
+          <td style="font-size:12px">${(()=>{
+            const mesesRec=[...new Set(_parcelasReais(c).map(p=>p.mes).filter(Boolean))];
+            if(mesesRec.length>1) return `<strong>${mesesRec.join(' + ')}</strong><div style="font-size:10px;color:#888">${c.status==='Recebida'?'recebida em partes':'parcial'} · prev. ${c.mesPrevisao||'—'}</div>`;
+            const me=_mesEfetivoComissao(c); return me && me!==c.mesPrevisao ? `<strong>${me}</strong><div style="font-size:10px;color:#888">prev. ${c.mesPrevisao||'—'}</div>` : (c.mesPrevisao||'—');})()}</td>
           <td><span class="badge ${statusCor[c.status]||'badge-cinza'}">${c.status}</span></td>
           <td>
             <div style="display:flex;gap:3px;flex-wrap:wrap">
@@ -14427,9 +14439,9 @@ function renderRelatorios() {
   const comTable = el('rel-comissao-table');
   const comsFiltradas = mesFiltro==='todos'
     ? comissoes_data.filter(c=>!c.excluido)
-    : comissoes_data.filter(c=>!c.excluido && _previstoNoMes(c, mesFiltro) > 0); // v34: mês efetivo / parcelas por mês
+    : comissoes_data.filter(c=>!c.excluido && (_previstoNoMes(c, mesFiltro) > 0 || _recebidoNoMes(c, mesFiltro) > 0)); // v36: parcelas por mês
   const _pm = c => _previstoNoMes(c, mesFiltro==='todos' ? '' : mesFiltro);
-  const _rm = c => { const reais=(c.parcelas||[]).filter(p=>(parseFloat(p.valor)||0)>0); if(mesFiltro==='todos') return reais.length?reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0):(c.valorRecebido||0); if(c.status==='Recebida') return _mesEfetivoComissao(c)===mesFiltro?_r2(c.valor):0; return reais.filter(p=>p.mes===mesFiltro).reduce((s,p)=>s+(parseFloat(p.valor)||0),0); };
+  const _rm = c => _recebidoNoMes(c, mesFiltro==='todos' ? '' : mesFiltro); // v36: cada parcela no seu mês
   const totRec  = _r2(comsFiltradas.reduce((s,c)=>s+_rm(c),0));
   const totAtr  = _r2(comsFiltradas.filter(c=>c.status==='Atrasada').reduce((s,c)=>s+(_pm(c)-_rm(c)),0));
   const totPrev = _r2(comsFiltradas.reduce((s,c)=>s+_pm(c),0) - totRec - totAtr);
