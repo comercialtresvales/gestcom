@@ -2372,7 +2372,7 @@ tr:last-child td{border-bottom:none;}
     <div class="panel" id="panel-regras">
       <div class="section-bar">
         <div><div class="section-title">Regras Comerciais</div><div class="section-sub">Configure regras por rede ou cliente — filiais herdam automaticamente a regra da rede</div></div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-regra');popularSelectsDinamicos()">+ Nova Regra</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirNovaRegra()">+ Nova Regra</button>
       </div>
       <div class="alert alert-warning">⚠️ Alterações nas regras recalculam automaticamente as comissões futuras. Comissões já recebidas não são afetadas.</div>
 
@@ -3898,6 +3898,11 @@ tr:last-child td{border-bottom:none;}
     <!-- Info da comissão -->
     <div style="background:#1a1a1a;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12px">
       <div id="edcom-info" style="color:#aaa"></div>
+      <div id="edcom-detalhe" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #333;color:#ddd">
+        <div style="font-size:11px;font-weight:700;color:#f5c500">🏷️ Quebra por categoria (% efetivo)</div>
+        <div id="edcom-detalhe-tabela"></div>
+        <div style="font-size:10px;color:#888;margin-top:4px">Alterar a base ou o % manualmente descarta esta quebra.</div>
+      </div>
     </div>
 
     <!-- ── VALOR PREVISTO ── -->
@@ -4099,6 +4104,18 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-group"><label>Mês de Vigência Início</label><input type="month" id="regra-vigencia" value="2026-01"></div>
     </div>
+
+    <!-- ── Exceções de % por categoria de produto ── -->
+    <div style="border-top:1px solid var(--cinza-medio,#ddd);margin:14px 0 12px;padding-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px">🏷️ Exceções por categoria</div>
+        <button type="button" class="btn btn-outline btn-xs" onclick="regraExcAdd()">+ Adicionar exceção</button>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">Itens do pedido cujos produtos estão nessas categorias usam o % abaixo em vez do % padrão da regra. A base da NF líquida é rateada proporcionalmente aos itens.</div>
+      <datalist id="regra-exc-cats"></datalist>
+      <div id="regra-exc-list"></div>
+    </div>
+
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeModal('modal-regra')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarRegra()">💾 Salvar Regra</button>
@@ -6627,7 +6644,8 @@ function salvarPedido() {
         const prazoUpd = _regraUpd?.prazo || obj.cond || cliCadUpd?.prazo || '';
         const dataNFUpd = nfInline?.data || obj.nf?.data || obj.data || new Date();
         const mesLabelUpd = _calcMesPrevisaoComissao(dataNFUpd, tipoUpd, prazoUpd);
-        comissoes_data[cIdx] = {...c, cliente: obj.cliente, industria: obj.industria, baseLiq: baseCom, valor: _r2(baseCom*c.pct/100), tipo: tipoUpd, mesPrevisao: mesLabelUpd};
+        const _calcUpd = _regraUpd ? _calcComissaoPorCategoria(_regraUpd, obj, baseCom) : { pct: c.pct, valor: _r2(baseCom*c.pct/100), detalhe: null };
+        comissoes_data[cIdx] = {...c, cliente: obj.cliente, industria: obj.industria, baseLiq: baseCom, pct: _calcUpd.pct, valor: _calcUpd.valor, detalhe: _calcUpd.detalhe, tipo: tipoUpd, mesPrevisao: mesLabelUpd};
       } else {
         // Cria comissão se não existia ainda
         gerarComissaoAuto({...obj, nf: nfInline}, baseCom);
@@ -6882,7 +6900,8 @@ function salvarNF() {
           const prazoNF  = _regraNF?.prazo || ped.cond || cliCadNF?.prazo || '';
           const dataNFUpd = nfObj.data || ped.data || new Date();
           const mesNF = _calcMesPrevisaoComissao(dataNFUpd, tipoNF, prazoNF);
-          comissoes_data[cIdx] = {...c, cliente: ped.cliente, industria: ped.industria, baseLiq: liq, valor: _r2(liq*c.pct/100), tipo: tipoNF, mesPrevisao: mesNF};
+          const _calcNF = _regraNF ? _calcComissaoPorCategoria(_regraNF, ped, liq) : { pct: c.pct, valor: _r2(liq*c.pct/100), detalhe: null };
+          comissoes_data[cIdx] = {...c, cliente: ped.cliente, industria: ped.industria, baseLiq: liq, pct: _calcNF.pct, valor: _calcNF.valor, detalhe: _calcNF.detalhe, tipo: tipoNF, mesPrevisao: mesNF};
         }
       }
       // v5: gerar saldo automaticamente se pedido > NF
@@ -7335,7 +7354,9 @@ function gerarComissaoAuto(ped, baseLiq) {
     (r.cliente==='Todos' || !r.cliente) && !r.rede
   );
   const regra = regraCliente || regraRede || regraGlobal;
-  const pct = regra ? regra.pct : 5;
+  const _calc = _calcComissaoPorCategoria(regra, ped, baseLiq);
+  const pct = _calc.pct;
+  const detalhe = _calc.detalhe;
 
   // ── Tipo: vem da REGRA encontrada; fallback = tipoCom da indústria; fallback final = Faturamento
   // (regra de cliente/rede específica pode ter tipo diferente do padrão da indústria)
@@ -7357,7 +7378,8 @@ function gerarComissaoAuto(ped, baseLiq) {
   if(existente) {
     // Atualiza a comissão existente com os novos valores
     const idx = comissoes_data.indexOf(existente);
-    comissoes_data[idx] = {...existente, cliente: ped.cliente, industria: ped.industria, baseLiq, pct, valor: _r2(baseLiq*pct/100), tipo, mesPrevisao: mesLabel};
+    comissoes_data[idx] = {...existente, cliente: ped.cliente, industria: ped.industria, baseLiq, pct, valor: _calc.valor, detalhe, tipo, mesPrevisao: mesLabel};
+    if(detalhe) try { toast(`🏷️ Comissão ${existente.id} com exceção por categoria: ${detalhe.map(d=>d.cat+' '+d.pct+'%').join(' · ')} → ${pct}% efetivo = ${fmt(_calc.valor)}`); } catch(e){}
     return;
   }
 
@@ -7367,8 +7389,9 @@ function gerarComissaoAuto(ped, baseLiq) {
   const id = comIdStr;
 
   comissoes_data.push({id, pedido:ped.id, cliente:ped.cliente, industria:ped.industria,
-    tipo, baseLiq, pct, valor: _r2(baseLiq*pct/100),
+    tipo, baseLiq, pct, valor: _calc.valor, detalhe,
     mesPrevisao:mesLabel, mesRecebimento:'', status:'Prevista'});
+  if(detalhe) try { toast(`🏷️ Comissão ${id} com exceção por categoria: ${detalhe.map(d=>d.cat+' '+d.pct+'%').join(' · ')} → ${pct}% efetivo = ${fmt(_calc.valor)}`); } catch(e){}
 }
 
 // Registra bonificação como entrada separada (não gera comissão, não afeta saldo financeiro)
@@ -8692,7 +8715,7 @@ function renderComissoes() {
           <td><span class="tag" style="font-size:9px">${esc(c.industria)}</span></td>
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
           <td style="font-size:12px">${fmt(c.baseLiq)}</td>
-          <td style="font-size:12px">${c.pct}%</td>
+          <td style="font-size:12px;white-space:nowrap">${c.pct}%${(c.detalhe&&c.detalhe.length)?` <span title="${esc(_detalheComissaoTitle(c))}" style="cursor:help;font-size:11px">🏷️</span>`:''}</td>
           <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
           <td class="bold verde" style="font-size:12px">
             ${(()=>{const rm=_recNoMes(c,filtMes); return rm>0 ? (filtMes && Math.abs(rm-recebido)>0.001 ? `${fmt(rm)}<div style="font-size:10px;color:#888;font-weight:400">total ${fmt(recebido)}</div>` : fmt(recebido)) : '<span style="color:#aaa">—</span>';})()}
@@ -8743,21 +8766,24 @@ function recalcularPctComissoes() {
       r.rede===redeObj
     )) || regrasComerciais.find(r => r.ativo && (r.industria==='Todas' || r.industria===c.industria) && (r.cliente==='Todos'||!r.cliente) && !r.rede);
     if(!regra) return c;
-    const novoPct = regra.pct;
+    const ped = pedidos.find(p => p.id === c.pedido);
+    const _calcR = _calcComissaoPorCategoria(regra, ped, c.baseLiq);
+    const novoPct = _calcR.pct;
     // ── Tipo: regra tem prioridade; fallback = tipoCom da indústria ─────────
     const indCad = industrias.find(i => i.nome === c.industria || i.id === c.industria);
     const novoTipo = regra.tipo || indCad?.tipoCom || 'Faturamento';
-    const ped = pedidos.find(p => p.id === c.pedido);
     const prazo = regra.prazo || ped?.cond || cliObj?.prazo || '';
     const dataNF = ped?.nf?.data || ped?.data || c.dataNF || new Date();
     const novoMes = _calcMesPrevisaoComissao(dataNF, novoTipo, prazo);
     total++;
     if(novoPct !== c.pct || novoTipo !== c.tipo) alteradas++;
-    return {...c, pct: novoPct, valor: _r2(c.baseLiq*novoPct/100), tipo: novoTipo, mesPrevisao: novoMes};
+    if(_calcR.detalhe) window._recalcComCat = (window._recalcComCat||0)+1;
+    return {...c, pct: novoPct, valor: _calcR.valor, detalhe: _calcR.detalhe, tipo: novoTipo, mesPrevisao: novoMes};
   });
   renderComissoes();
   syncAutoSaveHook();
-  toast(`✅ ${total} comissão(ões) verificadas · ${alteradas} atualizada(s) (% e/ou tipo).`);
+  const _comCat = window._recalcComCat||0; window._recalcComCat = 0;
+  toast(`✅ ${total} comissão(ões) verificadas · ${alteradas} atualizada(s) (% e/ou tipo)${_comCat?' · 🏷️ '+_comCat+' com quebra por categoria':''}.`);
 }
 
 function recalcularTipoTodasComissoes() {
@@ -9205,6 +9231,33 @@ function editarComissao(comId) {
 
   el('edcom-titulo').textContent = `Editar Comissão — ${c.id}`;
   el('edcom-info').textContent   = `${c.cliente} · ${c.industria} · Pedido ${c.pedido}`;
+  const _detBox = el('edcom-detalhe');
+  if(_detBox){
+    let h = _detalheComissaoHTML(c);
+    if(!h){
+      // Diagnóstico: regra tem exceções mas a quebra não foi aplicada — mostra o que o sistema enxergou
+      try {
+        const _pedD  = pedidos.find(p=>p.id===c.pedido);
+        const _cliD  = clientes.find(cl=>cl.nome===c.cliente||cl.id===c.cliente);
+        const _rD    = _regraDaComissao(c,_pedD,_cliD).regra;
+        const _excD  = (_rD && Array.isArray(_rD.excecoes)) ? _rD.excecoes.filter(e=>e&&e.cat) : [];
+        if(_excD.length){
+          const _itD = (_pedD && _pedD.itens) || [];
+          h = `<div style="font-size:11px;color:#f5c500;margin-bottom:4px">⚠️ A regra tem exceção (${_excD.map(e=>esc(e.cat)+' '+e.pct+'%').join(', ')}) mas ela não foi aplicada nesta comissão.</div>`
+            + (!_itD.length
+              ? '<div style="font-size:11px;color:#aaa">Este pedido não tem itens cadastrados (NF sem pedido / importação) — foi usado o % padrão.</div>'
+              : `<div style="font-size:11px;color:#aaa;margin-bottom:4px">Itens do pedido e categoria identificada:</div>
+                 <table style="width:100%;font-size:11px;border-collapse:collapse">${_itD.map(it=>{const hit=_excecaoDoItem(it,_excD);return `<tr><td style="padding:2px 4px">${esc(it.cod||'')}</td><td style="padding:2px 4px">${esc(it.desc||'')}</td><td style="padding:2px 4px;text-align:right;color:#aaa">${fmt(_valorDoItem(it))}</td><td style="padding:2px 4px;text-align:right">${hit?'<span style="color:#7bd88f">🏷️ '+esc(hit.e.cat)+' (via '+hit.via+')</span>':'<span style="color:#888">padrão</span>'}</td></tr>`}).join('')}</table>
+                 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px">
+                   <div style="font-size:10px;color:#888">Itens marcados 🏷️ entram com o % da exceção; os demais com o % padrão da regra.</div>
+                   <button type="button" class="btn btn-primary btn-xs" onclick="aplicarExcecaoComissao('${c.id}')">🔄 Aplicar exceção nesta comissão</button>
+                 </div>`);
+        }
+      } catch(e){}
+    }
+    _detBox.style.display = h ? '' : 'none';
+    el('edcom-detalhe-tabela').innerHTML = h;
+  }
 
   // Valor previsto
   el('edcom-base').value     = (c.baseLiq!=null ? c.baseLiq : '');
@@ -9380,9 +9433,11 @@ function salvarEdicaoComissao() {
         usuario: (typeof usuarioLogado!=='undefined' && usuarioLogado?.login) || 'admin'
       });
     }
+    const _mantemDetalhe = Math.abs(base-(x.baseLiq||0))<0.005 && Math.abs(pct-(x.pct||0))<0.005 && !el('edcom-override').checked;
     return {...x,
       baseLiq: base,
       pct: pct,
+      detalhe: _mantemDetalhe ? (x.detalhe||null) : null,
       valor: parseFloat(valor.toFixed(2)),
       valorRecebido: parseFloat(recebido.toFixed(2)),
       desconto: parseFloat(desconto.toFixed(2)),
@@ -12902,6 +12957,158 @@ function criarNovoMix() {
 }
 
 /* ── Regras — toggle vínculo ── */
+/* ══════════════════════════════════════════════════════════════════════
+   COMISSÃO POR CATEGORIA — exceções de % dentro da Regra Comercial
+   regra.excecoes = [{cat:'Escovas', pct:5}, ...]
+   comissão.detalhe = [{cat, base, pct, valor}, ...]  (null = % único)
+══════════════════════════════════════════════════════════════════════ */
+function abrirNovaRegra() {
+  regraEditId = null;
+  el('regra-modal-titulo').textContent = 'Nova Regra Comercial';
+  popularSelectsDinamicos();
+  regraExcRender([]);
+  openModal('modal-regra');
+}
+
+function _categoriasProdutos() {
+  const cats = new Set();
+  Object.values(typeof PRODUTOS_CAT!=='undefined' ? PRODUTOS_CAT : {}).forEach(p => { if(p && p.cat) cats.add(String(p.cat).trim()); });
+  return [...cats].filter(Boolean).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+}
+
+function regraExcRender(lista) {
+  const box = el('regra-exc-list'); if(!box) return;
+  const dl = el('regra-exc-cats');
+  if(dl) dl.innerHTML = _categoriasProdutos().map(c=>`<option value="${esc(c)}">`).join('');
+  lista = Array.isArray(lista) ? lista : [];
+  if(!lista.length) {
+    box.innerHTML = '<div style="font-size:11px;color:#aaa;padding:6px 0">Nenhuma exceção — todos os itens usam o % padrão da regra.</div>';
+    return;
+  }
+  box.innerHTML = `<div style="display:grid;grid-template-columns:2fr 1fr 36px;gap:8px;align-items:center">
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">Categoria do produto</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">% comissão</div><div></div>
+    ${lista.map((e,i)=>`
+      <input class="regra-exc-cat" list="regra-exc-cats" value="${esc(e.cat||'')}" placeholder="Ex: Escovas">
+      <input class="regra-exc-pct" type="number" step="0.5" min="0" max="100" value="${e.pct!=null?e.pct:''}" placeholder="5">
+      <button type="button" class="btn btn-danger btn-xs" title="Remover exceção" onclick="regraExcRemove(${i})">✕</button>`).join('')}
+  </div>`;
+}
+
+function regraExcLer() {
+  const cats = [...document.querySelectorAll('#regra-exc-list .regra-exc-cat')];
+  const pcts = [...document.querySelectorAll('#regra-exc-list .regra-exc-pct')];
+  const out = [];
+  cats.forEach((c,i)=>{
+    const cat = (c.value||'').trim();
+    const pct = parseFloat(String((pcts[i]||{}).value||'').replace(',','.'));
+    if(cat && !isNaN(pct)) out.push({cat, pct});
+  });
+  return out;
+}
+function regraExcAdd()      { const l = regraExcLer(); l.push({cat:'', pct:''}); regraExcRender(l); }
+function regraExcRemove(i)  { const l = regraExcLer(); l.splice(i,1); regraExcRender(l); }
+
+/* Categoria de um item do pedido: cadastro do produto (por código) > campo do item */
+function _catDoItem(it) {
+  if(!it) return '';
+  const p = (typeof PRODUTOS_CAT!=='undefined' && it.cod) ? PRODUTOS_CAT[it.cod] : null;
+  return String((p && p.cat) || it.cat || '').trim();
+}
+function _normTxt(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+/* Descobre a exceção que se aplica ao item:
+   1) categoria do produto igual/contendo a categoria da exceção
+   2) descrição do item ou do produto contendo a palavra (ex.: "ESCOVA DENTAL ...") */
+function _excecaoDoItem(it, exc) {
+  const cat  = _normTxt(_catDoItem(it));
+  const p    = (typeof PRODUTOS_CAT!=='undefined' && it && it.cod) ? PRODUTOS_CAT[it.cod] : null;
+  let hit = null;
+  exc.forEach(e => {
+    if(hit) return;
+    const k = _normTxt(e.cat); if(!k) return;
+    if(cat && (cat === k || cat.includes(k) || k.includes(cat))) { hit = {e, via:'categoria'}; return; }
+    const kEsc = k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const rxIni = new RegExp('^' + kEsc + '(s|es)?([^a-z0-9]|$)');
+    const dItem = _normTxt((it && it.desc) || ''), dProd = _normTxt((p && p.desc) || '');
+    if(rxIni.test(dItem) || rxIni.test(dProd)) hit = {e, via:'descrição'};
+  });
+  return hit;
+}
+
+/* Valor de um item (líquido de desconto de item) */
+function _valorDoItem(it) {
+  if(it.total!=null && !isNaN(parseFloat(it.total))) return parseFloat(it.total)||0;
+  return (parseFloat(it.qtd)||0) * (parseFloat(it.precoUnit)||0) * (1 - (parseFloat(it.descPct||it.desc_pct)||0)/100);
+}
+
+/* ── Cálculo central ──────────────────────────────────────────────────────
+   Retorna {pct, valor, detalhe}. Se a regra tem exceções e o pedido tem
+   itens de alguma categoria com exceção, rateia baseLiq proporcionalmente
+   aos itens e aplica o % de cada grupo. Caso contrário, % único da regra. */
+function _calcComissaoPorCategoria(regra, ped, baseLiq) {
+  baseLiq = parseFloat(baseLiq)||0;
+  const pctPadrao = regra ? (parseFloat(regra.pct)||0) : 5;
+  const simples = { pct: pctPadrao, valor: _r2(baseLiq*pctPadrao/100), detalhe: null };
+  const exc = (regra && Array.isArray(regra.excecoes) ? regra.excecoes : [])
+    .filter(e => e && e.cat && e.pct!=null && !isNaN(parseFloat(e.pct)));
+  const itens = (ped && Array.isArray(ped.itens)) ? ped.itens : [];
+  if(!exc.length || !itens.length || baseLiq <= 0) return simples;
+
+  const grupos = {}; let totalItens = 0, temExcecao = false;
+  itens.forEach(it => {
+    const v = _valorDoItem(it); if(v <= 0) return;
+    const hit = _excecaoDoItem(it, exc);
+    if(hit) temExcecao = true;
+    const chave = hit ? _normTxt(hit.e.cat) : '__padrao';
+    if(!grupos[chave]) grupos[chave] = { cat: hit ? hit.e.cat : 'Demais produtos', pct: hit ? parseFloat(hit.e.pct) : pctPadrao, soma: 0 };
+    grupos[chave].soma += v; totalItens += v;
+  });
+  if(!temExcecao || totalItens <= 0) return simples;
+
+  // Rateio proporcional; o último grupo absorve o resíduo de arredondamento
+  const lista = Object.values(grupos).sort((a,b)=> a.cat==='Demais produtos' ? -1 : b.cat==='Demais produtos' ? 1 : a.cat.localeCompare(b.cat,'pt-BR'));
+  let acumulado = 0, valor = 0;
+  const detalhe = lista.map((g,i) => {
+    const base = i === lista.length-1 ? _r2(baseLiq - acumulado) : _r2(baseLiq * g.soma / totalItens);
+    acumulado = _r2(acumulado + base);
+    const v = _r2(base * g.pct / 100); valor = _r2(valor + v);
+    return { cat: g.cat, base, pct: g.pct, valor: v };
+  });
+  const pctEf = baseLiq > 0 ? Math.round(valor / baseLiq * 10000) / 100 : pctPadrao;
+  return { pct: pctEf, valor, detalhe };
+}
+
+/* Recalcula uma única comissão conforme a regra atual (com exceções) */
+function aplicarExcecaoComissao(comId) {
+  const c = comissoes_data.find(x=>x.id===comId); if(!c) return;
+  if(c.status==='Recebida' && !confirm('Esta comissão já está como Recebida. Recalcular mesmo assim?')) return;
+  const ped = pedidos.find(p=>p.id===c.pedido);
+  const cli = clientes.find(cl=>cl.nome===c.cliente||cl.id===c.cliente);
+  const regra = _regraDaComissao(c, ped, cli).regra;
+  if(!regra){ toast('Nenhuma regra comercial encontrada para esta comissão.'); return; }
+  const calc = _calcComissaoPorCategoria(regra, ped, c.baseLiq);
+  const antes = `${c.pct}% = ${fmt(c.valor)}`;
+  comissoes_data = comissoes_data.map(x => x.id!==comId ? x : {...x, pct: calc.pct, valor: calc.valor, detalhe: calc.detalhe});
+  try { addAudit(usuarioLogado?.login||'admin', `Comissão ${comId} recalculada por categoria: ${antes} → ${calc.pct}% = ${fmt(calc.valor)}`, '🏷️'); } catch(e){}
+  syncAutoSaveHook();
+  renderComissoes();
+  toast(calc.detalhe ? `🏷️ ${comId}: ${calc.pct}% efetivo = ${fmt(calc.valor)}` : `${comId}: nenhum item se enquadrou na exceção — mantido ${calc.pct}%.`);
+  if(typeof editarComissao==='function') editarComissao(comId);
+}
+
+/* HTML da quebra por categoria (usado na lista e no modal de edição) */
+function _detalheComissaoHTML(c) {
+  if(!c || !Array.isArray(c.detalhe) || !c.detalhe.length) return '';
+  return `<table style="width:100%;font-size:11px;border-collapse:collapse;margin-top:6px">
+    <tr style="color:#888"><th style="text-align:left;font-weight:600;padding:2px 4px">Categoria</th><th style="text-align:right;font-weight:600;padding:2px 4px">Base rateada</th><th style="text-align:right;font-weight:600;padding:2px 4px">%</th><th style="text-align:right;font-weight:600;padding:2px 4px">Valor</th></tr>
+    ${c.detalhe.map(d=>`<tr><td style="padding:2px 4px">${d.cat==='Demais produtos'?d.cat:'🏷️ '+esc(d.cat)}</td><td style="text-align:right;padding:2px 4px">${fmt(d.base)}</td><td style="text-align:right;padding:2px 4px">${d.pct}%</td><td style="text-align:right;padding:2px 4px;font-weight:600">${fmt(d.valor)}</td></tr>`).join('')}
+  </table>`;
+}
+function _detalheComissaoTitle(c) {
+  if(!c || !Array.isArray(c.detalhe) || !c.detalhe.length) return '';
+  return 'Comissão ponderada por categoria:\n' + c.detalhe.map(d=>`${d.cat}: ${fmt(d.base)} × ${d.pct}% = ${fmt(d.valor)}`).join('\n') + `\n% efetivo: ${c.pct}%`;
+}
+
 function toggleRegraVinculo() {
   const v = (el('regra-vinculo-tipo')||{}).value||'todos';
   const rg = el('regra-rede-group');
@@ -15659,7 +15866,8 @@ function _regrasFiltradas() {
     if(filtAtv === 'ativa'   && !r.ativo) return false;
     if(filtAtv === 'inativa' &&  r.ativo) return false;
     if(busca) {
-      const alvo = [r.industria, r.rede, r.cliente, r.perfil, r.prazo, r.tipo, r.base, r.id]
+      const alvo = [r.industria, r.rede, r.cliente, r.perfil, r.prazo, r.tipo, r.base, r.id,
+                    ...(r.excecoes||[]).map(e=>e.cat)]
         .filter(Boolean).join(' ').toLowerCase();
       if(!alvo.includes(busca)) return false;
     }
@@ -15724,7 +15932,9 @@ function renderRegras() {
     <td>${r.perfil||'—'}</td>
     <td>${r.prazo||'—'}</td>
     <td><span class="badge ${r.tipo==='Faturamento'?'badge-azul':'badge-verde'}">${r.tipo}</span></td>
-    <td class="bold">${r.pct}%</td>
+    <td class="bold">${r.pct}%${(r.excecoes||[]).length
+        ? `<div style="font-size:10px;font-weight:400;color:#888;white-space:nowrap">${r.excecoes.map(e=>`🏷️ ${esc(e.cat)}: <strong>${e.pct}%</strong>`).join('<br>')}</div>`
+        : ''}</td>
     <td>${r.base}</td>
     <td><div class="switch ${r.ativo?'on':''}" onclick="toggleRegra('${r.id}')"></div></td>
     <td>
@@ -15748,13 +15958,14 @@ function salvarRegra() {
     prazo:el('regra-prazo').value,
     tipo:el('regra-tipo').value,
     pct, base:el('regra-base').value,
+    excecoes: regraExcLer(),
     ativo:true, vigencia:el('regra-vigencia').value,
     usuario:usuarioLogado?.login||'admin'
   };
   regrasComerciais = regrasComerciais.filter(r=>r.id!==id);
   regrasComerciais.push(obj);
   regraEditId=null;
-  addAudit(usuarioLogado?.login||'admin',`Regra ${ind}: ${pct}% ${obj.tipo}${rede?' para rede '+rede:cliente&&cliente!=='Todos'?' para '+cliente:''}`, '⚙️');
+  addAudit(usuarioLogado?.login||'admin',`Regra ${ind}: ${pct}% ${obj.tipo}${rede?' para rede '+rede:cliente&&cliente!=='Todos'?' para '+cliente:''}${obj.excecoes.length?' · exceções: '+obj.excecoes.map(e=>e.cat+' '+e.pct+'%').join(', '):''}`, '⚙️');
   closeModal('modal-regra'); renderRegras();
   toast('Regra salva! Comissões futuras serão calculadas com a nova regra.');
   syncAutoSaveHook();
@@ -15771,6 +15982,7 @@ function editarRegra(id) {
   el('regra-pct').value=r.pct;
   el('regra-base').value=r.base||'NF Líquida';
   el('regra-vigencia').value=r.vigencia||'2026-01';
+  regraExcRender(r.excecoes||[]);
   // vínculo
   const vt = el('regra-vinculo-tipo');
   if(vt) {
