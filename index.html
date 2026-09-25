@@ -149,6 +149,50 @@ tr:last-child td{border-bottom:none;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
 
+
+/* ── v38: Relatórios compactos + Comparativo Sell In ── */
+#panel-relatorios .rel-kpis{gap:12px;margin-bottom:14px;}
+#panel-relatorios .rel-kpis .kpi-card{padding:12px 14px;}
+#panel-relatorios .rel-kpis .kpi-value{font-size:19px;}
+#panel-relatorios .rel-tabs{margin-bottom:14px;}
+#panel-relatorios .rel-tabs .tab{font-size:13px;padding:9px 16px;}
+.rel-rank-grid .card{padding:14px 16px;}
+.rel-rank-grid .card-header{margin-bottom:6px;}
+.rel-rank-grid .rank-row{padding:6px 0;}
+.rel-rank-foot{text-align:center;margin-top:6px;}
+.rel-link{background:none;border:none;color:var(--azul);font-size:11.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 6px;}
+.rel-link:hover{text-decoration:underline;}
+.si-ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.si-ctrl select{padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;}
+.si-seg{display:inline-flex;border:1.5px solid var(--cinza-medio);border-radius:6px;overflow:hidden;}
+.si-seg button{border:none;background:#fff;padding:7px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--cinza-escuro);}
+.si-seg button+button{border-left:1.5px solid var(--cinza-medio);}
+.si-seg button.on{background:var(--preto);color:var(--amarelo);font-weight:600;}
+.si-info{font-size:11.5px;color:#888;margin:2px 0 10px;}
+.si-tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.si-tbl th{text-align:right;padding:8px 10px;}
+.si-tbl th:first-child,.si-tbl td:first-child{text-align:left;}
+.si-tbl td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--cinza);white-space:nowrap;}
+.si-tbl th .si-fonte{display:block;font-size:9px;font-weight:600;letter-spacing:.3px;color:#aaa;text-transform:none;}
+.si-tbl tr.si-tot td{font-weight:700;background:#f4f3ef;border-top:2px solid var(--cinza-medio);border-bottom:none;}
+.si-up{color:var(--verde);font-weight:600;}
+.si-dn{color:var(--vermelho);font-weight:600;}
+.si-novo{font-size:10px;font-weight:700;background:#e8f5e9;color:var(--verde);padding:2px 6px;border-radius:4px;}
+.si-vazio{color:#ccc;}
+.si-import{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border:1.5px dashed var(--cinza-medio);border-radius:8px;padding:12px 14px;background:#fafaf8;}
+.si-sec{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;margin:16px 0 8px;}
+.si-form-grid{display:grid;grid-template-columns:120px 1fr 1fr;gap:10px;}
+.si-meses{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px;}
+.si-meses label{font-size:11px;color:#888;display:block;margin-bottom:3px;}
+.si-meses input{width:100%;padding:7px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;text-align:right;}
+.si-meses input:focus{border-color:var(--amarelo);}
+.si-lista-ctrl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.si-lista-ctrl select,.si-lista-ctrl input{padding:6px 9px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;}
+@media (max-width: 768px){
+  .si-form-grid{grid-template-columns:1fr;}
+  .si-meses{grid-template-columns:repeat(3,1fr);}
+}
+
 /* TABS */
 .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--cinza-medio);}
 .tab{padding:8px 14px;cursor:pointer;font-size:12.5px;color:var(--cinza-escuro);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
@@ -2831,64 +2875,56 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
 
-      <!-- KPIs principais -->
-      <div class="kpi-grid" id="relatorios-kpi-grid" style="margin-bottom:20px">
+      <!-- KPIs principais (faixa compacta) -->
+      <div class="kpi-grid rel-kpis" id="relatorios-kpi-grid">
         <div class="kpi-card kpi-verde"><div class="kpi-label">Faturamento Total</div><div class="kpi-value" id="rel-kpi-fat">R$ 0</div><div class="kpi-sub" id="rel-kpi-fat-sub">NFs registradas</div></div>
-        <div class="kpi-card kpi-amarelo" id="rel-kpi-card-com"><div class="kpi-label">Comissão Prevista</div><div class="kpi-value" id="rel-kpi-com">R$ 0</div><div class="kpi-sub" id="rel-kpi-com-sub">A receber</div></div>
+        <div class="kpi-card kpi-amarelo" id="rel-kpi-card-com"><div class="kpi-label">Comissão Recebida</div><div class="kpi-value" id="rel-kpi-com">R$ 0</div><div class="kpi-sub" id="rel-kpi-com-sub">No período</div></div>
         <div class="kpi-card kpi-azul"><div class="kpi-label">Ticket Médio</div><div class="kpi-value" id="rel-kpi-ticket">R$ 0</div><div class="kpi-sub">Por pedido faturado</div></div>
         <div class="kpi-card kpi-roxo"><div class="kpi-label">Bonificações</div><div class="kpi-value" id="rel-kpi-bon">R$ 0</div><div class="kpi-sub">Não geram comissão</div></div>
       </div>
 
-      <div class="grid-3" style="margin-bottom:16px">
-        <!-- Ranking Clientes -->
-        <div class="card">
-          <div class="card-header"><div class="card-title">🏆 Clientes que Mais Compraram</div></div>
-          <div id="rel-rank-clientes"></div>
-        </div>
-        <!-- Ranking Indústrias -->
-        <div class="card">
-          <div class="card-header"><div class="card-title">🏭 Indústrias que Mais Venderam</div></div>
-          <div id="rel-rank-industrias"></div>
-        </div>
-        <!-- Produtos mais vendidos -->
-        <div class="card">
-          <div class="card-header"><div class="card-title">📦 Produtos Mais Vendidos</div></div>
-          <div id="rel-rank-produtos"></div>
-        </div>
+      <div class="tabs rel-tabs">
+        <div class="tab active" id="rel-tab-rank" onclick="relTab('rank')">🏆 Rankings</div>
+        <div class="tab" id="rel-tab-si" onclick="relTab('si')">📊 Comparativo Sell In</div>
       </div>
 
-      <div class="grid-2" id="rel-grid-comsaldo">
-        <!-- Comissão Prevista x Recebida -->
-        <div class="card" id="rel-card-comissao">
-          <div class="card-header"><div class="card-title">💰 Comissão Prevista × Recebida</div></div>
-          <div id="rel-comissao-table"></div>
-        </div>
-        <!-- Saldo pendente por cliente -->
-        <div class="card">
-          <div class="card-header"><div class="card-title">⚖️ Saldo Pendente por Cliente × Indústria</div></div>
-          <div id="rel-saldo-pendente"></div>
-        </div>
-      </div>
-
-      <!-- ===== FATURAMENTO & BONIFICAÇÕES MÊS A MÊS POR CLIENTE × INDÚSTRIA ===== -->
-      <div class="card" style="margin-top:16px" id="rel-fatbonif-card">
-        <div class="card-header" style="flex-wrap:wrap;gap:10px;align-items:center">
-          <div class="card-title">📅 Faturamento &amp; Bonificações — Mês a Mês por Cliente × Indústria</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto">
-            <select id="relfb-ano" onchange="renderRelFatBonif()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-              <option value="2026">2026</option><option value="2025">2025</option>
-            </select>
-            <select id="relfb-cli" onchange="renderRelFatBonif()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-              <option value="">Todos os clientes / grupos</option>
-            </select>
-            <select id="relfb-ind" onchange="renderRelFatBonif()" style="padding:7px 10px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
-              <option value="">Todas as indústrias</option>
-            </select>
-            <button class="btn btn-info btn-sm" onclick="exportarRelFatBonif()">📤 Excel</button>
+      <!-- ABA: RANKINGS -->
+      <div id="rel-pane-rank">
+        <div class="grid-2 rel-rank-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">👥 Clientes que Mais Compraram</div><button class="btn btn-outline btn-xs" onclick="exportarRankingRel('cli')">📤 Excel</button></div>
+            <div id="rel-rank-clientes"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">🏭 Indústrias que Mais Venderam</div><button class="btn btn-outline btn-xs" onclick="exportarRankingRel('ind')">📤 Excel</button></div>
+            <div id="rel-rank-industrias"></div>
+          </div>
+          <div class="card" id="rel-card-rank-com">
+            <div class="card-header"><div class="card-title">🏆 Indústrias que Mais Pagaram Comissão</div><button class="btn btn-outline btn-xs" onclick="exportarRankingRel('com')">📤 Excel</button></div>
+            <div id="rel-rank-comissao"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">📦 Produtos Mais Vendidos</div><button class="btn btn-outline btn-xs" onclick="exportarRankingRel('prod')">📤 Excel</button></div>
+            <div id="rel-rank-produtos"></div>
           </div>
         </div>
-        <div class="kpi-grid" id="relfb-kpis" style="grid-template-columns:repeat(3,1fr);margin:12px 0 4px"></div>
-        <div id="relfb-content"></div>
+      </div>
+
+      <!-- ABA: COMPARATIVO SELL IN -->
+      <div id="rel-pane-si" style="display:none">
+        <div class="card">
+          <div class="card-header" style="flex-wrap:wrap;gap:10px">
+            <div class="card-title">📊 Comparativo Sell In</div>
+            <div class="si-ctrl">
+              <select id="si-mes" onchange="_siExp=false;renderSellInComp()"></select>
+              <span class="si-seg"><button id="si-v-ind" class="on" onclick="siSetView('ind')">Por indústria</button><button id="si-v-cli" onclick="siSetView('cli')">Por cliente</button></span>
+              <button class="btn btn-outline btn-sm" id="si-btn-lancar" onclick="abrirSellInModal()">➕ Lançar / importar</button>
+              <button class="btn btn-info btn-sm" onclick="exportarSellInComp()">📤 Excel</button>
+            </div>
+          </div>
+          <div class="si-info" id="si-info"></div>
+          <div id="si-tabela"></div>
+        </div>
       </div>
     </div>
 
@@ -3587,6 +3623,55 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 
+<!-- ===== MODAL SELL IN HISTÓRICO (v38) ===== -->
+<div class="modal-bg" id="modal-sellin">
+  <div class="modal modal-xl">
+    <div class="modal-title">📊 Sell In dos anos anteriores<button class="close-btn" onclick="closeModal('modal-sellin')">✕</button></div>
+    <div class="alert alert-info" id="si-aviso-perm" style="display:none">Você tem acesso só de visualização: pode consultar e exportar, mas não lançar ou importar.</div>
+    <div class="si-import">
+      <div>
+        <div style="font-weight:700;font-size:13px">Importar pelo Excel</div>
+        <div style="font-size:11.5px;color:#888;margin-top:2px">Colunas: Ano, Mês, Cliente, Indústria, Valor (uma linha por mês). Também aceita os meses nas colunas (Jan a Dez).<br>Importar de novo o mesmo mês substitui o valor, não duplica.</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="baixarModeloSellIn()">📥 Baixar modelo</button>
+        <button class="btn btn-primary btn-sm" onclick="if(_siPodeEditar()) el('si-file').click()">📤 Importar planilha</button>
+        <input type="file" id="si-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarSellInExcel(this)">
+      </div>
+    </div>
+
+    <div class="si-sec">Lançamento manual</div>
+    <div class="si-form-grid">
+      <div class="form-group"><label>Ano *</label><select id="si-f-ano" onchange="siCarregarForm()"></select></div>
+      <div class="form-group"><label>Cliente / Grupo *</label><input id="si-f-cli" list="si-dl-cli" onchange="siCarregarForm()" placeholder="Digite ou escolha"><datalist id="si-dl-cli"></datalist></div>
+      <div class="form-group"><label>Indústria *</label><input id="si-f-ind" list="si-dl-ind" onchange="siCarregarForm()" placeholder="Digite ou escolha"><datalist id="si-dl-ind"></datalist></div>
+    </div>
+    <div class="si-meses" id="si-f-meses"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 4px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px">Total do ano: <strong id="si-f-total">R$ 0,00</strong> <span id="si-f-status" style="font-size:11px;color:#888;margin-left:6px"></span></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="siLimparForm()">Limpar</button>
+        <button class="btn btn-primary btn-sm" onclick="salvarSellInManual()">💾 Salvar lançamento</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px">
+      <div class="si-sec" style="margin:8px 0">Lançamentos salvos <span id="si-l-count" style="font-weight:400;color:#888"></span></div>
+      <div class="si-lista-ctrl">
+        <select id="si-l-ano" onchange="renderSellInLista()"></select>
+        <input id="si-l-busca" placeholder="Buscar cliente ou indústria" oninput="renderSellInLista()">
+        <button class="btn btn-info btn-sm" onclick="exportarSellInHist()">📤 Exportar lançamentos</button>
+      </div>
+    </div>
+    <div class="table-wrap" style="max-height:260px;overflow-y:auto;border:1px solid var(--cinza-medio);border-radius:8px">
+      <table>
+        <thead><tr><th>Ano</th><th>Cliente / Grupo</th><th>Indústria</th><th style="text-align:right">Total</th><th>Origem</th><th></th></tr></thead>
+        <tbody id="si-l-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL PREMIAÇÃO / DESCONTO ===== -->
 <div class="modal-bg" id="modal-com-extra">
   <div class="modal">
@@ -4274,6 +4359,8 @@ let logEditId = null;
 let logisticaData = [];
 
 let sellOutData = [];
+// v38 — Sell In dos anos anteriores (lançado à mão ou importado do Excel)
+let sellInHist = [];
 
 let usuarios = [
   {id:'USR-001',nome:'Administrador',login:'admin',senha:'admin123',perfil:'diretoria',email:'',status:'ativo',ultimoAcesso:'—'},
@@ -4688,7 +4775,7 @@ function _mixExpandir(arr) {
    num aparelho não volte à vida vindo da cópia do outro.                    */
 var _COLECOES_MESCLAVEIS = ['pedidos','orcamentos','comissoes_data','comissoesExtras','clientes','industrias',
   'redes','logisticaData','tratativas','bonificacoesData','metasData','tarefasData',
-  'atasData','contaCorrenteData'];
+  'atasData','contaCorrenteData','sellInHist'];
 
 window._tomb = window._tomb || {};   // {colecao: {chave: timestampDaExclusao}}
 var _snapReg = null;                 // retrato da última gravação, para detectar mudanças
@@ -4709,6 +4796,7 @@ function _colGet(n){
     case 'tarefasData': return typeof tarefasData!=='undefined'?tarefasData:null;
     case 'atasData': return typeof atasData!=='undefined'?atasData:null;
     case 'contaCorrenteData': return typeof contaCorrenteData!=='undefined'?contaCorrenteData:null;
+    case 'sellInHist': return typeof sellInHist!=='undefined'?sellInHist:null;
   }
   return null;
 }
@@ -4728,6 +4816,7 @@ function _colSet(n, v){
     case 'tarefasData': tarefasData=v; return;
     case 'atasData': atasData=v; return;
     case 'contaCorrenteData': contaCorrenteData=v; return;
+    case 'sellInHist': sellInHist=v; return;
   }
 }
 
@@ -4896,7 +4985,7 @@ function _salvarLocal() {
     payload = JSON.stringify({
       pedidos, orcamentos, orcamentosExcluidos, clientes, industrias, redes, comissoes_data,
       comissoesExtras,
-      logisticaData, sellOutData, metasData, regrasComerciais, tratativas,
+      logisticaData, sellOutData, sellInHist, metasData, regrasComerciais, tratativas,
       PRODUTOS_CAT, mixProdutos: _mixComprimir(mixProdutos), bonificacoesData, usuarios, userPerms,
       configSistema, auditLog, saldoUsosData: (window.saldoUsosData||[]),
       ctrlSaldosData, ctrlSaldosHistorico,
@@ -4975,6 +5064,7 @@ function _carregarLocal() {
     if(Array.isArray(d.comissoesExtras))  comissoesExtras  = d.comissoesExtras;
     if(Array.isArray(d.logisticaData))    logisticaData    = d.logisticaData;
     if(Array.isArray(d.sellOutData))      sellOutData      = d.sellOutData;
+    if(Array.isArray(d.sellInHist))       sellInHist       = d.sellInHist;
     if(Array.isArray(d.metasData))        metasData        = d.metasData;
     if(Array.isArray(d.regrasComerciais)) regrasComerciais = d.regrasComerciais;
     if(Array.isArray(d.tratativas))       tratativas       = d.tratativas.map(t=>({notas:[],...t}));
@@ -7136,11 +7226,13 @@ function _recebidoNoMes(c, mes) {
   // sem parcelas: o valor recebido pertence ao mês de recebimento (ou previsão)
   return ((c.mesRecebimento||c.mesPrevisao)||'') === mes ? _r2(c.valorRecebido||0) : 0;
 }
-// ─── v36: quanto da comissão conta como PREVISTO num determinado mês ─────────
+// ─── v36/v37: quanto da comissão conta como PREVISTO num determinado mês ─────
 // • Parcelas recebidas contam no mês em que entraram (qualquer status)
-// • O RESTANTE (valor − recebido) fica no mês de previsão; se a comissão já foi
-//   encerrada como Recebida com desconto aceito, a diferença fica no mês da
-//   última baixa (apenas informativo)
+// • O RESTANTE (valor − recebido) fica SEMPRE no mês de previsão da comissão —
+//   independente do status. Ex.: comissão prevista para Nov, recebida parte em
+//   Set → Set mostra só a parte recebida; o que sobrou continua previsto em Nov.
+//   (v37: antes, se a comissão estava "Recebida" com desconto, a diferença caía
+//   no mês da última baixa e inflava o Total Previsto daquele mês.)
 // Sem filtro de mês (mes vazio) → valor inteiro.
 function _previstoNoMes(c, mes) {
   if(!c) return 0;
@@ -7148,7 +7240,7 @@ function _previstoNoMes(c, mes) {
   let v = _recebidoNoMes(c, mes);
   const restante = Math.max(0, _r2(c.valor) - _recTotalComissao(c));
   if(restante > 0.001) {
-    const mesRest = c.status === 'Recebida' ? _mesEfetivoComissao(c) : (c.mesPrevisao||'');
+    const mesRest = (c.mesPrevisao||'') || _mesEfetivoComissao(c);
     if(mesRest === mes) v += restante;
   }
   return _r2(v);
@@ -8716,7 +8808,7 @@ function renderComissoes() {
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
           <td style="font-size:12px">${fmt(c.baseLiq)}</td>
           <td style="font-size:12px;white-space:nowrap">${c.pct}%${(c.detalhe&&c.detalhe.length)?` <span title="${esc(_detalheComissaoTitle(c))}" style="cursor:help;font-size:11px">🏷️</span>`:''}</td>
-          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
+          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); const difRec=c.status==='Recebida'?_r2(Math.max(0,_r2(c.valor)-_recTotalComissao(c))):0; return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} previsto em ${c.mesPrevisao||'—'}`:difRec>0.001?` · diferença ${fmt(difRec)} fica em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
           <td class="bold verde" style="font-size:12px">
             ${(()=>{const rm=_recNoMes(c,filtMes); return rm>0 ? (filtMes && Math.abs(rm-recebido)>0.001 ? `${fmt(rm)}<div style="font-size:10px;color:#888;font-weight:400">total ${fmt(recebido)}</div>` : fmt(recebido)) : '<span style="color:#aaa">—</span>';})()}
           </td>
@@ -13419,6 +13511,7 @@ function propagarRenomeIndustria(nomeAntigo, nomeNovo) {
   troca(orcamentos);
   troca(bonificacoesData);
   troca(sellOutData);
+  troca(sellInHist);
   troca(metasData);
   troca(ctrlSaldosData);
   troca(logisticaData);
@@ -13437,7 +13530,7 @@ function repararNomesIndustria() {
   const usados = new Set();
   const add = arr => { if(Array.isArray(arr)) arr.forEach(o=>{ if(o&&o.industria) usados.add(o.industria); }); };
   add(comissoes_data); add(pedidos); add(orcamentos); add(bonificacoesData);
-  add(sellOutData); add(metasData); add(ctrlSaldosData); add(logisticaData); add(window.saldoUsosData);
+  add(sellOutData); add(sellInHist); add(metasData); add(ctrlSaldosData); add(logisticaData); add(window.saldoUsosData);
   if(PRODUTOS_CAT && typeof PRODUTOS_CAT==='object') Object.values(PRODUTOS_CAT).forEach(p=>{ if(p&&p.ind) usados.add(p.ind); });
   // Órfãos = nomes usados nos dados que não existem no cadastro atual (ignora coringa "Todas")
   const orfaos = [...usados].filter(n=> n!=='Todas' && !nomesCad.has(n)).sort();
@@ -14033,7 +14126,8 @@ function aplicarVisibilidadeComissao() {
 
   // ── Relatórios / KPIs ──
   mostrar('rel-kpi-card-com',  podeVerComissao); // KPI "Comissão Prevista"
-  mostrar('rel-card-comissao', podeVerComissao); // Card "Comissão Prevista × Recebida"
+  mostrar('rel-card-comissao', podeVerComissao); // (removido na v38)
+  mostrar('rel-card-rank-com', podeVerComissao); // Ranking "Indústrias que mais pagaram comissão"
   ajustarGrid('relatorios-kpi-grid', !podeVerComissao);
   ajustarGrid('rel-grid-comsaldo',   !podeVerComissao);
 }
@@ -14559,6 +14653,7 @@ function exportarSellInOut() {
 ══════════════════════════ */
 function renderRelatorios() {
   const mesFiltro = (el('rel-filtro-mes')||{}).value||'todos';
+  const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   // Helper: filtra pedidos pelo mês selecionado
   function pedsFiltrados(incluirBonif) {
@@ -14567,7 +14662,6 @@ function renderRelatorios() {
       if(!incluirBonif && p.tipo === 'bonificacao') return false;
       if(mesFiltro !== 'todos') {
         // Converte "Abr/26" → "2026-04"
-        const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
         const parts = mesFiltro.split('/');
         const mIdx = mesesAbrev.findIndex(m=>m===parts[0]);
         if(mIdx===-1) return true;
@@ -14579,119 +14673,49 @@ function renderRelatorios() {
     });
   }
 
-  // Ranking clientes — top 10, apenas vendas com NF
-  const rankCli = el('rel-rank-clientes'); if(!rankCli) return;
+  // Ranking clientes — apenas vendas com NF
   const cliMap = {};
   pedsFiltrados(false).filter(p=>p.nf).forEach(p=>{
     cliMap[p.cliente] = (cliMap[p.cliente]||0) + p.nf.liquida;
   });
-  // Inclui também bonificações no total do cliente (informativo)
-  pedsFiltrados(true).filter(p=>p.tipo==='bonificacao'&&p.nf).forEach(p=>{
-    // não soma no ranking de venda, mas conta no total abaixo
-  });
-  const cliRank = Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const maxCli = cliRank[0]?.[1]||1;
-  rankCli.innerHTML = cliRank.length===0 ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>' :
-    cliRank.map(([nome,val],i)=>`
-    <div class="rank-row">
-      <div class="rank-num">${i+1}</div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:12.5px">${esc(nome)}</div>
-        <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${(val/maxCli*100).toFixed(0)}%"></div></div>
-      </div>
-      <div class="bold" style="font-size:12px">${fmt(val)}</div>
-    </div>`).join('');
+  _relRankSet('cli', 'Clientes que mais compraram', ['Cliente','Faturamento (R$)'],
+    Object.entries(cliMap).sort((a,b)=>b[1]-a[1]).map(([nome,val])=>({nome, val})));
 
-  // Ranking indústrias — top 10
-  const rankInd = el('rel-rank-industrias'); if(!rankInd) return;
+  // Ranking indústrias que mais venderam
   const indMap = {};
   pedsFiltrados(false).filter(p=>p.nf).forEach(p=>{
     indMap[p.industria] = (indMap[p.industria]||0) + p.nf.liquida;
   });
-  const indRank = Object.entries(indMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const maxInd = indRank[0]?.[1]||1;
-  rankInd.innerHTML = indRank.length===0 ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>' :
-    indRank.map(([nome,val],i)=>`
-    <div class="rank-row">
-      <div class="rank-num">${i+1}</div>
-      <div style="flex:1">
-        <div><span class="tag">${esc(nome)}</span></div>
-        <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${(val/maxInd*100).toFixed(0)}%"></div></div>
-      </div>
-      <div class="bold" style="font-size:12px">${fmt(val)}</div>
-    </div>`).join('');
+  _relRankSet('ind', 'Indústrias que mais venderam', ['Indústria','Faturamento (R$)'],
+    Object.entries(indMap).sort((a,b)=>b[1]-a[1]).map(([nome,val])=>({nome, val, tag:true})));
 
-  // Ranking produtos — top 10 (inclui bonificações para ter visão real do volume)
-  const rankProd = el('rel-rank-produtos'); if(!rankProd) return;
+  // v38 — Ranking indústrias que mais PAGARAM comissão (valor efetivamente recebido no período)
+  const mesCom = mesFiltro==='todos' ? '' : mesFiltro;
+  const comAtivas = comissoes_data.filter(c=>!c.excluido);
+  const comMap = {};
+  comAtivas.forEach(c=>{
+    const v = _recebidoNoMes(c, mesCom);
+    if(v > 0.004) comMap[c.industria] = _r2((comMap[c.industria]||0) + v);
+  });
+  const totRecebido = _r2(Object.values(comMap).reduce((s,v)=>s+v,0));
+  _relRankSet('com', 'Indústrias que mais pagaram comissão', ['Indústria','Comissão recebida (R$)','% do total'],
+    Object.entries(comMap).sort((a,b)=>b[1]-a[1]).map(([nome,val])=>({
+      nome, val, tag:true,
+      pct: totRecebido>0 ? val/totRecebido*100 : 0
+    })));
+
+  // Ranking produtos (inclui bonificações para ter visão real do volume)
   const prodMap = {};
   pedsFiltrados(true).forEach(p=>(p.itens||[]).forEach(it=>{
     if(!prodMap[it.cod]) prodMap[it.cod] = {desc:it.desc, total:0};
     prodMap[it.cod].total += it.total;
   }));
-  const prodRank = Object.entries(prodMap).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
-  const maxProd = prodRank[0]?.[1].total||1;
-  rankProd.innerHTML = prodRank.length===0 ? '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>' :
-    prodRank.map(([cod,{desc,total}],i)=>`
-    <div class="rank-row">
-      <div class="rank-num">${i+1}</div>
-      <div style="flex:1">
-        <div style="font-size:12px;font-weight:600">${esc(desc)}</div>
-        <div style="font-size:10px;color:#aaa">${cod}</div>
-        <div class="rank-bar-wrap" style="margin-top:3px"><div class="rank-bar" style="width:${(total/maxProd*100).toFixed(0)}%"></div></div>
-      </div>
-      <div class="bold" style="font-size:12px">${fmt(total)}</div>
-    </div>`).join('');
+  _relRankSet('prod', 'Produtos mais vendidos', ['Código','Produto','Total (R$)'],
+    Object.entries(prodMap).sort((a,b)=>b[1].total-a[1].total).map(([cod,{desc,total}])=>({nome:desc, cod, val:total})));
 
-  // Comissões previstas — mostra apenas resumo + top 5, exportação completa via botão
-  const comTable = el('rel-comissao-table');
-  const comsFiltradas = mesFiltro==='todos'
-    ? comissoes_data.filter(c=>!c.excluido)
-    : comissoes_data.filter(c=>!c.excluido && (_previstoNoMes(c, mesFiltro) > 0 || _recebidoNoMes(c, mesFiltro) > 0)); // v36: parcelas por mês
-  const _pm = c => _previstoNoMes(c, mesFiltro==='todos' ? '' : mesFiltro);
-  const _rm = c => _recebidoNoMes(c, mesFiltro==='todos' ? '' : mesFiltro); // v36: cada parcela no seu mês
-  const totRec  = _r2(comsFiltradas.reduce((s,c)=>s+_rm(c),0));
-  const totAtr  = _r2(comsFiltradas.filter(c=>c.status==='Atrasada').reduce((s,c)=>s+(_pm(c)-_rm(c)),0));
-  const totPrev = _r2(comsFiltradas.reduce((s,c)=>s+_pm(c),0) - totRec - totAtr);
-  const comsResumidas = comsFiltradas.filter(c=>c.status!=='Recebida').slice(0,5);
-  comTable.innerHTML = `
-    <div class="mini-row"><span>✅ Recebida</span><span class="bold verde">${fmt(totRec)}</span></div>
-    <div class="mini-row"><span>⏳ Prevista</span><span class="bold">${fmt(totPrev)}</span></div>
-    <div class="mini-row"><span>⚠️ Em Atraso</span><span class="bold vermelho">${fmt(totAtr)}</span></div>
-    <div class="mini-row" style="font-size:13px;font-weight:700;border-top:2px solid var(--cinza-medio);margin-top:6px;padding-top:8px">
-      <span>Total Geral</span><span>${fmt(totPrev+totRec+totAtr)}</span>
-    </div>
-    <div style="margin-top:10px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Prévia — top 5 pendentes</div>
-    <div style="margin-top:6px">
-      ${comsResumidas.map(c=>`<div class="mini-row">
-        <span style="font-size:11px">${esc(c.cliente)} · <span class="tag" style="font-size:9px">${esc(c.industria)}</span> <span style="color:#aaa">${_mesEfetivoComissao(c)||''}</span></span>
-        <span><span class="badge ${c.status==='Recebida'?'badge-verde':c.status==='Atrasada'?'badge-vermelho':'badge-amarelo'}" style="font-size:9px">${c.status}</span> <strong>${fmt(_pm(c))}</strong></span>
-      </div>`).join('')}
-      ${comsFiltradas.length>5?`<div style="text-align:center;margin-top:8px"><button class="btn btn-info btn-sm" onclick="exportarComissoes()">📤 Ver completo (${comsFiltradas.length} registros) — Exportar Excel</button></div>`:''}
-    </div>`;
+  ['cli','ind','com','prod'].forEach(_relRankRender);
 
-  // Saldo pendente — top 5 + botão exportar completo
-  const saldoDiv = el('rel-saldo-pendente');
-  const saldos = [];
-  const _nomsCli = [...new Set([...clientes.map(c=>c.nome),...pedidos.map(p=>p.cliente)])];
-  const _nomsInd = [...new Set([...industrias.map(i=>i.nome),...pedidos.map(p=>p.industria)])];
-  _nomsCli.forEach(cli=>{
-    _nomsInd.forEach(ind=>{
-      const coms = comissoes_data.filter(c=>!c.excluido&&c.cliente===cli&&c.industria===ind);
-      const prev = _r2(coms.reduce((s,c)=>s+_restanteNoMes(c, mesFiltro==='todos'?'':mesFiltro),0));
-      if(prev>0) saldos.push({cli,ind,prev});
-    });
-  });
-  saldos.sort((a,b)=>b.prev-a.prev);
-  const saldosResumidos = saldos.slice(0,5);
-  saldoDiv.innerHTML = saldos.length===0
-    ? '<div style="color:#aaa;font-size:12px;padding:8px 0">Nenhum saldo pendente</div>'
-    : saldosResumidos.map(s=>`<div class="mini-row">
-        <span><strong>${esc(s.cli)}</strong> · <span class="tag" style="font-size:9px">${esc(s.ind)}</span></span>
-        <span class="bold" style="color:var(--amarelo)">${fmt(s.prev)}</span>
-      </div>`).join('') +
-      (saldos.length>5?`<div style="text-align:center;margin-top:8px"><button class="btn btn-info btn-sm" onclick="exportarSaldo()">📤 Ver completo (${saldos.length} registros) — Exportar Excel</button></div>`:'');
-
-  // Update KPIs — inclui bonificações no total de bonificações e faturamento líquido de vendas
+  // KPIs
   const pedsVenda = pedsFiltrados(false).filter(p=>p.nf);
   const pedsBonif = pedsFiltrados(true).filter(p=>p.tipo==='bonificacao'&&p.nf);
   const totFat    = pedsVenda.reduce((s,p)=>s+p.nf.liquida,0);
@@ -14699,18 +14723,597 @@ function renderRelatorios() {
                   + pedsVenda.reduce((s,p)=>s+(p.nf.bonif||0),0);
 
   if(el('rel-kpi-fat')) el('rel-kpi-fat').textContent = fmt(totFat);
-  const totComissao = _r2(comsFiltradas.reduce((s,c)=>s+_pm(c),0));
-  if(el('rel-kpi-com')) el('rel-kpi-com').textContent = fmt(totComissao);
+  if(el('rel-kpi-com')) el('rel-kpi-com').textContent = fmt(totRecebido);
   if(el('rel-kpi-ticket')) el('rel-kpi-ticket').textContent = pedsVenda.length>0 ? fmt(totFat/pedsVenda.length) : 'R$ 0';
   if(el('rel-kpi-bon')) el('rel-kpi-bon').textContent = fmt(totBonif);
   if(el('rel-kpi-fat-sub')) el('rel-kpi-fat-sub').textContent = `${pedsVenda.length} NF${pedsVenda.length!==1?'s':''} (somente vendas)`;
-  if(el('rel-kpi-com-sub')) el('rel-kpi-com-sub').textContent = mesFiltro==='todos'?'Geral':'Mês: '+mesFiltro;
+  if(el('rel-kpi-com-sub')) el('rel-kpi-com-sub').textContent = mesFiltro==='todos' ? 'Total recebido' : 'Recebido em '+mesFiltro;
 
   // Oculta comissão para quem não tem acesso
   try { aplicarVisibilidadeComissao(); } catch(e) {}
 
-  // Faturamento & Bonificações mês a mês por cliente × indústria
-  try { renderRelFatBonif(); } catch(e) {}
+  // Comparativo Sell In (usa filtro próprio, não o mês do topo)
+  try { renderSellInComp(); } catch(e) { console.warn('[GestCom] Comparativo Sell In:', e); }
+}
+
+/* ── v38: abas da tela de Relatórios ── */
+let _relTabAtual = 'rank';
+function relTab(t) {
+  _relTabAtual = t;
+  if(el('rel-pane-rank')) el('rel-pane-rank').style.display = t==='rank' ? '' : 'none';
+  if(el('rel-pane-si'))   el('rel-pane-si').style.display   = t==='si'   ? '' : 'none';
+  if(el('rel-tab-rank'))  el('rel-tab-rank').classList.toggle('active', t==='rank');
+  if(el('rel-tab-si'))    el('rel-tab-si').classList.toggle('active', t==='si');
+  if(t==='si') { try { renderSellInComp(); } catch(e) {} }
+}
+
+/* ── v38: rankings com top 5 + "ver todos" + exportação ── */
+window._relRanks = window._relRanks || {};
+window._relRankExp = window._relRankExp || {};
+const _REL_RANK_EL = {cli:'rel-rank-clientes', ind:'rel-rank-industrias', com:'rel-rank-comissao', prod:'rel-rank-produtos'};
+
+function _relRankSet(key, titulo, cols, itens) {
+  window._relRanks[key] = {titulo, cols, itens};
+}
+function _relRankToggle(key) {
+  window._relRankExp[key] = !window._relRankExp[key];
+  _relRankRender(key);
+}
+function _relRankRender(key) {
+  const box = el(_REL_RANK_EL[key]); if(!box) return;
+  const R = window._relRanks[key];
+  if(!R || !R.itens.length) {
+    box.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px">Sem dados para o período selecionado</div>';
+    return;
+  }
+  const aberto = !!window._relRankExp[key];
+  const lista  = aberto ? R.itens.slice(0,50) : R.itens.slice(0,5);
+  const maxV   = R.itens[0].val || 1;
+  box.innerHTML = lista.map((x,i)=>`
+    <div class="rank-row">
+      <div class="rank-num">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.tag?'<span class="tag">'+esc(x.nome)+'</span>':esc(x.nome)}${x.cod?' <span style="font-size:10px;color:#aaa;font-weight:400">'+esc(x.cod)+'</span>':''}</div>
+        <div class="rank-bar-wrap" style="margin-top:4px"><div class="rank-bar" style="width:${Math.max(0,(x.val/maxV*100)).toFixed(0)}%"></div></div>
+      </div>
+      <div style="text-align:right;white-space:nowrap">
+        <div class="bold gc-val" style="font-size:12px">${fmt(x.val)}</div>
+        ${x.pct!==undefined?`<div style="font-size:10.5px;color:#888">${x.pct.toFixed(1).replace('.',',')}%</div>`:''}
+      </div>
+    </div>`).join('') +
+    (R.itens.length>5 ? `<div class="rel-rank-foot"><button class="rel-link" onclick="_relRankToggle('${key}')">${aberto?'Mostrar menos':'Ver todos ('+R.itens.length+')'}</button></div>` : '');
+}
+function exportarRankingRel(key) {
+  const R = window._relRanks[key];
+  if(!R || !R.itens.length) { toast('Nada para exportar neste período.','warning'); return; }
+  const mes = (el('rel-filtro-mes')||{}).value||'todos';
+  const rows = [[R.titulo + ' — ' + (mes==='todos'?'Todos os meses':mes)], [], ['#', ...R.cols]];
+  R.itens.forEach((x,i)=>{
+    if(key==='prod')      rows.push([i+1, x.cod||'', x.nome, _r2(x.val)]);
+    else if(key==='com')  rows.push([i+1, x.nome, _r2(x.val), _r2(x.pct)]);
+    else                  rows.push([i+1, x.nome, _r2(x.val)]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:5},{wch:40},{wch:20},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ranking');
+  XLSX.writeFile(wb, `Ranking_${key}_${mes.replace('/','-')}_TresVales.xlsx`);
+  toast('Ranking exportado!');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   v38 — COMPARATIVO SELL IN
+   · Ano atual  → puxado do sistema (NF líquida das vendas, sem bonificação)
+   · Anos anteriores → lançados à mão ou importados do Excel (sellInHist)
+     (se um ano anterior não tiver nada lançado, usa o que houver no sistema)
+   · Clientes com rede são somados pelo grupo, igual ao resto dos relatórios
+══════════════════════════════════════════════════════════════ */
+const SI_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+let _siView = 'ind';
+let _siExp  = false;
+
+function _siAnoAtual(){ return new Date().getFullYear(); }
+function _siAnos(){ const a=_siAnoAtual(); return [a-2, a-1, a]; }
+function _siNorm(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim(); }
+function _siPodeEditar(){
+  const ok = (typeof hasEditAccess==='function') ? hasEditAccess('relatorios') : true;
+  if(!ok) toast('Você não tem permissão para lançar ou importar Sell In.','warning');
+  return ok;
+}
+function _siFonteAno(ano){
+  if(ano >= _siAnoAtual()) return 'sistema';
+  return sellInHist.some(r=>+r.ano===ano) ? 'importado' : 'sistema';
+}
+function _siDadosAno(ano){
+  const out = {};
+  const add = (cli,ind,mi,v)=>{
+    const k = cli+'||'+ind;
+    if(!out[k]) out[k] = {cli, ind, m:Array(12).fill(0)};
+    out[k].m[mi] += v;
+  };
+  if(_siFonteAno(ano)==='importado') {
+    sellInHist.forEach(r=>{
+      if(+r.ano!==ano) return;
+      (r.meses||[]).forEach((v,i)=>{ const n=parseFloat(v)||0; if(n && i<12) add(r.cliente, r.industria, i, n); });
+    });
+  } else {
+    pedidos.forEach(p=>{
+      if(p.excluido || !p.nf || p.tipo==='bonificacao') return;
+      const d = p.nf.data || '';
+      if(!d.startsWith(ano+'-')) return;
+      const mi = parseInt(d.slice(5,7),10)-1;
+      if(!(mi>=0 && mi<=11)) return;
+      add(normalizarGrupoSellOut(p.cliente), p.industria, mi, parseFloat(p.nf.liquida)||0);
+    });
+  }
+  return out;
+}
+function _siComparativo(){
+  const anos = _siAnos();
+  const mes  = (el('si-mes')||{}).value || 'ano';
+  const view = _siView;
+  const linhas = {};
+  anos.forEach((ano,ai)=>{
+    Object.values(_siDadosAno(ano)).forEach(L=>{
+      const nome = view==='ind' ? L.ind : L.cli;
+      if(!nome) return;
+      if(!linhas[nome]) linhas[nome] = {nome, v:[0,0,0]};
+      linhas[nome].v[ai] += (mes==='ano') ? L.m.reduce((s,x)=>s+x,0) : L.m[+mes];
+    });
+  });
+  const lista = Object.values(linhas)
+    .filter(l=>l.v.some(x=>Math.abs(x)>0.005))
+    .sort((a,b)=>(b.v[2]-a.v[2]) || (b.v[1]-a.v[1]) || (b.v[0]-a.v[0]));
+  const tot = [0,1,2].map(i=>lista.reduce((s,l)=>s+l.v[i],0));
+  // mês do ano atual que ainda não chegou
+  const futuro = mes!=='ano' && (+mes > new Date().getMonth());
+  return {anos, mes, view, lista, tot, futuro};
+}
+function _siVar(a,b){
+  if(Math.abs(a)<0.005 && Math.abs(b)<0.005) return '<span class="si-vazio">—</span>';
+  if(Math.abs(a)<0.005) return '<span class="si-novo">novo</span>';
+  const p = (b-a)/a*100;
+  return `<span class="${p>=0?'si-up':'si-dn'}">${p>=0?'▲ +':'▼ '}${p.toFixed(1).replace('.',',')}%</span>`;
+}
+function _siVal(v){ return Math.abs(v)>0.005 ? `<span class="gc-val">${fmt(v)}</span>` : '<span class="si-vazio">—</span>'; }
+
+function siSetView(v){
+  _siView = v; _siExp = false;
+  if(el('si-v-ind')) el('si-v-ind').classList.toggle('on', v==='ind');
+  if(el('si-v-cli')) el('si-v-cli').classList.toggle('on', v==='cli');
+  renderSellInComp();
+}
+
+function renderSellInComp(){
+  const box = el('si-tabela'); if(!box) return;
+  const sel = el('si-mes');
+  if(sel && !sel.options.length) {
+    sel.innerHTML = '<option value="ano">Ano todo</option>' + SI_MESES.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  }
+  const btnL = el('si-btn-lancar');
+  if(btnL) btnL.style.display = (typeof hasEditAccess!=='function' || hasEditAccess('relatorios')) ? '' : 'none';
+
+  const {anos, mes, view, lista, tot, futuro} = _siComparativo();
+  const fonte = anos.map(_siFonteAno);
+  const yy = a => String(a).slice(2);
+  const rotMes = mes==='ano' ? 'Ano todo (janeiro a dezembro)' : `${SI_MESES[+mes]} de cada ano`;
+  el('si-info').innerHTML = `${rotMes} · ${anos[2]} vem do sistema${mes==='ano'?' (faturado até hoje)':''} · ${anos[0]} e ${anos[1]}: ${fonte[0]==='importado'&&fonte[1]==='importado'?'lançados / importados':'lançados / importados quando houver'}`;
+
+  const semHist = fonte[0]!=='importado' && fonte[1]!=='importado';
+  const aviso = semHist
+    ? `<div class="alert alert-info" style="margin-bottom:10px">Ainda não há Sell In de ${anos[0]} e ${anos[1]} lançado. Use <strong>➕ Lançar / importar</strong> para trazer os anos anteriores.</div>`
+    : '';
+
+  if(!lista.length){
+    box.innerHTML = aviso + '<div style="text-align:center;color:#aaa;padding:24px;font-size:13px">Nenhum valor encontrado para este período.</div>';
+    return;
+  }
+  const mostra = _siExp ? lista : lista.slice(0,10);
+  const th = (ano,i)=>`<th>${mes==='ano'?ano:SI_MESES[+mes]+'/'+yy(ano)}<span class="si-fonte">${fonte[i]==='importado'?'importado':'sistema'}</span></th>`;
+  const c26 = v => futuro ? '<span class="si-vazio">—</span>' : _siVal(v);
+  const v26 = (a,b) => futuro ? '<span class="si-vazio">—</span>' : _siVar(a,b);
+  box.innerHTML = aviso + `
+    <div class="table-wrap">
+      <table class="si-tbl">
+        <thead><tr>
+          <th style="min-width:170px">${view==='ind'?'Indústria':'Cliente / Grupo'}</th>
+          ${th(anos[0],0)}${th(anos[1],1)}
+          <th>${yy(anos[1])} × ${yy(anos[0])}</th>
+          ${th(anos[2],2)}
+          <th>${yy(anos[2])} × ${yy(anos[1])}</th>
+        </tr></thead>
+        <tbody>
+          ${mostra.map(l=>`<tr>
+            <td>${view==='ind'?'<span class="tag">'+esc(l.nome)+'</span>':'<strong>'+esc(l.nome)+'</strong>'}</td>
+            <td>${_siVal(l.v[0])}</td>
+            <td>${_siVal(l.v[1])}</td>
+            <td>${_siVar(l.v[0],l.v[1])}</td>
+            <td>${c26(l.v[2])}</td>
+            <td>${v26(l.v[1],l.v[2])}</td>
+          </tr>`).join('')}
+          <tr class="si-tot">
+            <td>TOTAL${lista.length>mostra.length?' <span style="font-weight:400;color:#888;font-size:11px">(todos os '+lista.length+')</span>':''}</td>
+            <td>${_siVal(tot[0])}</td>
+            <td>${_siVal(tot[1])}</td>
+            <td>${_siVar(tot[0],tot[1])}</td>
+            <td>${c26(tot[2])}</td>
+            <td>${v26(tot[1],tot[2])}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ${lista.length>10?`<div class="rel-rank-foot"><button class="rel-link" onclick="_siExp=!_siExp;renderSellInComp()">${_siExp?'Mostrar menos':'Ver todos ('+lista.length+')'}</button></div>`:''}`;
+}
+
+function exportarSellInComp(){
+  const {anos, mes, view, lista, tot, futuro} = _siComparativo();
+  if(!lista.length){ toast('Nada para exportar neste período.','warning'); return; }
+  const pv = (a,b)=> Math.abs(a)<0.005 ? '' : _r2((b-a)/a*100);
+  const per = mes==='ano' ? 'Ano todo' : SI_MESES[+mes];
+  const rows = [
+    ['Comparativo Sell In — '+per+' — '+(view==='ind'?'por indústria':'por cliente')],
+    [],
+    [view==='ind'?'Indústria':'Cliente / Grupo', String(anos[0]), String(anos[1]), `Var. ${anos[1]}×${anos[0]} (%)`, String(anos[2]), `Var. ${anos[2]}×${anos[1]} (%)`]
+  ];
+  lista.forEach(l=>rows.push([l.nome, _r2(l.v[0]), _r2(l.v[1]), pv(l.v[0],l.v[1]), futuro?'':_r2(l.v[2]), futuro?'':pv(l.v[1],l.v[2])]));
+  rows.push(['TOTAL', _r2(tot[0]), _r2(tot[1]), pv(tot[0],tot[1]), futuro?'':_r2(tot[2]), futuro?'':pv(tot[1],tot[2])]);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:40},{wch:16},{wch:16},{wch:14},{wch:16},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Comparativo');
+  XLSX.writeFile(wb, `SellIn_Comparativo_${per.replace(/\s+/g,'')}_${view}_TresVales.xlsx`);
+  toast('Comparativo exportado!');
+}
+
+/* ── Nomes: casa o que foi digitado/importado com o cadastro ── */
+function _siMapas(){
+  const cli = {}, ind = {};
+  const addC = (raw, grp)=>{ if(!raw || !grp) return; const k=_siNorm(raw); if(k && !cli[k]) cli[k]=grp; };
+  const addI = (nome)=>{ if(!nome) return; const k=_siNorm(nome); if(k && !ind[k]) ind[k]=nome; };
+  clientes.forEach(c=>{ if(c&&c.nome){ const g=normalizarGrupoSellOut(c.nome); addC(g,g); } });
+  (typeof redes!=='undefined' && Array.isArray(redes) ? redes : []).forEach(r=>{ if(r&&r.nome) addC(r.nome, r.nome); });
+  clientes.forEach(c=>{ if(c&&c.nome) addC(c.nome, normalizarGrupoSellOut(c.nome)); });
+  pedidos.forEach(p=>{ if(!p.excluido && p.cliente) addC(p.cliente, normalizarGrupoSellOut(p.cliente)); });
+  sellInHist.forEach(r=>addC(r.cliente, r.cliente));
+  industrias.forEach(i=>{ if(i) addI(i.nome); });
+  pedidos.forEach(p=>{ if(!p.excluido) addI(p.industria); });
+  sellInHist.forEach(r=>addI(r.industria));
+  return {cli, ind};
+}
+function _siAchar(ano, cli, ind){
+  const nc=_siNorm(cli), ni=_siNorm(ind);
+  return sellInHist.find(r=>+r.ano===+ano && _siNorm(r.cliente)===nc && _siNorm(r.industria)===ni);
+}
+function _siNovoId(ano, cli, ind){
+  let id = 'SI-'+ano+'-'+_siNorm(cli).replace(/[^A-Z0-9]+/g,'_').slice(0,40)+'-'+_siNorm(ind).replace(/[^A-Z0-9]+/g,'_').slice(0,30);
+  let n = 2, base = id;
+  while(sellInHist.some(r=>r.id===id)) id = base+'-'+(n++);
+  return id;
+}
+function _siFmtNum(v){ return (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* ── Modal ── */
+function abrirSellInModal(){
+  const atual = _siAnoAtual();
+  const anos = []; for(let a=atual-1; a>=atual-6; a--) anos.push(a);
+  el('si-f-ano').innerHTML = anos.map(a=>`<option value="${a}">${a}</option>`).join('');
+  const lAno = el('si-l-ano'); const curL = lAno.value;
+  const anosHist = [...new Set(sellInHist.map(r=>+r.ano))].sort((a,b)=>b-a);
+  lAno.innerHTML = '<option value="">Todos os anos</option>' + anosHist.map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(curL) lAno.value = curL;
+  const m = _siMapas();
+  el('si-dl-cli').innerHTML = [...new Set(Object.values(m.cli))].sort().map(n=>`<option value="${esc(n)}">`).join('');
+  el('si-dl-ind').innerHTML = [...new Set(Object.values(m.ind))].sort().map(n=>`<option value="${esc(n)}">`).join('');
+  el('si-f-meses').innerHTML = SI_MESES.map((mm,i)=>`<div><label>${mm}</label><input id="si-f-m${i}" inputmode="decimal" placeholder="0,00" oninput="siAtualizarTotal()"></div>`).join('');
+  const podeEd = (typeof hasEditAccess!=='function') || hasEditAccess('relatorios');
+  el('si-aviso-perm').style.display = podeEd ? 'none' : '';
+  siLimparForm();
+  renderSellInLista();
+  openModal('modal-sellin');
+}
+function siAtualizarTotal(){
+  let t = 0;
+  for(let i=0;i<12;i++){ const f=el('si-f-m'+i); if(f) t += parsePrecoBR(f.value)||0; }
+  el('si-f-total').textContent = fmt(t);
+}
+function siLimparForm(){
+  el('si-f-cli').value = ''; el('si-f-ind').value = '';
+  for(let i=0;i<12;i++){ const f=el('si-f-m'+i); if(f) f.value=''; }
+  el('si-f-status').textContent = '';
+  siAtualizarTotal();
+}
+function _siCanon(cli, ind){
+  const m = _siMapas();
+  return {
+    cli: m.cli[_siNorm(cli)] || String(cli||'').trim().toUpperCase().replace(/\s+/g,' '),
+    ind: m.ind[_siNorm(ind)] || String(ind||'').trim().toUpperCase().replace(/\s+/g,' '),
+    cliConhecido: !!m.cli[_siNorm(cli)], indConhecida: !!m.ind[_siNorm(ind)]
+  };
+}
+// Ao escolher ano + cliente + indústria, carrega o que já existe (vira edição)
+function siCarregarForm(){
+  const ano = +el('si-f-ano').value, cli = el('si-f-cli').value, ind = el('si-f-ind').value;
+  if(!cli.trim() || !ind.trim()) { el('si-f-status').textContent=''; return; }
+  const c = _siCanon(cli, ind);
+  const r = _siAchar(ano, c.cli, c.ind);
+  for(let i=0;i<12;i++){
+    const f = el('si-f-m'+i); if(!f) continue;
+    const v = r ? (parseFloat((r.meses||[])[i])||0) : 0;
+    f.value = r && v ? _siFmtNum(v) : '';
+  }
+  el('si-f-status').textContent = r ? '✏️ Já lançado — salvar vai atualizar' : '🆕 Novo lançamento';
+  siAtualizarTotal();
+}
+function siEditar(id){
+  const r = sellInHist.find(x=>x.id===id); if(!r) return;
+  el('si-f-ano').value = String(r.ano);
+  if(el('si-f-ano').value !== String(r.ano)) el('si-f-ano').insertAdjacentHTML('beforeend', `<option value="${r.ano}" selected>${r.ano}</option>`);
+  el('si-f-cli').value = r.cliente; el('si-f-ind').value = r.industria;
+  siCarregarForm();
+  el('si-f-cli').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function salvarSellInManual(){
+  if(!_siPodeEditar()) return;
+  const ano = +el('si-f-ano').value;
+  const cliD = el('si-f-cli').value.trim(), indD = el('si-f-ind').value.trim();
+  if(!ano || !cliD || !indD){ alert('Preencha ano, cliente e indústria.'); return; }
+  if(ano >= _siAnoAtual()){ alert(ano+' vem direto do sistema. Lance aqui só anos anteriores.'); return; }
+  const meses = []; let tem = false;
+  for(let i=0;i<12;i++){ const v=_r2(parsePrecoBR(el('si-f-m'+i).value)||0); meses.push(v); if(v) tem=true; }
+  const c = _siCanon(cliD, indD);
+  let r = _siAchar(ano, c.cli, c.ind);
+  if(!tem && !r){ alert('Informe o valor de pelo menos um mês.'); return; }
+  if(!r && (!c.cliConhecido || !c.indConhecida)){
+    const falt = [!c.cliConhecido?'cliente "'+c.cli+'"':'', !c.indConhecida?'indústria "'+c.ind+'"':''].filter(Boolean).join(' e ');
+    if(!confirm(`O ${falt} não está no cadastro do sistema.\n\nSalvar mesmo assim? (vai aparecer com esse nome no comparativo)`)) return;
+  }
+  if(!r){
+    r = {id:_siNovoId(ano,c.cli,c.ind), ano, cliente:c.cli, industria:c.ind, meses:Array(12).fill(0), origem:'Manual'};
+    sellInHist.push(r);
+  } else if(r.origem==='Excel') r.origem = 'Excel + manual';
+  r.meses = meses;
+  r.usuario = usuarioLogado?.login || '';
+  r.atualizadoEm = new Date().toISOString();
+  addAudit(usuarioLogado?.login||'sistema', `Sell In ${ano} lançado: ${c.cli} / ${c.ind} — ${fmt(meses.reduce((s,v)=>s+v,0))}`, '📊');
+  syncAutoSaveHook();
+  el('si-f-status').textContent = '✅ Salvo';
+  _siAtualizarAnosLista();
+  renderSellInLista();
+  renderSellInComp();
+  toast('Sell In salvo!');
+}
+function excluirSellIn(id){
+  if(!_siPodeEditar()) return;
+  const r = sellInHist.find(x=>x.id===id); if(!r) return;
+  if(!confirm(`Excluir o Sell In ${r.ano} de ${r.cliente} / ${r.industria}?`)) return;
+  sellInHist = sellInHist.filter(x=>x.id!==id);
+  addAudit(usuarioLogado?.login||'sistema', `Sell In ${r.ano} excluído: ${r.cliente} / ${r.industria}`, '🗑️');
+  syncAutoSaveHook();
+  _siAtualizarAnosLista();
+  renderSellInLista();
+  renderSellInComp();
+  toast('Lançamento excluído.');
+}
+function _siAtualizarAnosLista(){
+  const lAno = el('si-l-ano'); if(!lAno) return;
+  const cur = lAno.value;
+  const anosHist = [...new Set(sellInHist.map(r=>+r.ano))].sort((a,b)=>b-a);
+  lAno.innerHTML = '<option value="">Todos os anos</option>' + anosHist.map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(cur && anosHist.includes(+cur)) lAno.value = cur;
+}
+function renderSellInLista(){
+  const tb = el('si-l-tbody'); if(!tb) return;
+  const fa = (el('si-l-ano')||{}).value || '';
+  const q  = _siNorm((el('si-l-busca')||{}).value || '');
+  const podeEd = (typeof hasEditAccess!=='function') || hasEditAccess('relatorios');
+  const lista = sellInHist
+    .filter(r=>(!fa || +r.ano===+fa) && (!q || _siNorm(r.cliente).includes(q) || _siNorm(r.industria).includes(q)))
+    .sort((a,b)=>(b.ano-a.ano) || String(a.cliente).localeCompare(b.cliente) || String(a.industria).localeCompare(b.industria));
+  el('si-l-count').textContent = `(${lista.length})`;
+  if(!lista.length){
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:18px">Nenhum lançamento ainda.</td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map(r=>{
+    const tot = (r.meses||[]).reduce((s,v)=>s+(parseFloat(v)||0),0);
+    return `<tr>
+      <td>${r.ano}</td>
+      <td><strong>${esc(r.cliente)}</strong></td>
+      <td><span class="tag">${esc(r.industria)}</span></td>
+      <td style="text-align:right" class="gc-val">${fmt(tot)}</td>
+      <td style="font-size:11px;color:#888">${esc(r.origem||'')}</td>
+      <td style="white-space:nowrap;text-align:right">${podeEd?`<button class="btn btn-outline btn-xs" onclick="siEditar('${esc(r.id)}')">✏️</button> <button class="btn btn-danger btn-xs" onclick="excluirSellIn('${esc(r.id)}')">🗑️</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── Excel: modelo, exportação e importação ── */
+function baixarModeloSellIn(){
+  const a = _siAnoAtual()-1;
+  const m = _siMapas();
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Ano','Mês','Cliente','Indústria','Valor'],
+    [a,'Jan','COELHO DINIZ','LABOTRAT',150000],
+    [a,'Fev','COELHO DINIZ','LABOTRAT',132500.50]
+  ]);
+  ws['!cols'] = [{wch:8},{wch:8},{wch:42},{wch:24},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws, 'SellIn');
+  const inst = [
+    ['Como preencher'],
+    ['• Uma linha por mês de cada cliente × indústria (apague as 2 linhas de exemplo).'],
+    ['• Ano: ex. 2024, 2025.   Mês: Jan, Fev... ou 1 a 12.'],
+    ['• Cliente: nome do grupo/rede ou do cliente como está no sistema (filiais de uma rede são somadas na rede).'],
+    ['• Valor: sell in líquido do mês — mesma base do faturamento do sistema.'],
+    ['• Também é aceito o formato com os meses nas colunas: Ano | Cliente | Indústria | Jan | Fev | ... | Dez.'],
+    ['• Importar de novo o mesmo mês substitui o valor anterior (não duplica).'],
+    ['• O ano atual não precisa ser lançado: vem direto do sistema.']
+  ];
+  const wsI = XLSX.utils.aoa_to_sheet(inst); wsI['!cols']=[{wch:110}];
+  XLSX.utils.book_append_sheet(wb, wsI, 'Instrucoes');
+  const cl = [...new Set(Object.values(m.cli))].sort(), il = [...new Set(Object.values(m.ind))].sort();
+  const wsN = XLSX.utils.aoa_to_sheet([['Clientes / grupos cadastrados','Indústrias cadastradas'], ...Array.from({length:Math.max(cl.length,il.length)},(_,i)=>[cl[i]||'', il[i]||''])]);
+  wsN['!cols']=[{wch:45},{wch:28}];
+  XLSX.utils.book_append_sheet(wb, wsN, 'Nomes do sistema');
+  XLSX.writeFile(wb, 'Modelo_SellIn_TresVales.xlsx');
+}
+function exportarSellInHist(){
+  if(!sellInHist.length){ toast('Nenhum lançamento para exportar.','warning'); return; }
+  const rows = [['Ano','Mês','Cliente','Indústria','Valor','Origem']];
+  [...sellInHist].sort((a,b)=>(a.ano-b.ano)||String(a.cliente).localeCompare(b.cliente)||String(a.industria).localeCompare(b.industria))
+    .forEach(r=>(r.meses||[]).forEach((v,i)=>{ const n=parseFloat(v)||0; if(n) rows.push([+r.ano, SI_MESES[i], r.cliente, r.industria, _r2(n), r.origem||'']); }));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:8},{wch:8},{wch:42},{wch:24},{wch:16},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'SellIn');
+  XLSX.writeFile(wb, 'SellIn_Lancamentos_TresVales.xlsx');
+  toast('Lançamentos exportados (dá para reimportar este arquivo).');
+}
+function _siMesIdx(v){
+  if(v instanceof Date && !isNaN(v)) return {mi:v.getMonth(), ano:v.getFullYear()};
+  if(typeof v==='number'){
+    if(Number.isInteger(v) && v>=1 && v<=12) return {mi:v-1};
+    if(v>20000){ try { const d=XLSX.SSF.parse_date_code(v); if(d) return {mi:d.m-1, ano:d.y}; } catch(e){} }
+    return null;
+  }
+  const s = _siNorm(v).toLowerCase(); if(!s) return null;
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})/); if(m && +m[2]>=1 && +m[2]<=12) return {mi:+m[2]-1, ano:+m[1]};
+  m = s.match(/^(\d{1,2})[-\/.](\d{2,4})$/); if(m && +m[1]>=1 && +m[1]<=12){ let a=+m[2]; if(a<100)a+=2000; return {mi:+m[1]-1, ano:a}; }
+  m = s.match(/^(\d{1,2})$/); if(m && +m[1]>=1 && +m[1]<=12) return {mi:+m[1]-1};
+  const pt=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'], en=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const k = s.slice(0,3);
+  let mi = pt.indexOf(k); if(mi<0) mi = en.indexOf(k); if(mi<0) return null;
+  if(s.length>3 && !/^[a-zç]{3,9}([\s\/\-.]*\d{2,4})?$/.test(s)) return null;
+  const ya = s.match(/(\d{2,4})\s*$/); let ano;
+  if(ya){ ano=+ya[1]; if(ano<100) ano+=2000; }
+  return {mi, ano};
+}
+function _siNumCel(v){
+  if(typeof v==='number') return v;
+  if(v===null || v===undefined || String(v).trim()==='') return null;
+  const n = parsePrecoBR(v);
+  return isNaN(n) ? null : n;
+}
+function importarSellInExcel(inp){
+  const file = inp.files && inp.files[0]; inp.value = '';
+  if(!file) return;
+  if(!_siPodeEditar()) return;
+  const rd = new FileReader();
+  rd.onload = e=>{
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
+      _siProcessarPlanilha(wb);
+    } catch(err) {
+      alert('Não foi possível ler a planilha: ' + err.message);
+    }
+  };
+  rd.readAsArrayBuffer(file);
+}
+function _siProcessarPlanilha(wb){
+  const atual = _siAnoAtual();
+  const mapas = _siMapas();
+  const agg = {};
+  let lidas = 0, ignAtual = 0, ignInval = 0;
+  const cliDesc = new Set(), indDesc = new Set();
+
+  wb.SheetNames.forEach(sn=>{
+    if(/instru|nomes do sistema/i.test(sn)) return;
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:''});
+    let h = -1;
+    for(let i=0;i<Math.min(rows.length,20);i++){
+      const r = (rows[i]||[]).map(_siNorm);
+      if(r.some(c=>/^(CLIENTE|GRUPO|REDE)/.test(c)) && r.some(c=>/^INDUSTRIA/.test(c))){ h=i; break; }
+    }
+    if(h<0) return;
+    const H = rows[h].map(_siNorm);
+    const idx = re => H.findIndex(c=>re.test(c));
+    const cAno = idx(/^ANO$/);
+    const cMes = idx(/^(MES|COMPETENCIA|PERIODO|DATA|REFERENCIA)/);
+    const cCli = idx(/^(CLIENTE|GRUPO|REDE)/);
+    const cInd = idx(/^INDUSTRIA/);
+    const cVal = idx(/^(VALOR|SELL ?IN|TOTAL|FATURAMENTO|VENDA)/);
+    const mesCols = [];
+    H.forEach((c,i)=>{
+      if([cAno,cMes,cCli,cInd,cVal].includes(i) || !/^[A-Z]{3}/.test(c)) return;
+      const mm = _siMesIdx(c); if(mm) mesCols.push({i, mi:mm.mi, ano:mm.ano});
+    });
+    const longo = cMes>=0 && cVal>=0;
+    if(!longo && !mesCols.length) return;
+
+    const somar = (ano, cliRaw, indRaw, mi, val)=>{
+      if(!(ano>=2000 && ano<=2100) || !(mi>=0 && mi<=11)) { ignInval++; return; }
+      if(ano >= atual) { ignAtual++; return; }
+      const kc=_siNorm(cliRaw), ki=_siNorm(indRaw);
+      const cli = mapas.cli[kc] || String(cliRaw).trim().toUpperCase().replace(/\s+/g,' ');
+      const ind = mapas.ind[ki] || String(indRaw).trim().toUpperCase().replace(/\s+/g,' ');
+      if(!mapas.cli[kc]) cliDesc.add(cli);
+      if(!mapas.ind[ki]) indDesc.add(ind);
+      const k = ano+'||'+_siNorm(cli)+'||'+_siNorm(ind);
+      if(!agg[k]) agg[k] = {ano, cli, ind, m:Array(12).fill(null)};
+      agg[k].m[mi] = (agg[k].m[mi]||0) + val;
+      lidas++;
+    };
+
+    for(let i=h+1;i<rows.length;i++){
+      const r = rows[i]||[];
+      const cliRaw = String(r[cCli]==null?'':r[cCli]).trim();
+      const indRaw = String(r[cInd]==null?'':r[cInd]).trim();
+      if(!cliRaw || !indRaw || /^TOTAL/.test(_siNorm(cliRaw))) continue;
+      const anoCol = cAno>=0 ? parseInt(r[cAno],10) : NaN;
+      if(longo){
+        const mm = _siMesIdx(r[cMes]);
+        const val = _siNumCel(r[cVal]);
+        if(!mm || val===null){ ignInval++; continue; }
+        somar(!isNaN(anoCol)?anoCol:mm.ano, cliRaw, indRaw, mm.mi, val);
+      } else {
+        mesCols.forEach(mc=>{
+          const val = _siNumCel(r[mc.i]); if(val===null) return;
+          somar(!isNaN(anoCol)?anoCol:mc.ano, cliRaw, indRaw, mc.mi, val);
+        });
+      }
+    }
+  });
+
+  const itens = Object.values(agg);
+  if(!itens.length){
+    alert('Nenhum valor encontrado na planilha.\n\nEla precisa ter as colunas: Ano, Mês, Cliente, Indústria e Valor\n(ou Ano, Cliente, Indústria e os meses Jan a Dez nas colunas).\n\nBaixe o modelo para ver o formato.'
+      + (ignAtual ? `\n\n${ignAtual} valor(es) do ano atual foram ignorados — ele vem do sistema.` : ''));
+    return;
+  }
+  if(cliDesc.size || indDesc.size){
+    const lst = (set)=>{ const a=[...set].sort(); return a.slice(0,12).join('\n  • ') + (a.length>12?`\n  … e mais ${a.length-12}`:''); };
+    let msg = 'Alguns nomes não batem com o cadastro do sistema:\n';
+    if(cliDesc.size) msg += `\nClientes (${cliDesc.size}):\n  • ${lst(cliDesc)}\n`;
+    if(indDesc.size) msg += `\nIndústrias (${indDesc.size}):\n  • ${lst(indDesc)}\n`;
+    msg += '\nOK = importar mesmo assim (aparecem com esse nome no comparativo)\nCancelar = não importar nada, para corrigir os nomes na planilha';
+    if(!confirm(msg)) return;
+  }
+  let novos = 0, atualizados = 0;
+  const agoraIso = new Date().toISOString();
+  itens.forEach(a=>{
+    let r = _siAchar(a.ano, a.cli, a.ind);
+    if(!r){
+      r = {id:_siNovoId(a.ano,a.cli,a.ind), ano:a.ano, cliente:a.cli, industria:a.ind, meses:Array(12).fill(0), origem:'Excel'};
+      sellInHist.push(r); novos++;
+    } else {
+      atualizados++;
+      if(r.origem==='Manual') r.origem = 'Excel + manual';
+    }
+    const ms = (r.meses||[]).slice(0,12); while(ms.length<12) ms.push(0);
+    a.m.forEach((v,i)=>{ if(v!==null) ms[i] = _r2(v); });
+    r.meses = ms;
+    r.usuario = usuarioLogado?.login || '';
+    r.atualizadoEm = agoraIso;
+  });
+  const anosImp = [...new Set(itens.map(a=>a.ano))].sort().join(', ');
+  addAudit(usuarioLogado?.login||'sistema', `Sell In importado do Excel (${anosImp}): ${novos} novo(s), ${atualizados} atualizado(s)`, '📊');
+  syncAutoSaveHook();
+  _siAtualizarAnosLista();
+  renderSellInLista();
+  renderSellInComp();
+  alert(`Importação concluída — ${anosImp}\n\n${novos} lançamento(s) novo(s)\n${atualizados} atualizado(s)\n${lidas} valor(es) mensais lidos`
+    + (ignAtual ? `\n\n${ignAtual} valor(es) do ano atual ignorados (vem do sistema).` : '')
+    + (ignInval ? `\n${ignInval} linha(s) ignoradas por mês/ano/valor inválido.` : ''));
 }
 
 /* ──────────────────────────────────────────────
@@ -16504,6 +17107,7 @@ function coletarDadosParaSync() {
     comissoesExtras: JSON.parse(JSON.stringify(typeof comissoesExtras!=='undefined'?comissoesExtras:[])),
     logisticaData:  JSON.parse(JSON.stringify(logisticaData)),
     sellOutData:    JSON.parse(JSON.stringify(sellOutData)),
+    sellInHist:     JSON.parse(JSON.stringify(typeof sellInHist!=='undefined'?sellInHist:[])),
     metasData:      JSON.parse(JSON.stringify(metasData)),
     regrasComerciais: JSON.parse(JSON.stringify(regrasComerciais)),
     tratativas:     JSON.parse(JSON.stringify(tratativas)),
@@ -16568,6 +17172,7 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(Array.isArray(dados.comissoesExtras)) comissoesExtras = dados.comissoesExtras;
   if(Array.isArray(dados.logisticaData)) logisticaData = dados.logisticaData;
   if(Array.isArray(dados.sellOutData)) sellOutData = dados.sellOutData;
+  if(Array.isArray(dados.sellInHist)) sellInHist = dados.sellInHist;
   if(Array.isArray(dados.metasData)) metasData = dados.metasData;
   if(Array.isArray(dados.regrasComerciais)) regrasComerciais = dados.regrasComerciais;
   if(Array.isArray(dados.tratativas)) tratativas = dados.tratativas.map(t=>({notas:[],...t}));
