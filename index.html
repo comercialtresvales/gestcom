@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1939,7 +1938,7 @@ tr:last-child td{border-bottom:none;}
         <div class="export-btns">
           <button class="btn btn-primary btn-sm" onclick="openModal('modal-lancar-recebimento')">💰 Lançar Recebimento</button>
           <button class="btn btn-success btn-sm" onclick="abrirComExtra()" title="Lançar uma premiação recebida da indústria ou um desconto aplicado sobre a comissão">🏆 Premiação / Desconto</button>
-          <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão de todas as comissões conforme Regras Comerciais e cadastro de indústrias">🔄 Recalcular % + Tipo</button>
+          <button class="btn btn-roxo btn-sm" onclick="recalcularPctComissoes()" title="Atualiza % + Tipo (Faturamento/Liquidez) + Mês de Previsão + quebra por exceção (INOAR, YELSEW...) de todas as comissões não recebidas, conforme as Regras Comerciais atuais">🔄 Recalcular % + Tipo</button>
           <button class="btn btn-outline btn-sm" onclick="recalcularTipoTodasComissoes()" title="Corrige o tipo (Faturamento/Liquidez) de todas as comissões conforme o cadastro atual das indústrias">🔄 Recalcular Tipo</button>
           <button class="btn btn-success btn-sm" onclick="recalcularMesPrevisaoTodasComissoes()" title="Recalcula apenas o mês de previsão — corrige DPC, DDL e outros prazos que não eram reconhecidos como número">📅 Corrigir Mês (DPC/DDL)</button>
           <button class="btn btn-danger btn-sm" onclick="repararNomesIndustria()" title="Detecta comissões e registros presos a um nome de indústria antigo (após renomear) e realinha ao cadastro atual">🩹 Reparar Nomes</button>
@@ -3599,8 +3598,13 @@ tr:last-child td{border-bottom:none;}
       <div class="form-group"><label>Grupo / Rede *</label>
         <select id="so-cli" style="border-color:var(--amarelo)"><option value="">— Selecione o grupo —</option></select>
       </div>
-      <div class="form-group"><label>Indústria *</label>
-        <select id="so-ind"><option value="">Selecione...</option></select>
+      <div class="form-group"><label>Indústria cadastrada</label>
+        <select id="so-ind" onchange="soToggleIndOutra()"><option value="">Selecione...</option></select>
+      </div>
+      <div class="form-group"><label>ou Outra indústria (sem cadastro)</label>
+        <input id="so-ind-outra" list="so-ind-outra-list" placeholder="Digite o nome da indústria" autocomplete="off" oninput="soToggleIndOutra()" onfocus="soPreencherListaIndExternas()" style="border-color:var(--amarelo)">
+        <datalist id="so-ind-outra-list"></datalist>
+        <div style="font-size:10px;color:#888;margin-top:3px">Preencha apenas um dos dois campos. Não cria cadastro de indústria.</div>
       </div>
       <div class="form-group"><label>Produto</label><input id="so-produto" placeholder="Descrição ou código do produto"></div>
       <div class="form-group"><label>Mês de Referência *</label>
@@ -3807,7 +3811,7 @@ tr:last-child td{border-bottom:none;}
     <div class="alert alert-info">Edite os dados do sell out. Alterações ficam registradas no histórico.</div>
     <div class="form-grid">
       <div class="form-group"><label>Cliente</label><select id="soe-cli"></select></div>
-      <div class="form-group"><label>Indústria</label><input id="soe-ind" readonly style="background:#fafaf8"></div>
+      <div class="form-group"><label>Indústria <span id="soe-ind-tag" style="display:none;font-weight:400;color:#7a5800">(fora do cadastro)</span></label><input id="soe-ind" readonly style="background:#fafaf8"></div>
       <div class="form-group"><label>Produto</label><input id="soe-produto" placeholder="Descrição ou código"></div>
       <div class="form-group"><label>Mês de Referência</label>
         <select id="soe-mes"><option>Jan/26</option><option>Fev/26</option><option>Mar/26</option><option>Abr/26</option><option>Mai/26</option><option>Jun/26</option><option>Jul/26</option><option>Ago/26</option><option>Set/26</option><option>Out/26</option><option>Nov/26</option><option>Dez/26</option></select>
@@ -4196,7 +4200,7 @@ tr:last-child td{border-bottom:none;}
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px">🏷️ Exceções por categoria</div>
         <button type="button" class="btn btn-outline btn-xs" onclick="regraExcAdd()">+ Adicionar exceção</button>
       </div>
-      <div style="font-size:11px;color:#888;margin-bottom:8px">Itens do pedido cujos produtos estão nessas categorias usam o % abaixo em vez do % padrão da regra. A base da NF líquida é rateada proporcionalmente aos itens.</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">Digite uma categoria ou apenas uma palavra que apareça na descrição do produto (ex.: YELSEW, MOOD). Todo item que tiver essa palavra usa o % abaixo em vez do % padrão da regra. A base da NF líquida é rateada proporcionalmente aos itens.</div>
       <datalist id="regra-exc-cats"></datalist>
       <div id="regra-exc-list"></div>
     </div>
@@ -8807,7 +8811,7 @@ function renderComissoes() {
           <td><span class="tag" style="font-size:9px">${esc(c.industria)}</span></td>
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
           <td style="font-size:12px">${fmt(c.baseLiq)}</td>
-          <td style="font-size:12px;white-space:nowrap">${c.pct}%${(c.detalhe&&c.detalhe.length)?` <span title="${esc(_detalheComissaoTitle(c))}" style="cursor:help;font-size:11px">🏷️</span>`:''}</td>
+          <td style="font-size:12px;white-space:nowrap">${c.pct}%${(c.detalhe&&c.detalhe.length)?` <span title="${esc(_detalheComissaoTitle(c))}" style="cursor:help;font-size:11px">🏷️</span><div style="font-size:10px;color:#888;line-height:1.5;margin-top:2px">média ponderada:<br>${c.detalhe.map(d=>`${esc(d.cat)}: <strong>${d.pct}%</strong> <span style="color:#aaa">(${fmt(d.base)})</span>`).join('<br>')}</div>`:''}</td>
           <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); const difRec=c.status==='Recebida'?_r2(Math.max(0,_r2(c.valor)-_recTotalComissao(c))):0; return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} previsto em ${c.mesPrevisao||'—'}`:difRec>0.001?` · diferença ${fmt(difRec)} fica em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
           <td class="bold verde" style="font-size:12px">
             ${(()=>{const rm=_recNoMes(c,filtMes); return rm>0 ? (filtMes && Math.abs(rm-recebido)>0.001 ? `${fmt(rm)}<div style="font-size:10px;color:#888;font-weight:400">total ${fmt(recebido)}</div>` : fmt(recebido)) : '<span style="color:#aaa">—</span>';})()}
@@ -9339,13 +9343,20 @@ function editarComissao(comId) {
             + (!_itD.length
               ? '<div style="font-size:11px;color:#aaa">Este pedido não tem itens cadastrados (NF sem pedido / importação) — foi usado o % padrão.</div>'
               : `<div style="font-size:11px;color:#aaa;margin-bottom:4px">Itens do pedido e categoria identificada:</div>
-                 <table style="width:100%;font-size:11px;border-collapse:collapse">${_itD.map(it=>{const hit=_excecaoDoItem(it,_excD);return `<tr><td style="padding:2px 4px">${esc(it.cod||'')}</td><td style="padding:2px 4px">${esc(it.desc||'')}</td><td style="padding:2px 4px;text-align:right;color:#aaa">${fmt(_valorDoItem(it))}</td><td style="padding:2px 4px;text-align:right">${hit?'<span style="color:#7bd88f">🏷️ '+esc(hit.e.cat)+' (via '+hit.via+')</span>':'<span style="color:#888">padrão</span>'}</td></tr>`}).join('')}</table>
+                 <table style="width:100%;font-size:11px;border-collapse:collapse">${_itD.map(it=>{const hit=_excecaoDoItem(it,_excD,_pedD);return `<tr><td style="padding:2px 4px">${esc(it.cod||'')}</td><td style="padding:2px 4px">${esc(it.desc||'')}</td><td style="padding:2px 4px;text-align:right;color:#aaa">${fmt(_valorDoItem(it))}</td><td style="padding:2px 4px;text-align:right">${hit?'<span style="color:#7bd88f">🏷️ '+esc(hit.e.cat)+' (via '+hit.via+')</span>':'<span style="color:#888">padrão</span>'}</td></tr>`}).join('')}</table>
                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px">
                    <div style="font-size:10px;color:#888">Itens marcados 🏷️ entram com o % da exceção; os demais com o % padrão da regra.</div>
                    <button type="button" class="btn btn-primary btn-xs" onclick="aplicarExcecaoComissao('${c.id}')">🔄 Aplicar exceção nesta comissão</button>
                  </div>`);
         }
       } catch(e){}
+    }
+    // Botão de recalcular sempre disponível quando já existe quebra (ela pode estar desatualizada)
+    if(h && _detalheComissaoHTML(c)) {
+      h += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px">
+              <div style="font-size:10px;color:#888">Quebra errada ou desatualizada? Recalcula pelos itens do pedido e pelas exceções atuais da regra.</div>
+              <button type="button" class="btn btn-primary btn-xs" onclick="aplicarExcecaoComissao('${c.id}')">🔄 Recalcular pelas regras</button>
+            </div>`;
     }
     _detBox.style.display = h ? '' : 'none';
     el('edcom-detalhe-tabela').innerHTML = h;
@@ -13078,10 +13089,10 @@ function regraExcRender(lista) {
     return;
   }
   box.innerHTML = `<div style="display:grid;grid-template-columns:2fr 1fr 36px;gap:8px;align-items:center">
-    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">Categoria do produto</div>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">Categoria ou palavra da descrição</div>
     <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">% comissão</div><div></div>
     ${lista.map((e,i)=>`
-      <input class="regra-exc-cat" list="regra-exc-cats" value="${esc(e.cat||'')}" placeholder="Ex: Escovas">
+      <input class="regra-exc-cat" list="regra-exc-cats" value="${esc(e.cat||'')}" placeholder="Categoria ou palavra (ex: YELSEW)">
       <input class="regra-exc-pct" type="number" step="0.5" min="0" max="100" value="${e.pct!=null?e.pct:''}" placeholder="5">
       <button type="button" class="btn btn-danger btn-xs" title="Remover exceção" onclick="regraExcRemove(${i})">✕</button>`).join('')}
   </div>`;
@@ -13111,20 +13122,27 @@ function _normTxt(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u0
 /* Descobre a exceção que se aplica ao item:
    1) categoria do produto igual/contendo a categoria da exceção
    2) descrição do item ou do produto contendo a palavra (ex.: "ESCOVA DENTAL ...") */
-function _excecaoDoItem(it, exc) {
+function _excecaoDoItem(it, exc, ped) {
   const cat  = _normTxt(_catDoItem(it));
   const p    = (typeof PRODUTOS_CAT!=='undefined' && it && it.cod) ? PRODUTOS_CAT[it.cod] : null;
-  let hit = null;
-  exc.forEach(e => {
-    if(hit) return;
-    const k = _normTxt(e.cat); if(!k) return;
-    if(cat && (cat === k || cat.includes(k) || k.includes(cat))) { hit = {e, via:'categoria'}; return; }
-    const kEsc = k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    const rxIni = new RegExp('^' + kEsc + '(s|es)?([^a-z0-9]|$)');
-    const dItem = _normTxt((it && it.desc) || ''), dProd = _normTxt((p && p.desc) || '');
-    if(rxIni.test(dItem) || rxIni.test(dProd)) hit = {e, via:'descrição'};
-  });
-  return hit;
+  const dItem = _normTxt((it && it.desc) || ''), dProd = _normTxt((p && p.desc) || '');
+  const indsItem = [it && it.ind, p && p.ind, it && it.industria].map(_normTxt).filter(Boolean);
+  if(!indsItem.length && ped && ped.industria) indsItem.push(_normTxt(ped.industria));
+  // Exceções com palavra mais longa (mais específica) têm prioridade sobre as curtas
+  const lista = exc.map(e=>({e, k:_normTxt(e.cat)})).filter(x=>x.k).sort((a,b)=>b.k.length-a.k.length);
+  // Casa se a palavra aparece em QUALQUER parte da descrição do item/produto, na categoria
+  // ou no nome da indústria (ex.: "YELSEW" pega "CR. MOD. YELSEW", "GEL FIX. YELSEW"...)
+  // 1ª passada: categoria / descrição do produto (o que está escrito no item manda)
+  for(const {e,k} of lista) {
+    if(cat && (cat === k || cat.includes(k) || k.includes(cat))) return {e, via:'categoria'};
+    if(dItem.includes(k) || dProd.includes(k)) return {e, via:'descrição'};
+  }
+  // 2ª passada: indústria, só quando o nome é exatamente igual. (Indústria agrupada, como
+  // "EXCLUSIVE (INOAR, BLANT, YELSEW)", NÃO conta — senão pegaria todos os itens do grupo.)
+  for(const {e,k} of lista) {
+    if(indsItem.some(n => n === k)) return {e, via:'indústria'};
+  }
+  return null;
 }
 
 /* Valor de um item (líquido de desconto de item) */
@@ -13149,7 +13167,7 @@ function _calcComissaoPorCategoria(regra, ped, baseLiq) {
   const grupos = {}; let totalItens = 0, temExcecao = false;
   itens.forEach(it => {
     const v = _valorDoItem(it); if(v <= 0) return;
-    const hit = _excecaoDoItem(it, exc);
+    const hit = _excecaoDoItem(it, exc, ped);
     if(hit) temExcecao = true;
     const chave = hit ? _normTxt(hit.e.cat) : '__padrao';
     if(!grupos[chave]) grupos[chave] = { cat: hit ? hit.e.cat : 'Demais produtos', pct: hit ? parseFloat(hit.e.pct) : pctPadrao, soma: 0 };
@@ -14547,16 +14565,44 @@ function renderSellInOut() {
   if(window._renderSellInOutV3) return window._renderSellInOutV3();
 }
 
+// Alterna entre indústria cadastrada x indústria sem cadastro (só um dos dois fica ativo)
+function soToggleIndOutra() {
+  const sel = el('so-ind'), txt = el('so-ind-outra');
+  if(!sel || !txt) return;
+  sel.disabled = !!txt.value.trim();
+  txt.disabled = !!sel.value;
+  if(!txt.value.trim() && !sel.value){ sel.disabled=false; txt.disabled=false; }
+}
+// Sugere nomes de indústrias sem cadastro já usadas em lançamentos anteriores
+function soPreencherListaIndExternas() {
+  const dl = el('so-ind-outra-list'); if(!dl) return;
+  const nomes = [...new Set(sellOutData.filter(x=>x.indExterna && x.industria).map(x=>x.industria))].sort();
+  dl.innerHTML = nomes.map(n=>`<option value="${esc(n)}"></option>`).join('');
+}
+
 function salvarSellOut() {
   const cli = el('so-cli').value;
-  const ind = el('so-ind').value;
+  const indSel = el('so-ind').value;
+  const indTxt = ((el('so-ind-outra')||{}).value||'').trim().replace(/\s+/g,' ');
   const valor = parsePrecoBR(el('so-valor').value)||0;
-  if(!cli||!ind||!valor){alert('Preencha os campos obrigatórios.');return;}
+  if(indSel && indTxt){alert('Preencha apenas um: indústria cadastrada OU outra indústria.');return;}
+  let ind = indSel, indExterna = false;
+  if(indTxt){
+    // Se o nome digitado já existe no cadastro, usa o cadastrado (evita duplicidade)
+    const cad = (typeof industrias!=='undefined' ? industrias : []).find(i=>i && i.nome && i.nome.toUpperCase()===indTxt.toUpperCase());
+    if(cad){ ind = cad.nome; }
+    else {
+      // Reaproveita grafia de indústria externa já lançada (ignora maiúsc./minúsc.)
+      const ex = sellOutData.find(x=>x.indExterna && x.industria && x.industria.toUpperCase()===indTxt.toUpperCase());
+      ind = ex ? ex.industria : indTxt; indExterna = true;
+    }
+  }
+  if(!cli||!ind||!valor){alert('Preencha os campos obrigatórios (grupo, indústria e valor).');return;}
   let soN = sellOutData.length + 1;
   let soId;
   do { soId = 'SO-'+String(soN).padStart(3,'0'); soN++; } while(sellOutData.some(x=>x.id===soId));
   sellOutData.push({
-    id:soId, cliente:cli, industria:ind,
+    id:soId, cliente:cli, industria:ind, indExterna:indExterna,
     produto: el('so-produto').value||'',
     mes: el('so-mes').value,
     qtd: parseInt(el('so-qtd').value)||0,
@@ -14566,9 +14612,10 @@ function salvarSellOut() {
   });
   addAudit(usuarioLogado?.login||'sistema', `Sell Out lançado: ${cli} / ${ind} — ${fmt(valor)}`, '↕️');
   // Limpar todos os campos do modal após submit
-  ['so-valor','so-qtd','so-produto','so-obs','so-positivacao'].forEach(id=>{
+  ['so-valor','so-qtd','so-produto','so-obs','so-positivacao','so-ind-outra'].forEach(id=>{
     const f=el(id); if(f) f.value='';
   });
+  if(el('so-ind')) el('so-ind').disabled=false;
   closeModal('modal-sellout');
   renderSellInOut();
   syncAutoSaveHook();
@@ -18552,7 +18599,12 @@ function editarSellOut(soId) {
     }
     soeCli.value = so.cliente;
   }
-  if (el('soe-ind')) el('soe-ind').value = so.industria;
+  if (el('soe-ind')) {
+    el('soe-ind').value = so.industria;
+    el('soe-ind').readOnly = !so.indExterna;
+    el('soe-ind').style.background = so.indExterna ? '#fff' : '#fafaf8';
+  }
+  if (el('soe-ind-tag')) el('soe-ind-tag').style.display = so.indExterna ? 'inline' : 'none';
   if (el('soe-produto')) el('soe-produto').value = so.produto || '';
   if (el('soe-qtd')) el('soe-qtd').value = so.qtd || 0;
   if (el('soe-valor')) el('soe-valor').value = so.valor || 0;
@@ -18620,6 +18672,10 @@ function salvarSellOutEdit() {
 
   // Atualizar dados
   so.cliente = (el('soe-cli') || {}).value || so.cliente;
+  if (so.indExterna) {
+    const novaInd = ((el('soe-ind') || {}).value || '').trim();
+    if (novaInd) so.industria = novaInd;
+  }
   so.produto = (el('soe-produto') || {}).value || so.produto;
   so.mes = (el('soe-mes') || {}).value || so.mes;
   so.qtd = parseInt((el('soe-qtd') || {}).value) || so.qtd;
@@ -18770,6 +18826,15 @@ window._renderSellInOutV3 = function() {
   const todosGrupos = [...new Set(sellOutData.map(s=>grupoDeCliente(s.cliente)))].sort();
   const todasInds = [...new Set(sellOutData.map(s=>s.industria))].sort();
 
+  // Atualiza filtro de indústrias (cadastradas + sem cadastro lançadas no Sell Out)
+  const selInd=el('sio-filtro-ind');
+  if(selInd){
+    const c=selInd.value;
+    const cad=(typeof industrias!=='undefined'?industrias:[]).map(i=>i&&i.nome).filter(Boolean);
+    const todasOpts=[...new Set([...cad,...todasInds])].sort();
+    selInd.innerHTML='<option value="">Todas as indústrias</option>'+todasOpts.map(n=>`<option value="${esc(n)}"${n===c?' selected':''}>${esc(n)}</option>`).join('');
+  }
+
   // Atualiza filtro de clientes/grupos
   const selCli=el('sio-filtro-cli');
   if(selCli){ const c=selCli.value; selCli.innerHTML='<option value="">Todos os grupos</option>'+todosGrupos.map(g=>`<option value="${esc(g)}"${g===c?' selected':''}>${esc(g)}</option>`).join(''); }
@@ -18789,7 +18854,8 @@ window._renderSellInOutV3 = function() {
 
         const positivacao=soRows.reduce((s,r)=>s+(r.positivacao||0),0);
         const soIds=soRows.map(r=>r.id);
-        rows.push({grupo,ind,mes,sellOut,positivacao,soIds});
+        const externa=soRows.some(r=>r.indExterna);
+        rows.push({grupo,ind,mes,sellOut,positivacao,soIds,externa});
       });
     });
   });
@@ -18803,7 +18869,7 @@ window._renderSellInOutV3 = function() {
     ? `<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Nenhum dado encontrado</td></tr>`
     : rows.map(r=>`<tr>
       <td><strong>${esc(r.grupo)}</strong></td>
-      <td><span class="tag">${esc(r.ind)}</span></td>
+      <td><span class="tag">${esc(r.ind)}</span>${r.externa?' <span class="badge badge-amarelo" title="Indústria sem cadastro no sistema">sem cadastro</span>':''}</td>
       <td><span class="pill">${r.mes}</span></td>
       <td class="bold verde">${fmt(r.sellOut)}</td>
       <td>${r.positivacao>0?`<span class="badge badge-roxo">🏪 ${r.positivacao} ${r.positivacao===1?'loja':'lojas'}</span>`:'<span class="badge badge-cinza">—</span>'}</td>
