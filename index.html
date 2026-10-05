@@ -1642,17 +1642,17 @@ tr:last-child td{border-bottom:none;}
         <select id="log-filtro-alerta" onchange="renderLogistica()">
           <option value="">Todas as situações</option>
           <option value="atrasado">⚠️ Apenas atrasados</option>
-          <option value="sem-previsao">❓ Sem previsão</option>
+          <option value="sem-previsao">❓ Aguardando faturamento</option>
           <option value="hoje">📅 Entrega hoje</option>
         </select>
       </div>
-      <div class="alert alert-info" style="margin-bottom:10px">✏️ Edite <strong>previsão, data de entrega, status e observação</strong> diretamente na tabela — as alterações são salvas automaticamente ao sair do campo. Pedidos com previsão vencida e não entregues aparecem destacados em vermelho.</div>
+      <div class="alert alert-info" style="margin-bottom:10px">📅 A <strong>previsão de entrega é automática: data de faturamento (NF) + 20 dias</strong> — não conta a partir da implantação do pedido. Edite <strong>data de entrega, status e observação</strong> diretamente na tabela (salvos ao sair do campo). Pedidos com prazo vencido e não entregues aparecem em vermelho.</div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-wrap">
           <table>
             <thead><tr>
               <th>Pedido</th><th>Nº Ped. Cliente</th><th>NF</th><th>Cliente</th><th>Indústria</th><th>Data</th>
-              <th>Previsão Entrega</th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
+              <th>Previsão Entrega <span style="font-weight:400;font-size:10px">(NF + 20d)</span></th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
             </tr></thead>
             <tbody id="log-tbody"></tbody>
           </table>
@@ -2174,7 +2174,7 @@ tr:last-child td{border-bottom:none;}
 
       <!-- KPIs Tratativas -->
       <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">
-        <div class="kpi-card kpi-verde"><div class="kpi-label">Ativas no prazo</div><div class="kpi-value" id="trat-kpi-noprazo">0</div><div class="kpi-sub" id="trat-kpi-noprazo-sub">meta: 15 dias</div></div>
+        <div class="kpi-card kpi-verde"><div class="kpi-label">Ativas no prazo</div><div class="kpi-value" id="trat-kpi-noprazo">0</div><div class="kpi-sub" id="trat-kpi-noprazo-sub">meta: 20 dias</div></div>
         <div class="kpi-card kpi-amarelo"><div class="kpi-label">Vencendo (≤ 3 dias)</div><div class="kpi-value" id="trat-kpi-vencendo">0</div><div class="kpi-sub">Atenção</div></div>
         <div class="kpi-card kpi-vermelho"><div class="kpi-label">Fora do prazo</div><div class="kpi-value" id="trat-kpi-atrasadas">0</div><div class="kpi-sub">Ativas há mais que a meta</div></div>
         <div class="kpi-card kpi-azul"><div class="kpi-label">% Solucionadas no prazo</div><div class="kpi-value" id="trat-kpi-pct">—</div><div class="kpi-sub" id="trat-kpi-pct-sub">tempo médio: —</div></div>
@@ -2641,7 +2641,7 @@ tr:last-child td{border-bottom:none;}
             <input type="number" id="cfg-dias-alerta" value="5" min="1" max="60">
           </div>
           <div class="form-group"><label>⏱️ Prazo para solucionar tratativas (dias)</label>
-            <input type="number" id="cfg-prazo-trat" value="15" min="1" max="90">
+            <input type="number" id="cfg-prazo-trat" value="20" min="1" max="90">
             <div style="font-size:11px;color:#888;margin-top:3px">Meta da empresa. Tratativas ativas além deste prazo ficam em vermelho.</div>
           </div>
           <div class="form-group"><label>E-mail do Administrador</label>
@@ -4110,7 +4110,7 @@ tr:last-child td{border-bottom:none;}
       </select>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label>Previsão de Entrega</label><input type="date" id="log-previsao"></div>
+      <div class="form-group"><label>Previsão de Entrega (NF + 20 dias)</label><input type="date" id="log-previsao" readonly style="background:#f5f5f5"><div style="font-size:10px;color:#888;margin-top:3px">Calculada automaticamente a partir da data do faturamento</div></div>
       <div class="form-group"><label>📦 Data de Entrega Real</label><input type="date" id="log-data-entrega"><div style="font-size:10px;color:#888;margin-top:3px">Preencha quando o pedido for efetivamente entregue</div></div>
     </div>
     <div class="form-group"><label>Observação</label><textarea id="log-obs-status" rows="2" placeholder="Informações adicionais..."></textarea></div>
@@ -4385,6 +4385,7 @@ let configSistema = {
   layoutPdf:    'padrao',
   moeda:        'BRL',
   diasAlerta:   5,
+  prazoTratDias: 20,
   emailAdmin:   '',
   /* Endereço do webmail corporativo (Professional Mail).
      Mudou de GoDaddy/OX App Suite para Titan. Editável em Configurações. */
@@ -4682,6 +4683,8 @@ async function salvarExclusaoImediata() {
    Object.assign não cria chave que não existe na origem — sem isto,
    quem já usa o sistema ficaria com os campos undefined. */
 function _migrarConfigLembretes() {
+  // Prazo de tratativas: novo padrão da empresa = 20 dias (antes 15)
+  if(!configSistema.prazoTratDias || parseInt(configSistema.prazoTratDias)===15) configSistema.prazoTratDias = 20;
   var padrao = {
     lembTarefasAtivo: true, lembTarefasDias: [1,2,3,4,5], lembTarefasHora: '08:00',
     lembTarefaNova: true,
@@ -14218,6 +14221,22 @@ function addAudit(user, acao, icon='ℹ️') {
 /* ══════════════════════════
    LOGÍSTICA
 ══════════════════════════ */
+// Prazo de entrega: 20 dias corridos a partir da DATA DE FATURAMENTO (data da NF),
+// e não da data em que o pedido foi implantado no sistema.
+const PRAZO_ENTREGA_LOG_DIAS = 20;
+function _logPrevisaoPorNF(nfData) {
+  if (!nfData) return '';
+  let y, m, d;
+  const str = String(nfData).trim();
+  let mt = str.match(/^(\d{4})-(\d{2})-(\d{2})/);          // YYYY-MM-DD
+  if (mt) { y=+mt[1]; m=+mt[2]; d=+mt[3]; }
+  else if ((mt = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/))) { d=+mt[1]; m=+mt[2]; y=+mt[3]; } // DD/MM/YYYY
+  else return '';
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + PRAZO_ENTREGA_LOG_DIAS);
+  return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+}
+
 function _logIsAtrasado(l) {
   // Retorna true se tem previsão, não foi entregue/finalizado/cancelado, e a data já passou
   if (!l.previsao) return false;
@@ -14279,7 +14298,7 @@ function renderLogistica() {
       cliente:           p.cliente,
       industria:         p.industria,
       data:              p.data,
-      previsao:          l.previsao       || '',
+      previsao:          _logPrevisaoPorNF(p.nf?.data),   // automática: data da NF + 20 dias
       dataEntrega:       l.dataEntrega    || '',
       statusLog:         l.statusLog      || 'Pedido Digitado',
       obs:               l.obs            || ''
@@ -14297,7 +14316,7 @@ function renderLogistica() {
   if(kpiGrid) kpiGrid.innerHTML = `
     <div class="kpi-card kpi-azul"><div class="kpi-label">Em Andamento</div><div class="kpi-value">${totalAtivos}</div><div class="kpi-sub">Pedidos ativos</div></div>
     <div class="kpi-card kpi-vermelho"><div class="kpi-label">⚠️ Atrasados</div><div class="kpi-value" style="color:var(--vermelho)">${totalAtrasados}</div><div class="kpi-sub">Previsão vencida</div></div>
-    <div class="kpi-card kpi-amarelo"><div class="kpi-label">Sem Previsão</div><div class="kpi-value">${totalSemPrevisao}</div><div class="kpi-sub">Aguardando data</div></div>
+    <div class="kpi-card kpi-amarelo"><div class="kpi-label">Aguardando Faturamento</div><div class="kpi-value">${totalSemPrevisao}</div><div class="kpi-sub">Prazo conta a partir da NF</div></div>
     <div class="kpi-card kpi-verde"><div class="kpi-label">Entregues</div><div class="kpi-value">${totalEntregues}</div><div class="kpi-sub">Concluídos</div></div>
   `;
 
@@ -14397,7 +14416,7 @@ function renderLogistica() {
       rowStyle = 'background:#fffbeb;';
       situacaoBadge = `<span class="badge badge-amarelo">📅 Hoje</span>`;
     } else if(!l.previsao && !['Cancelado'].includes(l.statusLog)) {
-      situacaoBadge = `<span class="badge badge-cinza">❓ Sem previsão</span>`;
+      situacaoBadge = `<span class="badge badge-cinza" title="O prazo de ${PRAZO_ENTREGA_LOG_DIAS} dias só começa a contar após o faturamento">❓ Aguardando faturamento</span>`;
     } else if(l.previsao) {
       situacaoBadge = `<span class="badge badge-azul">🕐 No prazo</span>`;
     }
@@ -14423,10 +14442,9 @@ function renderLogistica() {
       <td><span class="tag">${esc(l.industria)}</span></td>
       <td>${l.data}</td>
       <td>
-        <input type="date" value="${l.previsao}"
-          style="${inStyle}width:130px${atrasado?';border-color:#fca5a5':''}"
-          onfocus="this.style.borderColor='var(--amarelo)'"
-          onblur="this.style.borderColor='${atrasado?'#fca5a5':'var(--cinza-medio)'  }';logSalvarCampo('${l.pedId}','previsao',this.value)">
+        <input type="date" value="${l.previsao}" readonly tabindex="-1"
+          title="${l.previsao ? 'Calculado automaticamente: data da NF + '+PRAZO_ENTREGA_LOG_DIAS+' dias' : 'Será calculado após o faturamento (NF)'}"
+          style="${inStyle}width:130px;background:#f5f5f5;cursor:default${atrasado?';border-color:#fca5a5':''}">
       </td>
       <td>
         <input type="date" value="${dataEntregaVal}"
@@ -14492,7 +14510,8 @@ function abrirModalStatusLog(pedId) {
   el('log-status-titulo').textContent = 'Atualizar Status — '+pedId;
   el('log-status-info').innerHTML = `<div class="alert alert-info">Pedido: <strong>${pedId}</strong> · Cliente: <strong>${esc(l.cliente)}</strong> · Indústria: <strong>${l.industria}</strong></div>`;
   el('log-novo-status').value = l.statusLog;
-  el('log-previsao').value = l.previsao||'';
+  const _pedLog = pedidos.find(p=>p.id===pedId);
+  el('log-previsao').value = _logPrevisaoPorNF(_pedLog?.nf?.data);
   if(el('log-data-entrega')) el('log-data-entrega').value = l.dataEntrega||'';
   el('log-obs-status').value = l.obs||'';
   openModal('modal-log-status');
@@ -14507,7 +14526,7 @@ function confirmarStatusLogistica() {
   logisticaData = logisticaData.map(l=>{
     if(l.pedId===logEditId) return {...l,
       statusLog: novoStatus,
-      previsao: el('log-previsao').value,
+      previsao: _logPrevisaoPorNF((pedidos.find(p=>p.id===logEditId)||{}).nf?.data),
       dataEntrega: autoDataEntrega,
       obs: el('log-obs-status').value
     };
@@ -14531,7 +14550,7 @@ function exportarLogistica() {
       p.nf?.valorNF || '',
       p.nf?.data    || '',
       p.cliente, p.industria, p.data,
-      l.previsao||'', l.dataEntrega||'',
+      _logPrevisaoPorNF(p.nf?.data), l.dataEntrega||'',
       l.statusLog||'', l.obs||''
     ]);
   });
@@ -15662,7 +15681,7 @@ function exportarTudo(){
   bonificacoesData.forEach(b=>r5.push([b.id,b.pedido,b.cliente,b.industria,b.data,b.nf||'',b.valorPedido,b.valorNF,b.mes,b.status]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r5),'Bonificacoes');
   const r4=[['Pedido','Cliente','Indústria','Data','Previsão','Status Log.']];
-  logisticaData.forEach(l=>r4.push([l.pedId,l.cliente,l.industria,l.data,l.previsao||'',l.statusLog]));
+  logisticaData.forEach(l=>{const _pp=pedidos.find(p=>p.id===l.pedId);r4.push([l.pedId,l.cliente,l.industria,l.data,_logPrevisaoPorNF(_pp?.nf?.data),l.statusLog]);});
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r4),'Logistica');
   XLSX.writeFile(wb,'GestCom_TresVales_v4_Completo.xlsx');
   toast('Relatório completo exportado!');
@@ -15750,7 +15769,7 @@ function salvarConfig(){
   configSistema.layoutPdf    = (el('cfg-layout-pdf')||{}).value || configSistema.layoutPdf;
   configSistema.moeda        = (el('cfg-moeda')||{}).value || configSistema.moeda;
   configSistema.diasAlerta   = parseInt((el('cfg-dias-alerta')||{}).value)||5;
-  configSistema.prazoTratDias = parseInt((el('cfg-prazo-trat')||{}).value)||15;
+  configSistema.prazoTratDias = parseInt((el('cfg-prazo-trat')||{}).value)||20;
   configSistema.emailAdmin   = (el('cfg-email-admin')||{}).value || configSistema.emailAdmin;
   if(el('cfg-webmail-url')) configSistema.webmailUrl = (el('cfg-webmail-url').value || '').trim() || WEBMAIL_PADRAO;
   if(el('cfg-webmail-compor')) configSistema.webmailComporUrl = (el('cfg-webmail-compor').value || '').trim();
@@ -16183,7 +16202,7 @@ function aplicarImpactoTratativa(trat, ped) {
 /* ══ v36 — PRAZO DAS TRATATIVAS ══════════════════════════════════════════════
    A empresa tem meta de solucionar cada tratativa em N dias (padrão 15,
    configurável em Configurações). Aqui ficam os utilitários de data/prazo.  */
-function _tratPrazoDias(){ return (typeof configSistema!=='undefined' && parseInt(configSistema.prazoTratDias)) || 15; }
+function _tratPrazoDias(){ return (typeof configSistema!=='undefined' && parseInt(configSistema.prazoTratDias)) || 20; }
 // "04/09/2026, 14:35" → Date local (só a parte da data)
 function _tratParseData(str){
   if(!str) return null;
@@ -16722,7 +16741,7 @@ function renderConfiguracoes() {
   if(el('cfg-layout-pdf'))  el('cfg-layout-pdf').value  = configSistema.layoutPdf  || 'padrao';
   if(el('cfg-moeda'))       el('cfg-moeda').value        = configSistema.moeda      || 'BRL';
   if(el('cfg-dias-alerta')) el('cfg-dias-alerta').value  = configSistema.diasAlerta || 5;
-  if(el('cfg-prazo-trat'))  el('cfg-prazo-trat').value   = configSistema.prazoTratDias || 15;
+  if(el('cfg-prazo-trat'))  el('cfg-prazo-trat').value   = configSistema.prazoTratDias || 20;
   if(el('cfg-email-admin')) el('cfg-email-admin').value  = configSistema.emailAdmin || '';
   if(el('cfg-webmail-url')) el('cfg-webmail-url').value  = configSistema.webmailUrl || WEBMAIL_PADRAO;
   if(el('cfg-webmail-compor')) el('cfg-webmail-compor').value = configSistema.webmailComporUrl || '';
