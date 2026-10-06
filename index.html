@@ -3938,6 +3938,17 @@ tr:last-child td{border-bottom:none;}
 
     <!-- ── ABA PARCELADO ── -->
     <div id="rec-bloco-parcelas" style="display:none">
+      <!-- v42: parcelas a receber (agendar) ou já recebidas -->
+      <div style="display:flex;gap:18px;flex-wrap:wrap;padding:10px 14px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:600">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;margin:0">
+          <input type="radio" name="rec-parc-situacao" id="rec-parc-agendar" value="agendar" checked onchange="recSwitchTab('parcelas', el('rec-tab-parcelas'))" style="accent-color:var(--amarelo)">
+          ⏳ Ainda vou receber (agendar parcelas)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;margin:0">
+          <input type="radio" name="rec-parc-situacao" id="rec-parc-recebidas" value="recebidas" onchange="recSwitchTab('parcelas', el('rec-tab-parcelas'))" style="accent-color:var(--verde)">
+          ✅ Já recebi estas parcelas
+        </label>
+      </div>
       <!-- Configuração das parcelas -->
       <div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:10px;align-items:end;padding:14px;background:#fafaf8;border:1px solid var(--cinza-medio);border-radius:8px;margin-bottom:12px">
         <div class="form-group" style="margin:0">
@@ -4081,11 +4092,11 @@ tr:last-child td{border-bottom:none;}
       <button type="button" class="btn btn-success btn-xs" onclick="edcomAddParcela()">➕ Adicionar Parcela</button>
     </div>
     <div style="font-size:11px;color:#888;margin-bottom:8px">
-      Cada parcela mantém o seu próprio mês. O total recebido é a soma das parcelas. Recebeu parte agora? Registre; quando receber o restante, adicione outra parcela com o mês daquele recebimento.
+      Cada parcela mantém o seu próprio mês. Desmarque <strong>Recebida?</strong> para deixar a parcela só agendada (a receber) — ela não entra no total recebido. O total recebido é a soma das parcelas marcadas.
     </div>
     <div style="border:1px solid var(--cinza-medio);border-radius:8px;overflow:hidden">
-      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 34px;gap:0;background:#f4f3ef;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px">
-        <div>#</div><div>Valor (R$)</div><div>Mês</div><div>Observação</div><div></div>
+      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 70px 34px;gap:8px;background:#f4f3ef;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px">
+        <div>#</div><div>Valor (R$)</div><div>Mês</div><div>Observação</div><div style="text-align:center">Recebida?</div><div></div>
       </div>
       <div id="edcom-parcelas-body"></div>
     </div>
@@ -7210,7 +7221,23 @@ function _dateToMesLabel(date) {
 function _r2(v){ return Math.round(((parseFloat(v)||0) + Number.EPSILON) * 100) / 100; }
 
 // ─── v36: parcelas efetivamente recebidas (valor > 0) ────────────────────────
-function _parcelasReais(c){ return (c && c.parcelas ? c.parcelas : []).filter(p => (parseFloat(p.valor)||0) > 0); }
+function _parcelasReais(c){ return (c && c.parcelas ? c.parcelas : []).filter(p => (parseFloat(p.valor)||0) > 0 && !p.pendente); }
+// v42: parcelas AGENDADAS (ainda não recebidas) — contam como previsão no mês delas
+function _parcelasPendentes(c){ return (c && c.parcelas ? c.parcelas : []).filter(p => (parseFloat(p.valor)||0) > 0 && p.pendente); }
+// v42: distribui o saldo em aberto: primeiro nas parcelas agendadas (cada uma no
+// seu mês), o que sobrar fica no mês de previsão da comissão
+function _restanteDistribuido(c, mes) {
+  let restante = Math.max(0, _r2(c.valor) - _recTotalComissao(c));
+  if(!mes) return _r2(restante);
+  let v = 0;
+  _parcelasPendentes(c).forEach(p => {
+    const pv = Math.min(parseFloat(p.valor)||0, restante);
+    restante = Math.max(0, restante - pv);
+    if((p.mes || c.mesPrevisao || '') === mes) v += pv;
+  });
+  if(restante > 0.001 && ((c.mesPrevisao||'') || _mesEfetivoComissao(c)) === mes) v += restante;
+  return _r2(v);
+}
 function _recTotalComissao(c){
   const reais = _parcelasReais(c);
   return _r2(reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0));
@@ -7245,26 +7272,19 @@ function _previstoNoMes(c, mes) {
   if(!c) return 0;
   if(!mes) return _r2(c.valor);
   let v = _recebidoNoMes(c, mes);
-  const restante = Math.max(0, _r2(c.valor) - _recTotalComissao(c));
-  if(restante > 0.001) {
-    const mesRest = (c.mesPrevisao||'') || _mesEfetivoComissao(c);
-    if(mesRest === mes) v += restante;
-  }
+  v += _restanteDistribuido(c, mes);
   return _r2(v);
 }
 // Saldo que ainda falta receber e que pertence ao mês (só no mês de previsão)
 function _restanteNoMes(c, mes) {
   if(!c || c.status === 'Recebida') return 0;
-  const reais = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0);
-  const recTotal = reais.length ? reais.reduce((s,p)=>s+(parseFloat(p.valor)||0),0) : (c.valorRecebido||0);
-  if(mes && (c.mesPrevisao||'') !== mes) return 0;
-  return _r2(Math.max(0, _r2(c.valor) - recTotal));
+  return _restanteDistribuido(c, mes);
 }
 
 function _mesEfetivoComissao(c) {
   if(!c) return '';
   if(c.status === 'Recebida') {
-    const parcs = (c.parcelas||[]).filter(p => (parseFloat(p.valor)||0) > 0 && p.mes);
+    const parcs = _parcelasReais(c).filter(p => p.mes);
     if(parcs.length) return parcs[parcs.length-1].mes;
     if(c.mesRecebimento) return c.mesRecebimento;
   }
@@ -8651,9 +8671,12 @@ function _atualizarStatusAtrasadas() {
     // v34: normaliza o valor previsto para 2 casas (evita "diferença" de R$ 0,01 por arredondamento)
     if(typeof c.valor === 'number' && Math.abs(c.valor - _r2(c.valor)) > 0) c = {...c, valor: _r2(c.valor)};
     if(c.excluido || c.status === 'Recebida') return c;
-    if(!c.mesPrevisao) return c;
+    // v42: com parcelas agendadas, o atraso é medido pela 1ª parcela ainda não recebida
+    const _pend = _parcelasPendentes(c).filter(p=>p.mes);
+    const _refMes = _pend.length ? _pend[0].mes : c.mesPrevisao;
+    if(!_refMes) return c;
     // Converte label ex. "Abr/26" para data
-    const partes = c.mesPrevisao.split('/');
+    const partes = _refMes.split('/');
     if(partes.length !== 2) return c;
     const mesIdx = meses.indexOf(partes[0]);
     if(mesIdx === -1) return c;
@@ -8815,7 +8838,7 @@ function renderComissoes() {
           <td><span class="com-${c.tipo==='Faturamento'?'fat':c.tipo==='Liquidez'?'liq':'bon'}" style="font-size:11px">${c.tipo}</span></td>
           <td style="font-size:12px">${fmt(c.baseLiq)}</td>
           <td style="font-size:12px;white-space:nowrap">${c.pct}%${(c.detalhe&&c.detalhe.length)?` <span title="${esc(_detalheComissaoTitle(c))}" style="cursor:help;font-size:11px">🏷️</span><div style="font-size:10px;color:#888;line-height:1.5;margin-top:2px">média ponderada:<br>${c.detalhe.map(d=>`${esc(d.cat)}: <strong>${d.pct}%</strong> <span style="color:#aaa">(${fmt(d.base)})</span>`).join('<br>')}</div>`:''}</td>
-          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); const difRec=c.status==='Recebida'?_r2(Math.max(0,_r2(c.valor)-_recTotalComissao(c))):0; return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} previsto em ${c.mesPrevisao||'—'}`:difRec>0.001?` · diferença ${fmt(difRec)} fica em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
+          <td class="bold" style="font-size:12px">${(()=>{const pm=_previstoNoMes(c,filtMes); const rest=_restanteNoMes(c,''); const difRec=c.status==='Recebida'?_r2(Math.max(0,_r2(c.valor)-_recTotalComissao(c))):0; return filtMes && Math.abs(pm-_r2(c.valor))>0.001 ? `${fmt(pm)}<div style="font-size:10px;color:#888;font-weight:400">de ${fmt(c.valor)}${rest>0.001?` · restante ${fmt(rest)} previsto em ${(()=>{const pm=[...new Set(_parcelasPendentes(c).map(p=>p.mes).filter(Boolean))]; return pm.length?pm.join(', '):(c.mesPrevisao||'—');})()}`:difRec>0.001?` · diferença ${fmt(difRec)} fica em ${c.mesPrevisao||'—'}`:' · outra parte em outro mês'}</div>` : fmt(c.valor);})()}</td>
           <td class="bold verde" style="font-size:12px">
             ${(()=>{const rm=_recNoMes(c,filtMes); return rm>0 ? (filtMes && Math.abs(rm-recebido)>0.001 ? `${fmt(rm)}<div style="font-size:10px;color:#888;font-weight:400">total ${fmt(recebido)}</div>` : fmt(recebido)) : '<span style="color:#aaa">—</span>';})()}
           </td>
@@ -8824,7 +8847,9 @@ function renderComissoes() {
           </td>
           <td style="font-size:11px">
             ${parcelas.length>0
-              ? parcelas.map((p,i)=>`<div style="white-space:nowrap">P${i+1}: ${fmt(p.valor)} <span style="color:#888">${p.mes}</span></div>`).join('')
+              ? parcelas.map((p,i)=> p.pendente
+                  ? `<div style="white-space:nowrap;color:#a17700" title="Parcela agendada — ainda não recebida">⏳ P${i+1}: ${fmt(p.valor)} <span style="color:#888">${p.mes}</span> <button class="btn btn-success btn-xs" style="padding:1px 5px;font-size:10px" onclick="marcarParcelaRecebida('${c.id}',${i})" title="Marcar esta parcela como recebida">✔ recebi</button></div>`
+                  : `<div style="white-space:nowrap">✅ P${i+1}: ${fmt(p.valor)} <span style="color:#888">${p.mes}</span></div>`).join('')
               : '<span style="color:#aaa">—</span>'
             }
           </td>
@@ -8960,6 +8985,32 @@ function excluirComissao(id) {
   toast(`Comissão ${id} excluída com sucesso.`);
 }
 
+// v42: marca uma parcela agendada como recebida
+function _recalcRecebidoStatus(x) {
+  const recebido = _recTotalComissao({...x, valorRecebido:0});
+  const coberto  = recebido + (x.desconto||0);
+  let status = x.status;
+  if(x.valor > 0 && (Math.abs(x.valor - coberto) <= 0.01 || coberto >= x.valor)) status = 'Recebida';
+  else if(recebido > 0) status = 'Parcial';
+  else if(status === 'Recebida' || status === 'Parcial') status = 'Prevista';
+  const reais = _parcelasReais(x).filter(p=>p.mes);
+  return {...x, valorRecebido: recebido, status, mesRecebimento: reais.length ? reais[reais.length-1].mes : (x.mesRecebimento||'')};
+}
+function marcarParcelaRecebida(comId, idx) {
+  const c = comissoes_data.find(x=>x.id===comId); if(!c) return;
+  const p = (c.parcelas||[])[idx]; if(!p || !p.pendente) return;
+  if(!confirm(`Confirmar recebimento da parcela P${idx+1} de ${fmt(p.valor)} (${p.mes||'sem mês'})?\n\nSe recebeu valor ou mês diferente, use ✏️ Editar.`)) return;
+  comissoes_data = comissoes_data.map(x=>{
+    if(x.id!==comId) return x;
+    const parcelas = (x.parcelas||[]).map((q,i)=> i===idx ? {...q, pendente:false, data:new Date().toLocaleDateString('pt-BR'), usuario:usuarioLogado?.login||'admin'} : q);
+    return _recalcRecebidoStatus({...x, parcelas});
+  });
+  const n = comissoes_data.find(x=>x.id===comId);
+  addAudit(usuarioLogado?.login||'admin', `Parcela recebida: ${comId} — P${idx+1} ${fmt(p.valor)} (${p.mes}) · ${c.cliente}/${c.industria}`, '💰');
+  renderComissoes(); syncAutoSaveHook();
+  toast(`✅ Parcela P${idx+1} recebida — Status: ${n?.status||''}`);
+}
+
 // Abre modal para lançar recebimento (total ou parcial)
 function abrirLancarRecebimento(comId) {
   const c = comissoes_data.find(x=>x.id===comId); if(!c) return;
@@ -8999,8 +9050,19 @@ function abrirLancarRecebimento(comId) {
   }
   ['rec-mes','rec-parc-mes-inicial'].forEach(id=>{ const s=el(id); if(s) s.innerHTML=optsHtml; });
 
+  // v42: parcelas agendadas → sugere a 1ª no recebimento simples
+  const _pendAb = _parcelasPendentes(c);
+  if(_pendAb.length){
+    el('rec-valor').value = (parseFloat(_pendAb[0].valor)||0).toFixed(2);
+    const sm = el('rec-mes');
+    if(sm && _pendAb[0].mes && [...sm.options].some(o=>o.value===_pendAb[0].mes)) sm.value = _pendAb[0].mes;
+  }
+  const _totPend = _pendAb.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  const _saldoParc = parseFloat(Math.max(0, saldoRest - _totPend).toFixed(2));
+  if(el('rec-parc-agendar')) el('rec-parc-agendar').checked = true;
+
   // Pré-preenche parcelado
-  if(el('rec-parc-total')) el('rec-parc-total').value = saldoRest > 0 ? saldoRest.toFixed(2) : '';
+  if(el('rec-parc-total')) el('rec-parc-total').value = _saldoParc > 0 ? _saldoParc.toFixed(2) : '';
   if(el('rec-parc-qtd'))   el('rec-parc-qtd').value   = 1;
 
   recSwitchTab('simples', el('rec-tab-simples'));
@@ -9019,7 +9081,8 @@ function recSwitchTab(modo, btn) {
   if(bSimp) bSimp.style.display = modo==='simples' ? '' : 'none';
   if(bParc) bParc.style.display = modo==='parcelas' ? '' : 'none';
   const btnConf = el('rec-confirmar-btn');
-  if(btnConf) btnConf.textContent = modo==='parcelas' ? '📅 Registrar Parcelas' : '💰 Confirmar Recebimento';
+  const _agendar = el('rec-parc-agendar')?.checked;
+  if(btnConf) btnConf.textContent = modo==='parcelas' ? (_agendar ? '📅 Agendar Parcelas' : '📅 Registrar Parcelas Recebidas') : '💰 Confirmar Recebimento';
 }
 
 function recCalcParcelas() {
@@ -9148,7 +9211,31 @@ function confirmarRecebimento() {
     const parcelas = window._recParcelasCalc;
     if(!parcelas || parcelas.length===0) { alert('Calcule as parcelas primeiro.'); return; }
     const totalParc = parcelas.reduce((s,p)=>s+p.valor,0);
-    if(!confirm(`Registrar ${parcelas.length} parcela(s) totalizando ${fmt(totalParc)}?`)) return;
+    const agendar   = !!el('rec-parc-agendar')?.checked;
+
+    if(agendar) {
+      // v42: só AGENDA — não conta como recebido
+      if(!confirm(`Agendar ${parcelas.length} parcela(s) a receber, totalizando ${fmt(totalParc)}?\n\nElas NÃO contam como recebidas. Quando cada uma entrar, clique em "✔ recebi" na lista.`)) return;
+      const obsA  = el('rec-parc-obs').value.trim();
+      const dataA = new Date().toLocaleDateString('pt-BR');
+      comissoes_data = comissoes_data.map(x=>{
+        if(x.id!==_recEditId) return x;
+        const novas = [...(x.parcelas||[]), ...parcelas.map((p,i)=>({
+          valor:p.valor, mes:p.mes, pendente:true,
+          obs: obsA || `Parcela ${i+1}/${parcelas.length}`,
+          data:dataA, usuario:usuarioLogado?.login||'admin'
+        }))];
+        return {...x, parcelas:novas};
+      });
+      addAudit(usuarioLogado?.login||'admin',
+        `Parcelas agendadas: ${c.id} — ${parcelas.length}x · Total ${fmt(totalParc)} · ${c.cliente}/${c.industria}`, '📅');
+      closeModal('modal-lancar-recebimento');
+      renderComissoes(); syncAutoSaveHook();
+      toast(`📅 ${parcelas.length} parcela(s) agendada(s) — ${fmt(totalParc)} a receber`);
+      return;
+    }
+
+    if(!confirm(`Registrar ${parcelas.length} parcela(s) como JÁ RECEBIDAS, totalizando ${fmt(totalParc)}?`)) return;
 
     const jaRecebido = c.valorRecebido||0;
     const novoTotal  = jaRecebido + totalParc;
@@ -9193,7 +9280,22 @@ function confirmarRecebimento() {
   const aceitouDif = el('rec-aceitar-dif')?.checked || false;
 
   // Parcelas histórico
-  const parcelas = [...(c.parcelas||[]), {valor:novoVal, mes, obs, data:new Date().toLocaleDateString('pt-BR'), usuario:usuarioLogado?.login||'admin'}];
+  // v42: o valor recebido quita as parcelas agendadas na ordem (1ª, 2ª...)
+  const _novaParc = {valor:novoVal, mes, obs, data:new Date().toLocaleDateString('pt-BR'), usuario:usuarioLogado?.login||'admin'};
+  let _resto = novoVal, _posIns = -1;
+  const _base = [];
+  (c.parcelas||[]).forEach(q=>{
+    if(q.pendente && _resto > 0.001){
+      if(_posIns < 0) _posIns = _base.length;
+      const qv = parseFloat(q.valor)||0;
+      if(qv <= _resto + 0.01){ _resto -= qv; return; }        // quitada → sai
+      _base.push({...q, valor: parseFloat((qv - _resto).toFixed(2))}); _resto = 0; return; // abatida
+    }
+    _base.push({...q});
+  });
+  if(_posIns < 0) _posIns = _base.length;
+  _base.splice(_posIns, 0, _novaParc);
+  const parcelas = _base;
 
   let novoStatus;
   let desconto = 0;
@@ -9208,7 +9310,7 @@ function confirmarRecebimento() {
     // Recebeu A MENOS mas aceitou como desconto/nota → Recebida com desconto
     novoStatus = 'Recebida';
     desconto = parseFloat(saldo.toFixed(2));
-    parcelas[parcelas.length-1].obs = (obs ? obs + ' · ' : '') + `Desconto/abatimento: -${fmt(desconto)}`;
+    _novaParc.obs = (obs ? obs + ' · ' : '') + `Desconto/abatimento: -${fmt(desconto)}`;
   } else {
     // Recebeu a menos sem aceitar → Parcial
     novoStatus = 'Parcial';
@@ -9262,7 +9364,7 @@ function edcomRenderParcelas() {
     body.innerHTML = `<div style="padding:14px;text-align:center;color:#aaa;font-size:12px">Nenhuma parcela registrada. Clique em <strong>➕ Adicionar Parcela</strong> para lançar um recebimento.</div>`;
   } else {
     body.innerHTML = _edcomParcelas.map((p,i)=>`
-      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 34px;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--cinza-medio)">
+      <div style="display:grid;grid-template-columns:32px 1.1fr 1fr 1.6fr 70px 34px;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--cinza-medio);${p.pendente?'background:#fffbea':''}">
         <div style="font-size:11px;color:#888;font-weight:700">P${i+1}</div>
         <div><input type="number" step="0.01" min="0" value="${p.valor!=null?p.valor:''}" placeholder="0,00"
               oninput="edcomParcelaChange(${i},'valor',this.value)"
@@ -9271,6 +9373,9 @@ function edcomRenderParcelas() {
         <div><input type="text" value="${(p.obs||'').replace(/"/g,'&quot;')}" placeholder="Ex: 1ª parcela"
               oninput="edcomParcelaChange(${i},'obs',this.value)"
               style="width:100%;padding:5px 6px;border:1.5px solid var(--cinza-medio);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none"></div>
+        <div style="text-align:center"><input type="checkbox" ${p.pendente?'':'checked'} title="Marcado = já recebida · Desmarcado = agendada (a receber)"
+              onchange="edcomParcelaChange(${i},'pendente',!this.checked);edcomRenderParcelas()"
+              style="width:16px;height:16px;cursor:pointer;accent-color:var(--verde)"></div>
         <div style="text-align:center"><button type="button" title="Remover parcela" onclick="edcomRemoveParcela(${i})"
               style="background:#fef2f2;color:var(--vermelho);border:1px solid #fecaca;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:12px">🗑️</button></div>
       </div>`).join('');
@@ -9291,8 +9396,14 @@ function edcomAddParcela() {
   const saldo = Math.max(0, previsto - somaAtual);
   // Mês sugerido: o da última parcela, ou o mês de previsão
   const ultimoMes = _edcomParcelas.length ? _edcomParcelas[_edcomParcelas.length-1].mes : (el('edcom-mes-prev').value||'');
+  // v42: mês futuro → nasce como agendada (a receber); dá pra marcar depois
+  const _M = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const _ord = m => { const [n,a]=(m||'').split('/'); return (parseInt(a,10)||0)*12 + _M.indexOf(n); };
+  const _hoje = new Date();
+  const _futuro = ultimoMes && _ord(ultimoMes) > (_hoje.getFullYear()-2000)*12 + _hoje.getMonth();
   _edcomParcelas.push({
     valor: parseFloat(saldo.toFixed(2)),
+    pendente: !!_futuro,
     mes: ultimoMes,
     obs: '',
     data: new Date().toLocaleDateString('pt-BR'),
@@ -9393,6 +9504,7 @@ function editarComissao(comId) {
     .filter(p => (parseFloat(p.valor)||0) > 0)
     .map(p => ({
       valor: parseFloat(p.valor)||0,
+      pendente: !!p.pendente,
       mes: p.mes||'',
       obs: p.obs||'',
       data: p.data || new Date().toLocaleDateString('pt-BR'),
@@ -9440,13 +9552,15 @@ function edcomAtualizarSaldo() {
   const previsto = parsePrecoBR(el('edcom-valor').value)||0;
 
   // Recebido = SOMA das parcelas (cada uma com seu próprio mês)
-  const recebido = _edcomParcelas.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  const _reaisEd  = _edcomParcelas.filter(p=>!p.pendente);
+  const recebido = _reaisEd.reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
+  const agendado = _edcomParcelas.filter(p=>p.pendente).reduce((s,p)=>s+(parseFloat(p.valor)||0),0);
   el('edcom-recebido').value = recebido ? recebido.toFixed(2) : '';
 
   // Mês de recebimento = mês da ÚLTIMA parcela lançada
   const selRec = el('edcom-mes-rec');
   if(selRec){
-    const ultima = _edcomParcelas.length ? _edcomParcelas[_edcomParcelas.length-1].mes : '';
+    const ultima = _reaisEd.length ? _reaisEd[_reaisEd.length-1].mes : '';
     // garante que a opção exista antes de selecionar
     if(ultima && ![...selRec.options].some(o=>o.value===ultima)){
       selRec.insertAdjacentHTML('beforeend', `<option value="${ultima}">${ultima}</option>`);
@@ -9460,7 +9574,7 @@ function edcomAtualizarSaldo() {
     const n = _edcomParcelas.length;
     const saldoParc = previsto - recebido;
     resumo.textContent = n
-      ? `${n} parcela(s) · Total recebido ${fmt(recebido)}` + (Math.abs(saldoParc)>0.01 ? ` · ${saldoParc>0?'Saldo a receber '+fmt(saldoParc):'Recebido a mais '+fmt(Math.abs(saldoParc))}` : ' · quitado ✅')
+      ? `${n} parcela(s) · Total recebido ${fmt(recebido)}` + (agendado>0.001 ? ` · Agendado (a receber) ${fmt(agendado)}` : '') + (Math.abs(saldoParc)>0.01 ? ` · ${saldoParc>0?'Saldo a receber '+fmt(saldoParc):'Recebido a mais '+fmt(Math.abs(saldoParc))}` : ' · quitado ✅')
       : '';
   }
 
@@ -9510,6 +9624,7 @@ function salvarEdicaoComissao() {
     .filter(p => (parseFloat(p.valor)||0) > 0)
     .map((p,i) => ({
       valor: parseFloat((parseFloat(p.valor)||0).toFixed(2)),
+      ...(p.pendente ? {pendente:true} : {}),
       mes: p.mes||'',
       obs: (p.obs||'').trim() || `Parcela ${i+1}`,
       data: p.data || new Date().toLocaleDateString('pt-BR'),
@@ -9517,8 +9632,9 @@ function salvarEdicaoComissao() {
     }));
 
   // Recebido = soma das parcelas · Mês de recebimento = mês da última parcela
-  const recebido = parcelasFinais.reduce((s,p)=>s+p.valor,0);
-  const mesRec   = parcelasFinais.length ? parcelasFinais[parcelasFinais.length-1].mes : '';
+  const _recFin  = parcelasFinais.filter(p=>!p.pendente);
+  const recebido = _recFin.reduce((s,p)=>s+p.valor,0);
+  const mesRec   = _recFin.length ? _recFin[_recFin.length-1].mes : '';
 
   if(valor <= 0 && !confirm('O valor previsto está zerado. Deseja salvar mesmo assim?')) return;
   if(el('edcom-status-auto').checked) status = _edcomStatusCalc(valor, recebido, desconto);
@@ -9905,7 +10021,7 @@ function exportarComissoes(){
     ['#','Pedido','Nº NF','Cliente','Indústria','Tipo','Base NF Líq.','%','Valor Previsto','Valor Recebido','Diferença','Parcelas','Mês Previsão','Mês Recebimento','Mês Efetivo','Status']];
   comissoes_data.filter(c=>!c.excluido).forEach(c=>{
     const rec  = c.valorRecebido||0;
-    const parc = (c.parcelas||[]).map(p=>`P: ${p.valor} (${p.mes})`).join(' | ');
+    const parc = (c.parcelas||[]).map(p=>`P: ${p.valor} (${p.mes})${p.pendente?' a receber':''}`).join(' | ');
     const pedVincExp = pedidos.find(p=>p.id===c.pedido);
     const nfNumExp = pedVincExp?.nf?.numero || '';
     rows.push([c.id,c.pedido,nfNumExp,c.cliente,c.industria,c.tipo,c.baseLiq,c.pct+'%',c.valor,rec,c.valor-rec,parc,c.mesPrevisao||'',c.mesRecebimento||'',_mesEfetivoComissao(c)||'',c.status]);
