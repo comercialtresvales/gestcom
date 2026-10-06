@@ -1646,13 +1646,13 @@ tr:last-child td{border-bottom:none;}
           <option value="hoje">📅 Entrega hoje</option>
         </select>
       </div>
-      <div class="alert alert-info" style="margin-bottom:10px">📅 A <strong>previsão de entrega é automática: data de faturamento (NF) + 20 dias</strong> — não conta a partir da implantação do pedido. Edite <strong>data de entrega, status e observação</strong> diretamente na tabela (salvos ao sair do campo). Pedidos com prazo vencido e não entregues aparecem em vermelho.</div>
+      <div class="alert alert-info" style="margin-bottom:10px">📅 A <strong>previsão de entrega é automática: data de faturamento (NF) + 15 dias</strong> — não conta a partir da implantação do pedido. Edite <strong>data de entrega, status e observação</strong> diretamente na tabela (salvos ao sair do campo). Pedidos com prazo vencido e não entregues aparecem em vermelho.</div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-wrap">
           <table>
             <thead><tr>
               <th>Pedido</th><th>Nº Ped. Cliente</th><th>NF</th><th>Cliente</th><th>Indústria</th><th>Data</th>
-              <th>Previsão Entrega <span style="font-weight:400;font-size:10px">(NF + 20d)</span></th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
+              <th>Previsão Entrega <span style="font-weight:400;font-size:10px">(NF + 15d)</span></th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
             </tr></thead>
             <tbody id="log-tbody"></tbody>
           </table>
@@ -4110,7 +4110,7 @@ tr:last-child td{border-bottom:none;}
       </select>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label>Previsão de Entrega (NF + 20 dias)</label><input type="date" id="log-previsao" readonly style="background:#f5f5f5"><div style="font-size:10px;color:#888;margin-top:3px">Calculada automaticamente a partir da data do faturamento</div></div>
+      <div class="form-group"><label>Previsão de Entrega (NF + 15 dias)</label><input type="date" id="log-previsao" readonly style="background:#f5f5f5"><div style="font-size:10px;color:#888;margin-top:3px">Calculada automaticamente a partir da data do faturamento</div></div>
       <div class="form-group"><label>📦 Data de Entrega Real</label><input type="date" id="log-data-entrega"><div style="font-size:10px;color:#888;margin-top:3px">Preencha quando o pedido for efetivamente entregue</div></div>
     </div>
     <div class="form-group"><label>Observação</label><textarea id="log-obs-status" rows="2" placeholder="Informações adicionais..."></textarea></div>
@@ -14221,9 +14221,9 @@ function addAudit(user, acao, icon='ℹ️') {
 /* ══════════════════════════
    LOGÍSTICA
 ══════════════════════════ */
-// Prazo de entrega: 20 dias corridos a partir da DATA DE FATURAMENTO (data da NF),
+// Prazo de entrega: 15 dias corridos a partir da DATA DE FATURAMENTO (data da NF),
 // e não da data em que o pedido foi implantado no sistema.
-const PRAZO_ENTREGA_LOG_DIAS = 20;
+const PRAZO_ENTREGA_LOG_DIAS = 15;
 function _logPrevisaoPorNF(nfData) {
   if (!nfData) return '';
   let y, m, d;
@@ -14298,7 +14298,7 @@ function renderLogistica() {
       cliente:           p.cliente,
       industria:         p.industria,
       data:              p.data,
-      previsao:          _logPrevisaoPorNF(p.nf?.data),   // automática: data da NF + 20 dias
+      previsao:          _logPrevisaoPorNF(p.nf?.data),   // automática: data da NF + 15 dias
       dataEntrega:       l.dataEntrega    || '',
       statusLog:         l.statusLog      || 'Pedido Digitado',
       obs:               l.obs            || ''
@@ -16200,7 +16200,7 @@ function aplicarImpactoTratativa(trat, ped) {
 }
 
 /* ══ v36 — PRAZO DAS TRATATIVAS ══════════════════════════════════════════════
-   A empresa tem meta de solucionar cada tratativa em N dias (padrão 15,
+   A empresa tem meta de solucionar cada tratativa em N dias (padrão 20,
    configurável em Configurações). Aqui ficam os utilitários de data/prazo.  */
 function _tratPrazoDias(){ return (typeof configSistema!=='undefined' && parseInt(configSistema.prazoTratDias)) || 20; }
 // "04/09/2026, 14:35" → Date local (só a parte da data)
