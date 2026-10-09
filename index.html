@@ -1646,13 +1646,13 @@ tr:last-child td{border-bottom:none;}
           <option value="hoje">📅 Entrega hoje</option>
         </select>
       </div>
-      <div class="alert alert-info" style="margin-bottom:10px">📅 A <strong>previsão de entrega é automática: data de faturamento (NF) + 15 dias</strong> — não conta a partir da implantação do pedido. Edite <strong>data de entrega, status e observação</strong> diretamente na tabela (salvos ao sair do campo). Pedidos com prazo vencido e não entregues aparecem em vermelho.</div>
+      <div class="alert alert-info" style="margin-bottom:10px">📅 A <strong>previsão de entrega é automática: data de faturamento (NF) + 15 dias úteis</strong> (não conta sábado, domingo nem feriado) — não conta a partir da implantação do pedido. Edite <strong>data de entrega, status e observação</strong> diretamente na tabela (salvos ao sair do campo). Pedidos com prazo vencido e não entregues aparecem em vermelho.</div>
       <div class="card" style="padding:0;overflow:hidden">
         <div class="table-wrap">
           <table>
             <thead><tr>
               <th>Pedido</th><th>Nº Ped. Cliente</th><th>NF</th><th>Cliente</th><th>Indústria</th><th>Data</th>
-              <th>Previsão Entrega <span style="font-weight:400;font-size:10px">(NF + 15d)</span></th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
+              <th>Previsão Entrega <span style="font-weight:400;font-size:10px">(NF + 15 dias úteis)</span></th><th>Data Entregue</th><th>Situação</th><th>Status</th><th>Observação</th>
             </tr></thead>
             <tbody id="log-tbody"></tbody>
           </table>
@@ -2643,6 +2643,10 @@ tr:last-child td{border-bottom:none;}
           <div class="form-group"><label>⏱️ Prazo para solucionar tratativas (dias)</label>
             <input type="number" id="cfg-prazo-trat" value="20" min="1" max="90">
             <div style="font-size:11px;color:#888;margin-top:3px">Meta da empresa. Tratativas ativas além deste prazo ficam em vermelho.</div>
+          </div>
+          <div class="form-group"><label>🚚 Feriados extras (logística)</label>
+            <input type="text" id="cfg-feriados-extras" placeholder="Ex: 24/06, 15/08, 20/02/2027">
+            <div style="font-size:11px;color:#888;margin-top:3px">Feriados estaduais/municipais que não contam no prazo de entrega (dd/mm = todo ano, dd/mm/aaaa = só naquele ano). Os nacionais, Carnaval, Sexta-feira Santa e Corpus Christi já são descontados automaticamente.</div>
           </div>
           <div class="form-group"><label>E-mail do Administrador</label>
             <input type="email" id="cfg-email-admin" placeholder="admin@empresa.com">
@@ -4121,7 +4125,7 @@ tr:last-child td{border-bottom:none;}
       </select>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label>Previsão de Entrega (NF + 15 dias)</label><input type="date" id="log-previsao" readonly style="background:#f5f5f5"><div style="font-size:10px;color:#888;margin-top:3px">Calculada automaticamente a partir da data do faturamento</div></div>
+      <div class="form-group"><label>Previsão de Entrega (NF + 15 dias úteis)</label><input type="date" id="log-previsao" readonly style="background:#f5f5f5"><div style="font-size:10px;color:#888;margin-top:3px">Calculada automaticamente a partir da data do faturamento</div></div>
       <div class="form-group"><label>📦 Data de Entrega Real</label><input type="date" id="log-data-entrega"><div style="font-size:10px;color:#888;margin-top:3px">Preencha quando o pedido for efetivamente entregue</div></div>
     </div>
     <div class="form-group"><label>Observação</label><textarea id="log-obs-status" rows="2" placeholder="Informações adicionais..."></textarea></div>
@@ -14337,9 +14341,43 @@ function addAudit(user, acao, icon='ℹ️') {
 /* ══════════════════════════
    LOGÍSTICA
 ══════════════════════════ */
-// Prazo de entrega: 15 dias corridos a partir da DATA DE FATURAMENTO (data da NF),
+// Prazo de entrega: 15 DIAS ÚTEIS a partir da DATA DE FATURAMENTO (data da NF),
 // e não da data em que o pedido foi implantado no sistema.
+// Não conta sábado, domingo nem feriado (nacionais fixos, Carnaval, Sexta-feira
+// Santa, Corpus Christi e os feriados extras cadastrados em Configurações).
 const PRAZO_ENTREGA_LOG_DIAS = 15;
+function _iso(dt){ return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+function _pascoa(ano){ // algoritmo de Meeus/Jones/Butcher
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),
+        g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,
+        l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+        mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;
+  return new Date(ano,mes-1,dia);
+}
+var _feriadosCache = {};
+function _feriadosDoAno(ano){
+  const extrasTxt = (typeof configSistema!=='undefined' && configSistema.feriadosExtras) || '';
+  const chave = ano+'|'+extrasTxt;
+  if(_feriadosCache[chave]) return _feriadosCache[chave];
+  const set = new Set();
+  ['01-01','04-21','05-01','09-07','10-12','11-02','11-15','11-20','12-25'].forEach(md=>set.add(ano+'-'+md));
+  const p = _pascoa(ano);
+  [-48,-47,-2,60].forEach(off=>{ const d=new Date(p); d.setDate(d.getDate()+off); set.add(_iso(d)); }); // Carnaval (seg/ter), Sexta Santa, Corpus Christi
+  // Feriados extras (estaduais/municipais): "dd/mm" (todo ano) ou "dd/mm/aaaa"
+  String(extrasTxt).split(/[\s,;]+/).forEach(t=>{
+    const m = t.trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+    if(!m) return;
+    if(m[3] && +m[3]!==ano) return;
+    set.add(ano+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[1]).padStart(2,'0'));
+  });
+  _feriadosCache = {}; _feriadosCache[chave] = set;
+  return set;
+}
+function _ehDiaUtil(dt){
+  const ds = dt.getDay();
+  if(ds===0 || ds===6) return false;
+  return !_feriadosDoAno(dt.getFullYear()).has(_iso(dt));
+}
 function _logPrevisaoPorNF(nfData) {
   if (!nfData) return '';
   let y, m, d;
@@ -14349,8 +14387,12 @@ function _logPrevisaoPorNF(nfData) {
   else if ((mt = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/))) { d=+mt[1]; m=+mt[2]; y=+mt[3]; } // DD/MM/YYYY
   else return '';
   const dt = new Date(y, m-1, d);
-  dt.setDate(dt.getDate() + PRAZO_ENTREGA_LOG_DIAS);
-  return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  let contados = 0;
+  while(contados < PRAZO_ENTREGA_LOG_DIAS){
+    dt.setDate(dt.getDate()+1);
+    if(_ehDiaUtil(dt)) contados++;
+  }
+  return _iso(dt);
 }
 
 function _logIsAtrasado(l) {
@@ -14414,7 +14456,7 @@ function renderLogistica() {
       cliente:           p.cliente,
       industria:         p.industria,
       data:              p.data,
-      previsao:          _logPrevisaoPorNF(p.nf?.data),   // automática: data da NF + 15 dias
+      previsao:          _logPrevisaoPorNF(p.nf?.data),   // automática: data da NF + 15 dias úteis
       dataEntrega:       l.dataEntrega    || '',
       statusLog:         l.statusLog      || 'Pedido Digitado',
       obs:               l.obs            || ''
@@ -14532,7 +14574,7 @@ function renderLogistica() {
       rowStyle = 'background:#fffbeb;';
       situacaoBadge = `<span class="badge badge-amarelo">📅 Hoje</span>`;
     } else if(!l.previsao && !['Cancelado'].includes(l.statusLog)) {
-      situacaoBadge = `<span class="badge badge-cinza" title="O prazo de ${PRAZO_ENTREGA_LOG_DIAS} dias só começa a contar após o faturamento">❓ Aguardando faturamento</span>`;
+      situacaoBadge = `<span class="badge badge-cinza" title="O prazo de ${PRAZO_ENTREGA_LOG_DIAS} dias úteis só começa a contar após o faturamento">❓ Aguardando faturamento</span>`;
     } else if(l.previsao) {
       situacaoBadge = `<span class="badge badge-azul">🕐 No prazo</span>`;
     }
@@ -14559,7 +14601,7 @@ function renderLogistica() {
       <td>${l.data}</td>
       <td>
         <input type="date" value="${l.previsao}" readonly tabindex="-1"
-          title="${l.previsao ? 'Calculado automaticamente: data da NF + '+PRAZO_ENTREGA_LOG_DIAS+' dias' : 'Será calculado após o faturamento (NF)'}"
+          title="${l.previsao ? 'Calculado automaticamente: data da NF + '+PRAZO_ENTREGA_LOG_DIAS+' dias úteis (sem sáb., dom. e feriados)' : 'Será calculado após o faturamento (NF)'}"
           style="${inStyle}width:130px;background:#f5f5f5;cursor:default${atrasado?';border-color:#fca5a5':''}">
       </td>
       <td>
@@ -15886,6 +15928,7 @@ function salvarConfig(){
   configSistema.moeda        = (el('cfg-moeda')||{}).value || configSistema.moeda;
   configSistema.diasAlerta   = parseInt((el('cfg-dias-alerta')||{}).value)||5;
   configSistema.prazoTratDias = parseInt((el('cfg-prazo-trat')||{}).value)||20;
+  if(el('cfg-feriados-extras')) configSistema.feriadosExtras = (el('cfg-feriados-extras').value||'').trim();
   configSistema.emailAdmin   = (el('cfg-email-admin')||{}).value || configSistema.emailAdmin;
   if(el('cfg-webmail-url')) configSistema.webmailUrl = (el('cfg-webmail-url').value || '').trim() || WEBMAIL_PADRAO;
   if(el('cfg-webmail-compor')) configSistema.webmailComporUrl = (el('cfg-webmail-compor').value || '').trim();
@@ -16858,6 +16901,7 @@ function renderConfiguracoes() {
   if(el('cfg-moeda'))       el('cfg-moeda').value        = configSistema.moeda      || 'BRL';
   if(el('cfg-dias-alerta')) el('cfg-dias-alerta').value  = configSistema.diasAlerta || 5;
   if(el('cfg-prazo-trat'))  el('cfg-prazo-trat').value   = configSistema.prazoTratDias || 20;
+  if(el('cfg-feriados-extras')) el('cfg-feriados-extras').value = configSistema.feriadosExtras || '';
   if(el('cfg-email-admin')) el('cfg-email-admin').value  = configSistema.emailAdmin || '';
   if(el('cfg-webmail-url')) el('cfg-webmail-url').value  = configSistema.webmailUrl || WEBMAIL_PADRAO;
   if(el('cfg-webmail-compor')) el('cfg-webmail-compor').value = configSistema.webmailComporUrl || '';
