@@ -1338,6 +1338,7 @@ tr:last-child td{border-bottom:none;}
   <div class="sidebar-section">
     <div class="sidebar-label">Análises</div>
     <div class="nav-item" onclick="showPanel('relatorios',this)"><span class="nav-icon">📈</span> Relatórios / KPIs</div>
+    <div class="nav-item" onclick="showPanel('analise',this)"><span class="nav-icon">🔎</span> Análise Cliente × Indústria</div>
     <div class="nav-item" onclick="showPanel('importexport',this)"><span class="nav-icon">🗂️</span> Import / Export</div>
   </div>
 
@@ -1542,7 +1543,7 @@ tr:last-child td{border-bottom:none;}
       🛒 <strong>Venda</strong> e 🎁 <strong>Bonificação</strong> aparecem separados nos indicadores acima e na coluna <strong>Tipo</strong>. O acompanhamento <strong>mês a mês</strong> está em <strong>Relatórios / KPIs</strong> e em <strong>Fat. Mensal por Indústria</strong>.</div>
 
       <!-- KPIs: faturado de VENDA x faturado de BONIFICAÇÃO -->
-      <div class="kpi-grid" id="fat-kpi-grid" style="margin-bottom:16px"></div>
+      <div class="kpi-grid" id="fat-kpi-grid" style="margin-bottom:16px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"></div>
 
       <div class="month-pills">
         <button class="month-pill active" onclick="filtrarFatMes('',this)">Todos</button>
@@ -1581,7 +1582,7 @@ tr:last-child td{border-bottom:none;}
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>NF</th><th>Pedido</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Val. Pedido</th><th>Val. NF</th><th>Abatimentos</th><th>Devoluções</th><th>Desc. Fin.</th><th>NFD</th><th>Bonif. s/ Com.</th><th class="bold">NF Líquida</th><th>Ações</th></tr></thead>
+          <thead><tr><th>NF</th><th>Pedido</th><th>Tipo</th><th>Cliente</th><th>Indústria</th><th>Data</th><th>Val. Pedido</th><th>Val. NF</th><th>Abatimentos</th><th>Devoluções</th><th>Desc. Fin.</th><th>NFD</th><th>Bonif. s/ Com.</th><th title="(Abatimentos + Desc. financeiro) ÷ Valor da NF">% Desc.</th><th class="bold">NF Líquida</th><th>Ações</th></tr></thead>
           <tbody id="fat-tbody"></tbody>
         </table>
       </div>
@@ -2929,6 +2930,39 @@ tr:last-child td{border-bottom:none;}
           <div id="si-tabela"></div>
         </div>
       </div>
+    </div>
+
+    <!-- ===== ANÁLISE CLIENTE × INDÚSTRIA (v45) ===== -->
+    <div class="panel" id="panel-analise">
+      <div class="section-bar">
+        <div><div class="section-title">🔎 Análise Cliente × Indústria</div><div class="section-sub">Veja em segundos como está cada cliente ou indústria: o que parou, o que dá para vender e o que fazer agora</div></div>
+        <div class="export-btns">
+          <button class="btn btn-outline btn-sm" onclick="anaGerarTarefasAlertas()">✅ Gerar tarefas dos alertas</button>
+          <button class="btn btn-info btn-sm" onclick="exportarAnalise()">📤 Exportar Excel</button>
+        </div>
+      </div>
+      <div class="search-bar" style="flex-wrap:wrap">
+        <select id="ana-visao" onchange="anaTrocarVisao()">
+          <option value="cli">Visão: por cliente</option>
+          <option value="ind">Visão: por indústria</option>
+        </select>
+        <select id="ana-cli" onchange="renderAnalise()" style="min-width:200px"></select>
+        <select id="ana-ind" onchange="renderAnalise()" style="min-width:170px"></select>
+        <select id="ana-periodo" onchange="renderAnalise()">
+          <option value="30">Últimos 30 dias</option>
+          <option value="60">Últimos 60 dias</option>
+          <option value="90" selected>Últimos 90 dias</option>
+          <option value="180">Últimos 180 dias</option>
+          <option value="365">Últimos 12 meses</option>
+        </select>
+        <select id="ana-comparar" onchange="renderAnalise()" title="Grupo usado para comparar e sugerir vendas possíveis">
+          <option value="segmento">Comparar: mesmo segmento</option>
+          <option value="todos">Comparar: todos os clientes</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;white-space:nowrap">Parado após
+          <input type="number" id="ana-dias" value="60" min="15" max="365" step="5" onchange="renderAnalise()" style="width:64px;padding:6px 8px;border:1.5px solid var(--cinza-medio);border-radius:6px;font-size:12px"> dias</label>
+      </div>
+      <div id="ana-conteudo"></div>
     </div>
 
 <!-- ═══ Módulo Financeiro — trazido do v29 ═══ -->
@@ -4421,7 +4455,7 @@ let configSistema = {
   lembReuniaoDias:    [1,2,3,4,5],   // dias em que é permitido enviar
   modulosAtivos: ['dashboard','orcamentos','pedidos','faturamento','logistica',
     'tratativas','saldo','ctrlsaldo','comissoes','fatmensal','sellinout','metas','relatorios',
-    'mix','redes','clientes','industrias','produtos','regras','usuarios','configuracoes','importexport','sync']
+    'mix','redes','clientes','industrias','produtos','regras','usuarios','configuracoes','importexport','sync','analise']
 };
 
 let tratativas = [];
@@ -4470,6 +4504,7 @@ const TODOS_MODULOS = [
   {key:'sellinout',   label:'Sell Out',     icone:'↕️'},
   {key:'metas',       label:'Metas',                  icone:'🎯'},
   {key:'relatorios',  label:'Relatórios / KPIs',      icone:'📈'},
+  {key:'analise',     label:'Análise Cliente × Indústria', icone:'🔎'},
   {key:'mix',         label:'Mix de Produtos',        icone:'🧩'},
   {key:'redes',       label:'Redes / Grupos',         icone:'🔗'},
   {key:'clientes',    label:'Clientes / Filiais',     icone:'👥'},
@@ -4493,7 +4528,7 @@ function defaultPerms(perfil) {
       'conta-corrente':'ver', 'tarefas':'editar', 'atas':'ver',
       dashboard:'ver', faturamento:'editar', nfcompare:'ver',
       saldo:'ver', comissoes:'editar', fatmensal:'ver', tratativas:'editar',
-      metas:'ver', relatorios:'ver', clientes:'ver',
+      metas:'ver', relatorios:'ver', clientes:'ver', analise:'ver',
       orcamentos:'nenhum', pedidos:'ver', logistica:'nenhum',
       sellinout:'nenhum', mix:'nenhum', industrias:'nenhum', produtos:'nenhum',
       regras:'nenhum', usuarios:'nenhum', configuracoes:'nenhum',
@@ -4503,7 +4538,7 @@ function defaultPerms(perfil) {
       'tarefas':'editar', 'atas':'editar', 'crm':'editar',
       dashboard:'ver', orcamentos:'editar', pedidos:'editar', faturamento:'ver',
       nfcompare:'ver', fatmensal:'ver', sellinout:'editar', metas:'ver',
-      relatorios:'ver', mix:'editar', clientes:'ver', industrias:'ver',
+      relatorios:'ver', analise:'ver', mix:'editar', clientes:'ver', industrias:'ver',
       produtos:'ver', logistica:'nenhum', tratativas:'ver',
       saldo:'nenhum', comissoes:'nenhum', regras:'nenhum',
       usuarios:'nenhum', configuracoes:'nenhum',
@@ -4521,7 +4556,7 @@ function defaultPerms(perfil) {
       // SEM 'financeiro'. Tarefas/atas liberadas: precisa das próprias.
       'tarefas':'editar', 'atas':'ver',
       dashboard:'ver', orcamentos:'editar', pedidos:'ver', sellinout:'ver',
-      mix:'ver', clientes:'ver',
+      mix:'ver', clientes:'ver', analise:'ver',
       faturamento:'nenhum', nfcompare:'nenhum', logistica:'nenhum', tratativas:'nenhum',
       fatmensal:'nenhum', saldo:'nenhum', comissoes:'nenhum', metas:'nenhum',
       relatorios:'nenhum', industrias:'nenhum', produtos:'nenhum',
@@ -4540,6 +4575,10 @@ function getPerms(userId) {
   if(!userPerms[userId]) {
     const u = usuarios.find(x=>x.id===userId);
     userPerms[userId] = defaultPerms(u?.perfil||'representante');
+  }
+  if(!('analise' in userPerms[userId])) {
+    const u2 = usuarios.find(x=>x.id===userId);
+    userPerms[userId].analise = defaultPerms(u2?.perfil||'representante').analise || 'nenhum';
   }
   return userPerms[userId];
 }
@@ -4722,6 +4761,12 @@ function _migrarConfigLembretes() {
       configSistema.modulosAtivos = configSistema.modulosAtivos.filter(function(k){ return k !== 'nfcompare'; });
     }
     configSistema._v32OcultarNfcompare = true;
+  }
+  /* v45 — módulo Análise Cliente × Indústria ativado por padrão (uma vez) */
+  if(!configSistema._v45Analise) {
+    if(Array.isArray(configSistema.modulosAtivos) && configSistema.modulosAtivos.indexOf('analise') < 0)
+      configSistema.modulosAtivos.push('analise');
+    configSistema._v45Analise = true;
   }
   /* Webmail: quem tinha o endereço antigo (GoDaddy / myprofessionalmail) passa para o Titan */
   if(!configSistema.webmailUrl || /myprofessionalmail|godaddy/i.test(configSistema.webmailUrl)) {
@@ -5313,7 +5358,7 @@ const panelTitles = {
   mix:'Mix de Produtos',redes:'Redes / Grupos Comerciais',
   clientes:'Clientes / Filiais',industrias:'Indústrias',produtos:'Produtos',
   regras:'Regras Comerciais',importexport:'Importações e Exportações',
-  configuracoes:'Configurações',usuarios:'Usuários e Acessos',relatorios:'Relatórios e Indicadores'
+  configuracoes:'Configurações',usuarios:'Usuários e Acessos',relatorios:'Relatórios e Indicadores',analise:'Análise Cliente × Indústria'
 };
 
 function showPanel(name, navEl) {
@@ -5355,6 +5400,7 @@ function showPanel(name, navEl) {
   if(name==='logistica')    renderLogistica();
   if(name==='sellinout')    renderSellInOut();
   if(name==='relatorios')   renderRelatorios();
+  if(name==='analise')      renderAnalise();
   if(name==='usuarios')     renderUsuarios();
   if(name==='tratativas')   renderTratativas();
   if(name==='metas')        renderMetas();
@@ -7611,6 +7657,11 @@ function renderFaturamento() {
   });
   const kTotal = kVenda + kBonif;
   const pctBon = kTotal > 0 ? (kBonif / kTotal * 100) : 0;
+  // v45 — % Desconto: abatimentos + desconto financeiro sobre o valor bruto das NFs de venda
+  let kDesc = 0, kDev = 0;
+  list.forEach(p => { if(_fatEhBonificacao(p)) return; const n = p.nf||{};
+    kDesc += (n.abatimentos||0) + (n.descFin||0); kDev += (n.devolucoes||0) + (n.nfd||0); });
+  const pctDesc = kBruto > 0 ? (kDesc / kBruto * 100) : 0;
   const kpiGrid = el('fat-kpi-grid');
   if(kpiGrid) kpiGrid.innerHTML = `
     <div class="kpi-card kpi-verde">
@@ -7632,11 +7683,16 @@ function renderFaturamento() {
       <div class="kpi-label">% Bonificação</div>
       <div class="kpi-value">${pctBon.toFixed(1).replace('.',',')}%</div>
       <div class="kpi-sub ${pctBon>15?'neg':''}">sobre o total faturado</div>
+    </div>
+    <div class="kpi-card kpi-vermelho">
+      <div class="kpi-label">% Desconto</div>
+      <div class="kpi-value">${pctDesc.toFixed(1).replace('.',',')}%</div>
+      <div class="kpi-sub ${pctDesc>10?'neg':''}">${fmt(kDesc)} abatidos · devol./NFD ${fmt(kDev)} à parte</div>
     </div>`;
 
   // ── Tabela de NFs ──
   if(list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;color:#aaa;padding:20px">Nenhuma NF encontrada para os filtros selecionados</td></tr>';
     return;
   }
   tbody.innerHTML = list.map(p => {
@@ -7660,6 +7716,10 @@ function renderFaturamento() {
       <td class="vermelho">${n.descFin>0?'- '+fmt(n.descFin):'—'}</td>
       <td class="vermelho">${n.nfd>0?'- '+fmt(n.nfd):'—'}</td>
       <td class="vermelho">${n.bonif>0?'- '+fmt(n.bonif):'—'}</td>
+      <td>${(()=>{ if(isBon || !(n.valorNF>0)) return '<span style="color:#aaa">—</span>';
+        const pd=((n.abatimentos||0)+(n.descFin||0))/n.valorNF*100;
+        if(pd<0.05) return '<span style="color:#aaa">0%</span>';
+        return '<span class="badge '+(pd>10?'badge-vermelho':'badge-amarelo')+'">'+pd.toFixed(1).replace('.',',')+'%</span>'; })()}</td>
       <td class="bold ${isBon?'':'verde'}">${isBon ? '<span style="color:#b8900a">'+fmt(n.valorNF||p.total||0)+'</span>' : fmt(n.liquida)}</td>
       <td>${isSemPed ? '<span style="font-size:11px;color:#aaa">🧾 Direto</span>' : `<button class="btn btn-outline btn-xs" onclick="abrirCompare('${p.id}')">⚖️ Compare</button>`}</td>
     </tr>`;
@@ -7710,12 +7770,13 @@ function exportarFaturamento(){
 
   // Aba 1 — NFs detalhadas, com a coluna Tipo
   const rows = [['NF','Pedido','Tipo','Cliente','Indústria','Data','Val.Pedido','Val.NF',
-    'Abatimentos','Devoluções','Desc.Fin.','NFD','Bonif.s/Com.','NF Líquida',
+    'Abatimentos','Devoluções','Desc.Fin.','NFD','Bonif.s/Com.','% Desconto','NF Líquida',
     'Faturado Venda','Faturado Bonificação']];
   pedidos.filter(p => p.nf && !p.excluido).forEach(p => {
     const n = p.nf, v = _fatValores(p);
     rows.push([n.numero, p.id, _fatEhBonificacao(p)?'Bonificação':'Venda', p.cliente, p.industria,
       n.data, n.valorPedido, n.valorNF, n.abatimentos, n.devolucoes, n.descFin, n.nfd, n.bonif,
+      (!_fatEhBonificacao(p) && n.valorNF>0) ? _r2(((n.abatimentos||0)+(n.descFin||0))/n.valorNF*100) : '',
       n.liquida, v.venda, v.bonif]);
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Faturamento');
@@ -16909,6 +16970,7 @@ function renderConfiguracoes() {
       {key:'sellinout',   label:'Sell Out',    desc:'Vendas lançadas manualmente'},
       {key:'metas',       label:'Metas',                 desc:'Metas mensais por indústria'},
       {key:'relatorios',  label:'Relatórios / KPIs',     desc:'Análises e indicadores gerenciais'},
+      {key:'analise',     label:'Análise Cliente × Indústria', desc:'Produtos parados, vendas possíveis, percentuais'},
       {key:'mix',         label:'Mix de Produtos',       desc:'Portfólio por cliente × indústria'},
       {key:'clientes',    label:'Clientes',              desc:'Cadastro de clientes'},
       {key:'industrias',  label:'Indústrias',            desc:'Cadastro de indústrias'},
@@ -19448,6 +19510,926 @@ function atualizarTextoAutoSave(swEl) {
   } catch(e) {}
 })();
 
+
+/* ══════════════════════════════════════════════════════════════
+   v46 — ANÁLISE CLIENTE × INDÚSTRIA (dinâmica)
+   Base: pedidos de venda (não excluídos/cancelados). Data = data da NF
+   quando houver, senão data do pedido. Valor = Val. NF (bruto) quando
+   faturado, senão total do pedido. Análise por produto depende de
+   pedidos com itens.
+   Tela: resumo em frases → indicadores com semáforo (clicáveis) → abas.
+══════════════════════════════════════════════════════════════ */
+let _anaUltimo = null;   // último resultado calculado (exportar / tarefas / abas)
+let _anaTab    = 'resumo';
+let _anaSort   = {};     // ordenação por tabela {id:{i,d}}
+let _anaRank   = [];     // ranking "quem precisa de atenção"
+let _anaAjudaAberta = false;
+
+/* ───────── utilitários ───────── */
+function _anaISO(d) {
+  if(!d) return '';
+  d = String(d);
+  if(d.includes('T')) d = d.split('T')[0];
+  if(d.includes('/')) { const p = d.split('/'); if(p.length===3) return `${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; }
+  return d.slice(0,10);
+}
+function _anaDataPed(p) { return _anaISO((p.nf && p.nf.data) || p.data); }
+function _anaValorPed(p) { return (p.nf && p.nf.valorNF) ? +p.nf.valorNF : (parseFloat(p.total)||0); }
+function _anaValido(p) {
+  if(!p || p.excluido) return false;
+  const st = String(p.status||'').toLowerCase();
+  return !(st.includes('cancel') || st.includes('exclu'));
+}
+function _anaPedsVenda()  { return pedidos.filter(p => _anaValido(p) && p.tipo !== 'bonificacao' && _anaDataPed(p)); }
+function _anaPedsBonif()  { return pedidos.filter(p => _anaValido(p) && p.tipo === 'bonificacao' && _anaDataPed(p)); }
+function _anaItemKey(it)  { return String(it.cod || it.desc || '').trim().toUpperCase(); }
+function _anaDiasAtras(n) { const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+function _anaPct(v, casas=1) { return (isFinite(v)?v:0).toFixed(casas).replace('.',',') + '%'; }
+function _anaMesLbl(ym) { const [a,m] = ym.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+a.slice(2); }
+function _anaDescPed(p) { const n = p.nf||{}; return (n.abatimentos||0) + (n.descFin||0); }
+function _anaPl(n, s, p) { return n===1 ? s : (p || s+'s'); }
+function _anaK(v) { v = +v||0; return v>=1e6 ? (v/1e6).toFixed(1).replace('.',',')+'M' : v>=1000 ? Math.round(v/1000)+'k' : String(Math.round(v)); }
+function _anaPeriodoTxt(per) { return per>=365 ? 'nos últimos 12 meses' : `nos últimos ${per} dias`; }
+function _anaMeses12() { const d = new Date(), r = []; for(let i=11;i>=0;i--){ const x=new Date(d.getFullYear(), d.getMonth()-i, 1); r.push(x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')); } return r; }
+
+/* cliente selecionado: 'c:Nome' ou 'r:Rede' */
+function _anaCliMatcher(sel) {
+  if(!sel) return () => true;
+  const [t, nome] = [sel.slice(0,1), sel.slice(2)];
+  if(t === 'r') return c => normalizarGrupoSellOut(c) === nome;
+  return c => c === nome;
+}
+function _anaSegmentoDe(sel) {
+  if(!sel) return '';
+  const [t, nome] = [sel.slice(0,1), sel.slice(2)];
+  const c = t==='r' ? clientes.find(x => x.rede === nome) : clientes.find(x => x.nome === nome);
+  return c?.segmento || '';
+}
+function _anaNomesDoSel(sel) {
+  if(!sel) return [];
+  const [t, nome] = [sel.slice(0,1), sel.slice(2)];
+  if(t === 'c') return [nome];
+  const s = new Set(clientes.filter(c => c.rede === nome).map(c => c.nome));
+  pedidos.forEach(p => { if(normalizarGrupoSellOut(p.cliente) === nome) s.add(p.cliente); });
+  return [...s];
+}
+
+/* ───────── estilo (injetado uma vez) ───────── */
+function _anaCss() {
+  if(el('ana-css')) return;
+  const s = document.createElement('style'); s.id = 'ana-css';
+  s.textContent = `
+  #panel-analise .ana-resumo{background:#fffdf3;border:1px solid var(--amarelo-claro,#FFF3B0);border-left:5px solid var(--amarelo);border-radius:10px;padding:14px 18px;margin-bottom:16px}
+  #panel-analise .ana-resumo h3{margin:0 0 8px;font-size:15px}
+  #panel-analise .ana-resumo ul{margin:0;padding:0;list-style:none;font-size:13.5px;line-height:1.9}
+  #panel-analise .ana-kpi{cursor:pointer;transition:transform .12s, box-shadow .12s;position:relative;overflow:visible}
+  #panel-analise .ana-kpi:hover{z-index:30}
+  #panel-analise .ana-kpi:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+  #panel-analise .ana-kpi .ana-st{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:6px}
+  #panel-analise .ana-kpi .ana-q{position:absolute;top:8px;right:10px;font-size:12px;color:#aaa}
+  #panel-analise .ana-kpi .ana-dica{display:none;position:absolute;z-index:20;left:8px;right:8px;top:100%;margin-top:6px;background:#1a1a1a;color:#fff;font-size:12px;line-height:1.45;padding:10px 12px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);text-transform:none;letter-spacing:0;font-weight:400}
+  #panel-analise .ana-kpi:hover .ana-dica{display:block}
+  #panel-analise .ana-tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--cinza-medio,#ddd);margin:4px 0 14px}
+  #panel-analise .ana-tab{background:none;border:none;padding:9px 14px;font-size:13px;font-family:inherit;cursor:pointer;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0}
+  #panel-analise .ana-tab:hover{background:rgba(0,0,0,.03);color:#222}
+  #panel-analise .ana-tab.on{color:#111;font-weight:700;border-bottom-color:var(--amarelo)}
+  #panel-analise .ana-tab-n{display:inline-block;min-width:18px;padding:0 6px;border-radius:10px;background:#eee;color:#555;font-size:11px;margin-left:4px;text-align:center}
+  #panel-analise .ana-tab-n.alerta{background:var(--vermelho);color:#fff}
+  #panel-analise .ana-tab-n.bom{background:var(--verde);color:#fff}
+  #panel-analise .ana-explica{background:#f4f8fd;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#345;line-height:1.55;margin-bottom:12px}
+  #panel-analise .ana-busca{width:100%;max-width:320px;padding:7px 10px;border:1.5px solid var(--cinza-medio,#ddd);border-radius:6px;font-size:12px;font-family:inherit}
+  #panel-analise .ana-link{color:var(--azul);cursor:pointer;text-decoration:underline dotted}
+  #panel-analise .ana-link:hover{text-decoration:underline}
+  #panel-analise .ana-acao{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+  #panel-analise .ana-acao:last-child{border-bottom:none}
+  #panel-analise .ana-acao .ana-acao-n{width:26px;height:26px;border-radius:50%;background:var(--amarelo);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+  #panel-analise .ana-barra{transition:opacity .15s;cursor:default}
+  #panel-analise .ana-barra:hover{opacity:.75}
+  #panel-analise details.ana-ajuda{background:#fafafa;border:1px dashed #ccc;border-radius:8px;padding:8px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.6}
+  #panel-analise details.ana-ajuda summary{cursor:pointer;font-weight:600;color:#555}
+  #panel-analise .ana-rank-row{cursor:pointer}
+  #panel-analise .ana-rank-row:hover td{background:#fffbe6}
+  `;
+  document.head.appendChild(s);
+}
+
+/* ───────── componentes visuais ───────── */
+const _ANA_ST = {
+  bom:  {t:'Bom',      i:'👍', c:'var(--verde)',    bg:'#e6f4ea', kpi:'verde'},
+  aten: {t:'Atenção',  i:'⚠️', c:'#9a7400',         bg:'#fff4d1', kpi:'amarelo'},
+  crit: {t:'Crítico',  i:'🔴', c:'var(--vermelho)', bg:'#fde7e5', kpi:'vermelho'},
+  neu:  {t:'',         i:'',   c:'#888',            bg:'transparent', kpi:'azul'}
+};
+function _anaKpi2({label, valor, sub='', st='neu', dica='', tab=''}) {
+  const S = _ANA_ST[st] || _ANA_ST.neu;
+  return `<div class="kpi-card kpi-${S.kpi} ana-kpi" ${tab?`onclick="anaIrAba('${tab}')"`:''}>
+    <span class="ana-q">ⓘ</span>
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value" style="color:${st==='neu'?'inherit':S.c}">${valor}</div>
+    <div class="kpi-sub">${sub}</div>
+    ${S.t?`<span class="ana-st" style="background:${S.bg};color:${S.c}">${S.i} ${S.t}</span>`:''}
+    ${dica?`<div class="ana-dica">${dica}${tab?'<div style="margin-top:6px;color:#F5C500">Clique para ver os detalhes →</div>':''}</div>`:''}
+  </div>`;
+}
+function _anaCard(titulo, extra, corpo, sub='') {
+  return `<div class="card" style="padding:0;overflow:visible;margin-bottom:16px">
+    <div class="card-header" style="padding:12px 16px;margin:0;flex-wrap:wrap;gap:8px"><div><div class="card-title">${titulo}</div>${sub?`<div style="font-size:11px;color:#888;margin-top:2px">${sub}</div>`:''}</div>${extra||''}</div>
+    <div style="overflow-x:auto">${corpo}</div></div>`;
+}
+function _anaVazio(msg, cols) { return `<tr><td colspan="${cols}" style="text-align:center;color:#999;padding:22px">${msg}</td></tr>`; }
+function _anaBar(pct, cor='var(--azul)') {
+  const w = Math.max(0, Math.min(100, pct));
+  return `<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;min-width:60px;height:8px;background:#eee;border-radius:4px;overflow:hidden"><div style="width:${w}%;height:100%;background:${cor}"></div></div><span style="font-size:11px;min-width:38px;text-align:right">${_anaPct(pct,0)}</span></div>`;
+}
+function _anaExplica(html) { return `<div class="ana-explica">💬 ${html}</div>`; }
+function _anaTag(t) { return `<span class="tag">${esc(t||'—')}</span>`; }
+function _anaDiasBadge(d, lim) { return `<span class="badge ${d>2*lim?'badge-vermelho':'badge-amarelo'}">${d} dias</span>`; }
+
+/* Tabela com ordenação (clique no título) e filtro rápido */
+function _anaTabela(id, cols, rows, vazio) {
+  const s = _anaSort[id];
+  let r = rows.slice();
+  if(s && cols[s.i]?.v) { const c = cols[s.i]; r.sort((a,b) => { const va=c.v(a), vb=c.v(b); return (va>vb?1:va<vb?-1:0)*s.d; }); }
+  return `${rows.length>6?`<div style="padding:10px 16px 4px"><input class="ana-busca" placeholder="🔍 Filtrar nesta lista..." oninput="_anaFiltrar(this,'${id}')"></div>`:''}
+  <table id="anat-${id}"><thead><tr>${cols.map((c,i)=>`<th ${c.v?`style="cursor:pointer;white-space:nowrap" onclick="anaOrdenar('${id}',${i})" title="Clique para ordenar"`:''}>${c.h}${c.v?(s&&s.i===i?(s.d>0?' ▲':' ▼'):' <span style="opacity:.3">⇅</span>'):''}</th>`).join('')}</tr></thead>
+  <tbody>${r.length ? r.map(x=>`<tr>${cols.map(c=>`<td>${c.f(x)}</td>`).join('')}</tr>`).join('') : _anaVazio(vazio, cols.length)}</tbody></table>`;
+}
+function anaOrdenar(id, i) { const s = _anaSort[id]; _anaSort[id] = (s && s.i===i) ? {i, d:-s.d} : {i, d:-1}; _anaRenderAba(); }
+function _anaFiltrar(inp, id) {
+  const q = inp.value.toLowerCase();
+  document.querySelectorAll('#anat-'+id+' tbody tr').forEach(tr => { tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'; });
+}
+
+/* Gráfico mensal com linha de média */
+function _anaGrafico(meses, porMes) {
+  const vals = meses.map(m => porMes[m]||0);
+  const max = Math.max(1, ...vals);
+  const comV = vals.filter(v=>v>0);
+  const media = comV.length ? comV.reduce((a,b)=>a+b,0)/comV.length : 0;
+  const H = 150, mesAtual = hoje().slice(0,7);
+  const yMed = Math.round(media/max*H);
+  return `<div style="position:relative;padding:22px 16px 0">
+    ${media?`<div style="position:absolute;left:16px;right:16px;bottom:${yMed}px;border-top:2px dashed #999;z-index:1;pointer-events:none"><span style="position:absolute;right:0;top:-18px;font-size:10px;color:#666;background:#fff;padding:0 4px">média ${fmt(media)}</span></div>`:''}
+    <div style="display:flex;align-items:flex-end;gap:6px;height:${H+18}px">
+    ${meses.map((m,i)=>{ const v=vals[i]; const h=Math.round(v/max*H);
+      const cor = m===mesAtual ? 'var(--amarelo)' : (media && v < media*0.7 ? '#e8a39b' : 'var(--azul)');
+      return `<div class="ana-barra" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${_anaMesLbl(m)}: ${fmt(v)}${media?` (${v>=media?'acima':'abaixo'} da média)`:''}">
+        <div style="font-size:9.5px;color:#777;margin-bottom:3px;white-space:nowrap">${v?_anaK(v):''}</div>
+        <div style="width:100%;max-width:40px;height:${Math.max(v?3:0,h)}px;background:${cor};border-radius:4px 4px 0 0"></div></div>`; }).join('')}
+    </div></div>
+    <div style="display:flex;gap:6px;padding:4px 16px 6px">${meses.map(m=>`<div style="flex:1;text-align:center;font-size:10px;color:${m===mesAtual?'#111':'#888'};font-weight:${m===mesAtual?700:400}">${_anaMesLbl(m)}</div>`).join('')}</div>
+    <div style="display:flex;gap:14px;padding:4px 16px 12px;font-size:11px;color:#777;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--azul);border-radius:2px"></span> mês normal</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#e8a39b;border-radius:2px"></span> mês fraco (30% abaixo da média)</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--amarelo);border-radius:2px"></span> mês atual (ainda em andamento)</span>
+    </div>`;
+}
+
+/* Guia "como ler" */
+function _anaAjuda(visao) {
+  const txt = visao === 'ind' ? `
+    <p style="margin:8px 0 4px"><b>Para que serve:</b> ver como uma indústria está espalhada pela sua carteira: quantos clientes compram, quem parou e quais produtos ainda vendem pouco.</p>
+    <ul style="margin:0 0 6px;padding-left:18px">
+      <li><b>Positivação</b> = % dos clientes que compraram a indústria no período. Ex.: 30 de 60 clientes = 50%.</li>
+      <li><b>Clientes parados</b> = compravam e não pedem há mais dos dias escolhidos em "Parado após".</li>
+      <li><b>Baixa positivação</b> = produtos que menos da metade dos clientes ativos compram, ou seja, onde dá para crescer.</li>
+      <li>Clique no <b>nome do cliente</b> para abrir a análise completa dele.</li>
+    </ul>` : `
+    <p style="margin:8px 0 4px"><b>Para que serve:</b> entender rápido como está um cliente: se está comprando mais ou menos, o que parou de pedir e o que dá para oferecer.</p>
+    <ul style="margin:0 0 6px;padding-left:18px">
+      <li>Os <b>cartões coloridos</b> mostram a situação: 👍 verde = bom, ⚠️ amarelo = atenção, 🔴 vermelho = crítico. Passe o mouse para ver a explicação e clique para abrir o detalhe.</li>
+      <li><b>Parou de comprar</b>: produtos que ele pedia com frequência e sumiram. É dinheiro que está deixando de entrar.</li>
+      <li><b>Vendas possíveis</b>: produtos que clientes parecidos compram e ele não. É onde está a oportunidade.</li>
+      <li><b>Mix nunca comprado</b>: itens com preço já negociado que ele nunca pediu. É a venda mais fácil.</li>
+      <li>Nas tabelas, clique no <b>título da coluna</b> para ordenar e use o 🔍 para filtrar.</li>
+    </ul>`;
+  return `<details class="ana-ajuda" ${_anaAjudaAberta?'open':''} ontoggle="_anaAjudaAberta=this.open"><summary>❓ Como ler esta tela</summary>${txt}</details>`;
+}
+
+/* ───────── filtros ───────── */
+function anaTrocarVisao() {
+  const v = el('ana-visao')?.value;
+  if(v === 'ind' && el('ana-cli')) el('ana-cli').value = '';
+  _anaTab = 'resumo';
+  renderAnalise();
+}
+function anaAbrirCliente(nome, ind) {
+  if(el('ana-visao')) el('ana-visao').value = 'cli';
+  _anaPopularFiltros();
+  const s = el('ana-cli'); const v = 'c:'+nome;
+  if(s && ![...s.options].some(o=>o.value===v)) { const o=document.createElement('option'); o.value=v; o.textContent=nome; s.appendChild(o); }
+  if(s) s.value = v;
+  if(el('ana-ind')) el('ana-ind').value = ind || '';
+  _anaTab = 'resumo';
+  renderAnalise();
+  el('panel-analise')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function anaAbrirIndustria(ind) {
+  if(el('ana-visao')) el('ana-visao').value = 'ind';
+  if(el('ana-cli')) el('ana-cli').value = '';
+  _anaPopularFiltros();
+  if(el('ana-ind')) el('ana-ind').value = ind;
+  _anaTab = 'resumo';
+  renderAnalise();
+  el('panel-analise')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function anaAbrirRank(i) { const r = _anaRank[i]; if(!r) return; r.tipo === 'ind' ? anaAbrirIndustria(r.nome) : anaAbrirCliente(r.nome); }
+
+function _anaPopularFiltros() {
+  const sCli = el('ana-cli'), sInd = el('ana-ind');
+  if(!sCli || !sInd) return;
+  const visao = el('ana-visao')?.value || 'cli';
+  const vCli = sCli.value, vInd = sInd.value;
+  const nomes = new Set(clientes.filter(c => !c.status || c.status === 'Ativo').map(c => c.nome));
+  pedidos.forEach(p => { if(p.cliente && !p.excluido) nomes.add(p.cliente); });
+  const redes = [...new Set(clientes.map(c => c.rede).filter(Boolean))].sort();
+  sCli.innerHTML = `<option value="">${visao==='cli'?'👤 Escolha o cliente / rede...':'Todos os clientes'}</option>` +
+    (redes.length ? `<optgroup label="Redes">${redes.map(r=>`<option value="r:${esc(r)}">🔗 ${esc(r)}</option>`).join('')}</optgroup>` : '') +
+    `<optgroup label="Clientes">${[...nomes].sort().map(n=>`<option value="c:${esc(n)}">${esc(n)}</option>`).join('')}</optgroup>`;
+  sCli.value = vCli; if(sCli.value !== vCli) sCli.value = '';
+  const inds = new Set(industrias.filter(i => !i.status || i.status === 'Ativo').map(i => i.nome));
+  pedidos.forEach(p => { if(p.industria && !p.excluido) inds.add(p.industria); });
+  sInd.innerHTML = `<option value="">${visao==='ind'?'🏭 Escolha a indústria...':'Todas as indústrias'}</option>` +
+    [...inds].sort().map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sInd.value = vInd; if(sInd.value !== vInd) sInd.value = '';
+}
+
+/* Agrega itens comprados: key → {cod, desc, ind, peds:Set, valor, ult} */
+function _anaAgregarItens(peds) {
+  const m = {};
+  peds.forEach(p => {
+    const d = _anaDataPed(p);
+    (p.itens||[]).forEach(it => {
+      const k = _anaItemKey(it); if(!k) return;
+      const ind = it.ind || p.industria || '';
+      const r = m[k] || (m[k] = {key:k, cod:it.cod||'', desc:it.desc||it.cod||'', ind, peds:new Set(), valor:0, ult:''});
+      r.peds.add(p.id); r.valor += parseFloat(it.total)||0;
+      if(d > r.ult) r.ult = d;
+    });
+  });
+  return m;
+}
+
+/* ═════════════ ENTRADA ═════════════ */
+function renderAnalise() {
+  const box = el('ana-conteudo'); if(!box) return;
+  _anaCss();
+  _anaPopularFiltros();
+  const visao = el('ana-visao')?.value || 'cli';
+  if(el('ana-comparar')) el('ana-comparar').style.display = visao === 'ind' ? 'none' : '';
+  if(visao === 'ind') {
+    if(!el('ana-ind').value) return _anaRenderRankingInd(box);
+    _anaCalcIndustria();
+  } else {
+    if(!el('ana-cli').value) return _anaRenderRankingCli(box);
+    _anaCalcCliente();
+  }
+  _anaRenderTela(box);
+}
+
+/* ═════════════ RANKINGS (nada selecionado) ═════════════ */
+function _anaRenderRankingCli(box) {
+  _anaUltimo = null;
+  const diasP = Math.max(15, +(el('ana-dias').value || 60));
+  const indF  = el('ana-ind').value;
+  const lim = _anaDiasAtras(diasP), ini6 = _anaDiasAtras(diasP+180), hojeISO = hoje();
+  const por = {};
+  _anaPedsVenda().filter(p => !indF || p.industria === indF).forEach(p => {
+    const o = por[p.cliente] || (por[p.cliente] = {nome:p.cliente, datas:new Set(), itens:{}, v12:0});
+    const d = _anaDataPed(p); o.datas.add(d);
+    if(d >= _anaDiasAtras(365)) o.v12 += _anaValorPed(p);
+    (p.itens||[]).forEach(it => { const k=_anaItemKey(it); if(!k) return;
+      const r = o.itens[k] || (o.itens[k] = {ult:'', peds:new Set(), v:0});
+      if(d > r.ult) r.ult = d; if(d >= ini6 && d < lim) { r.peds.add(p.id); r.v += parseFloat(it.total)||0; } });
+  });
+  _anaRank = Object.values(por).map(o => {
+    const ds = [...o.datas].sort(); const ult = ds[ds.length-1];
+    const freq = ds.length > 1 ? dataDiff(ds[0], ult)/(ds.length-1) : null;
+    const sem = dataDiff(ult, hojeISO);
+    let risco = 0, nPar = 0;
+    Object.values(o.itens).forEach(r => { if(r.peds.size >= 2 && r.ult < lim) { risco += r.v/6; nPar++; } });
+    const atrasado = freq && ds.length >= 3 && sem > 2*freq;
+    const motivos = [];
+    if(atrasado) motivos.push(`sem comprar há ${sem} dias (normal: ~${Math.round(freq)})`);
+    if(nPar) motivos.push(`${nPar} ${_anaPl(nPar,'produto parado','produtos parados')}`);
+    return {tipo:'cli', nome:o.nome, ult, sem, freq, risco, nPar, atrasado, v12:o.v12, motivo:motivos.join(' · ')};
+  }).filter(o => o.risco > 0 || o.atrasado).sort((a,b) => b.risco - a.risco || b.sem - a.sem).slice(0, 25);
+
+  const totRisco = _anaRank.reduce((s,o)=>s+o.risco,0);
+  box.innerHTML = `${_anaAjuda('cli')}
+    <div class="ana-resumo"><h3>👋 Escolha um cliente acima, ou comece por quem precisa de atenção</h3>
+      <ul><li>${_anaRank.length ? `🚨 <b>${_anaRank.length}</b> ${_anaPl(_anaRank.length,'cliente precisa','clientes precisam')} de atenção${indF?` em <b>${esc(indF)}</b>`:''}: pararam produtos ou estão demorando mais que o normal para comprar.` : '✅ Nenhum cliente com produto parado ou compra atrasada. Ótimo sinal!'}</li>
+      ${totRisco?`<li>💸 Juntos, deixaram de comprar cerca de <b>${fmt(totRisco)}/mês</b> em produtos que pediam com frequência.</li>`:''}
+      <li>👉 Clique em uma linha para abrir a análise completa do cliente.</li></ul></div>
+    ${_anaCard('🚨 Quem precisa de atenção', '', `<table><thead><tr><th>#</th><th>Cliente</th><th>O que está acontecendo</th><th>Última compra</th><th>Comprou em 12 meses</th><th>Em risco/mês</th><th></th></tr></thead><tbody>
+      ${_anaRank.length ? _anaRank.map((o,i)=>`<tr class="ana-rank-row" onclick="anaAbrirRank(${i})"><td style="color:#aaa">${i+1}</td><td class="bold">${esc(o.nome)}</td><td style="font-size:12px">${o.atrasado?'⏰ ':''}${o.nPar?'⏸️ ':''}${esc(o.motivo)}</td><td>${fmtData(o.ult)}</td><td>${fmt(o.v12)}</td><td class="bold ${o.risco?'vermelho':''}">${o.risco?fmt(o.risco):'—'}</td><td><span class="ana-link">Analisar →</span></td></tr>`).join('') : _anaVazio('Ninguém na lista 👍',7)}
+      </tbody></table>`, `Ordenado pelo valor que está deixando de entrar. "Parado" = sem pedido há mais de ${diasP} dias.`)}`;
+}
+
+function _anaRenderRankingInd(box) {
+  _anaUltimo = null;
+  const diasP = Math.max(15, +(el('ana-dias').value || 60));
+  const per = +(el('ana-periodo').value || 90);
+  const lim = _anaDiasAtras(diasP), ini = _anaDiasAtras(per), ini6 = _anaDiasAtras(diasP+180);
+  const por = {};
+  _anaPedsVenda().forEach(p => { const k = p.industria; if(!k) return;
+    const o = por[k] || (por[k] = {nome:k, clis:{}, fat:0});
+    const d = _anaDataPed(p); if(d >= ini) o.fat += _anaValorPed(p);
+    const c = o.clis[p.cliente] || (o.clis[p.cliente] = {ult:'', v6:0, per:false});
+    if(d > c.ult) c.ult = d; if(d >= ini) c.per = true; if(d >= ini6 && d < lim) c.v6 += _anaValorPed(p); });
+  const nCad = clientes.filter(c => !c.status || c.status === 'Ativo').length;
+  _anaRank = Object.values(por).map(o => {
+    const cs = Object.values(o.clis);
+    const ativos = cs.filter(c=>c.per).length, parados = cs.filter(c=>c.ult < lim);
+    const base = Math.max(nCad, cs.length);
+    return {tipo:'ind', nome:o.nome, fat:o.fat, ativos, base, positiv: base? ativos/base*100 : 0, nPar:parados.length, risco: parados.reduce((s,c)=>s+c.v6/6,0)};
+  }).sort((a,b) => b.risco - a.risco || b.fat - a.fat);
+
+  box.innerHTML = `${_anaAjuda('ind')}
+    <div class="ana-resumo"><h3>🏭 Escolha uma indústria acima, ou clique em uma linha abaixo</h3>
+      <ul><li>📋 Visão geral de todas as indústrias ${_anaPeriodoTxt(per)}: faturado, quantos clientes compraram e quantos pararam.</li>
+      <li>👉 Clique em uma linha para ver os detalhes da indústria.</li></ul></div>
+    ${_anaCard('🏭 Indústrias', '', `<table><thead><tr><th>Indústria</th><th>Faturado</th><th>Positivação</th><th>Clientes parados</th><th>Em risco/mês</th><th></th></tr></thead><tbody>
+      ${_anaRank.length ? _anaRank.map((o,i)=>`<tr class="ana-rank-row" onclick="anaAbrirRank(${i})"><td class="bold">${esc(o.nome)}</td><td>${fmt(o.fat)}</td><td style="min-width:160px">${_anaBar(o.positiv, o.positiv>=50?'var(--verde)':o.positiv>=25?'var(--amarelo)':'var(--vermelho)')}<div style="font-size:10px;color:#888">${o.ativos} de ${o.base} clientes</div></td><td>${o.nPar?`<span class="badge badge-vermelho">${o.nPar}</span>`:'<span class="badge badge-verde">0</span>'}</td><td class="bold ${o.risco?'vermelho':''}">${o.risco?fmt(o.risco):'—'}</td><td><span class="ana-link">Analisar →</span></td></tr>`).join('') : _anaVazio('Sem pedidos lançados.',6)}
+      </tbody></table>`)}`;
+}
+
+/* ═════════════ CÁLCULO — CLIENTE ═════════════ */
+function _anaCalcCliente() {
+  const sel   = el('ana-cli').value;
+  const indF  = el('ana-ind').value;
+  const per   = +(el('ana-periodo').value || 90);
+  const diasP = Math.max(15, +(el('ana-dias').value || 60));
+  const comp  = el('ana-comparar').value;
+  const hojeISO = hoje();
+  const ini   = _anaDiasAtras(per);
+  const iniAA = (() => { const d = new Date(ini); d.setFullYear(d.getFullYear()-1); return d.toISOString().slice(0,10); })();
+  const fimAA = (() => { const d = new Date(); d.setFullYear(d.getFullYear()-1); return d.toISOString().slice(0,10); })();
+  const isCli = _anaCliMatcher(sel);
+  const okInd = p => !indF || p.industria === indF;
+  const nomeSel = sel.slice(2);
+  const seg = _anaSegmentoDe(sel);
+
+  const todos   = _anaPedsVenda();
+  const doCli   = todos.filter(p => isCli(p.cliente) && okInd(p));
+  const noPer   = doCli.filter(p => _anaDataPed(p) >= ini);
+  const noAA    = doCli.filter(p => { const d=_anaDataPed(p); return d >= iniAA && d <= fimAA; });
+  const bonPer  = _anaPedsBonif().filter(p => isCli(p.cliente) && okInd(p) && _anaDataPed(p) >= ini);
+
+  const segDe = nome => clientes.find(c => c.nome === nome)?.segmento || '';
+  const ehPeer = nome => !isCli(nome) && (comp !== 'segmento' || !seg || segDe(nome) === seg);
+  const pedsPeers = todos.filter(p => ehPeer(p.cliente) && okInd(p));
+  const peersPer  = pedsPeers.filter(p => _anaDataPed(p) >= ini);
+
+  // KPIs
+  const fat   = noPer.reduce((s,p)=>s+_anaValorPed(p),0);
+  let fatAA = noAA.reduce((s,p)=>s+_anaValorPed(p),0), fonteAA = 'pedidos';
+  if(!fatAA && typeof sellInHist !== 'undefined' && sellInHist.length) {
+    const meses = new Set(); for(let d=new Date(iniAA); d<=new Date(fimAA); d.setMonth(d.getMonth()+1)) meses.add(d.getFullYear()+'-'+d.getMonth());
+    sellInHist.forEach(r => { if(!isCli(r.cliente) && normalizarGrupoSellOut(r.cliente)!==nomeSel) return; if(indF && r.industria!==indF) return;
+      (r.meses||[]).forEach((v,i)=>{ if(meses.has(r.ano+'-'+i)) fatAA += +v||0; }); });
+    if(fatAA) fonteAA = 'histórico sell-in';
+  }
+  const cresc = fatAA > 0 ? (fat/fatAA - 1)*100 : null;
+  const indsAtivas = new Set(noPer.map(p=>p.industria).filter(Boolean));
+  const indsHist   = new Set(doCli.map(p=>p.industria).filter(Boolean));
+  const ticket = noPer.length ? fat/noPer.length : 0;
+  const peersPorCli = {};
+  peersPer.forEach(p => { const o = peersPorCli[p.cliente] || (peersPorCli[p.cliente] = {v:0,n:0,d:0,b:0}); o.v+=_anaValorPed(p); o.n++; o.d+=_anaDescPed(p); o.b+=(p.nf?.valorNF||0); });
+  const pv = Object.values(peersPorCli);
+  const ticketSeg = pv.reduce((s,o)=>s+o.v,0) / Math.max(1, pv.reduce((s,o)=>s+o.n,0));
+  const datas = [...new Set(doCli.map(_anaDataPed))].sort();
+  const freq = datas.length > 1 ? dataDiff(datas[0], datas[datas.length-1])/(datas.length-1) : null;
+  const ultima = datas[datas.length-1] || '';
+  const diasSem = ultima ? dataDiff(ultima, hojeISO) : null;
+  const nfBruto = noPer.reduce((s,p)=>s+(p.nf?.valorNF||0),0);
+  const descCli = nfBruto>0 ? noPer.reduce((s,p)=>s+_anaDescPed(p),0)/nfBruto*100 : 0;
+  const brutoSeg = pv.reduce((s,o)=>s+o.b,0);
+  const descSeg = brutoSeg>0 ? pv.reduce((s,o)=>s+o.d,0)/brutoSeg*100 : 0;
+  const bonifV = bonPer.reduce((s,p)=>s+_anaValorPed(p),0) + noPer.reduce((s,p)=>s+(p.nf?.bonif||0),0);
+  const pctBon = (fat+bonifV)>0 ? bonifV/(fat+bonifV)*100 : 0;
+
+  // Mix
+  const nomesCli = _anaNomesDoSel(sel);
+  const redeSel = sel[0]==='r' ? nomeSel : (clientes.find(c=>c.nome===nomeSel)?.rede||'');
+  const mixCli = mixProdutos.filter(m => m.ativo !== false && (!indF || m.ind === indF) &&
+    ((redeSel && m.rede === redeSel) || nomesCli.includes(m.clienteEspecifico)));
+  const itensCliTudo = _anaAgregarItens(doCli);
+  const itensCliPer  = _anaAgregarItens(noPer);
+  const mixComprados = mixCli.filter(m => itensCliPer[String(m.cod||'').toUpperCase()]);
+  const cobertura = mixCli.length ? mixComprados.length/mixCli.length*100 : null;
+
+  // Parou de comprar
+  const lim = _anaDiasAtras(diasP), ini6m = _anaDiasAtras(diasP + 180);
+  const parados = [];
+  const histJanela = _anaAgregarItens(doCli.filter(p => { const d=_anaDataPed(p); return d >= ini6m && d < lim; }));
+  Object.values(histJanela).forEach(r => {
+    const tot = itensCliTudo[r.key];
+    if(r.peds.size >= 2 && tot && tot.ult < lim)
+      parados.push({...r, ult: tot.ult, dias: dataDiff(tot.ult, hojeISO), nPeds: r.peds.size, mediaMes: r.valor/6});
+  });
+  parados.sort((a,b)=>b.mediaMes-a.mediaMes); parados.forEach((r,i)=>r._i=i);
+  const receitaRisco = parados.reduce((s,r)=>s+r.mediaMes,0);
+
+  // Vendas possíveis
+  const ini12 = _anaDiasAtras(365);
+  const peersAno = pedsPeers.filter(p => _anaDataPed(p) >= ini12);
+  const nPeers = new Set(peersAno.map(p=>p.cliente)).size;
+  const porItem = {};
+  peersAno.forEach(p => (p.itens||[]).forEach(it => {
+    const k = _anaItemKey(it); if(!k || itensCliTudo[k]) return;
+    const r = porItem[k] || (porItem[k] = {key:k, cod:it.cod||'', desc:it.desc||it.cod||'', ind:it.ind||p.industria||'', clis:new Set(), valor:0});
+    r.clis.add(p.cliente); r.valor += parseFloat(it.total)||0;
+  }));
+  const possiveis = Object.values(porItem).map(r => {
+    const pct = nPeers ? r.clis.size/nPeers*100 : 0;
+    return {...r, nClis:r.clis.size, pct, gastoMes: r.valor / r.clis.size / 12, nivel: pct>=70?'Alto':pct>=40?'Médio':'Baixo'};
+  }).filter(r => r.nClis >= 2 || nPeers <= 3).sort((a,b)=>b.pct-a.pct || b.gastoMes-a.gastoMes).slice(0,40);
+  possiveis.forEach((r,i)=>r._i=i);
+  const potencial = possiveis.filter(r=>r.nivel!=='Baixo').reduce((s,r)=>s+r.gastoMes,0);
+
+  // Mix nunca comprado
+  const mixNunca = mixCli.filter(m => !itensCliTudo[String(m.cod||'').toUpperCase()]).map((m,i)=>({...m, _i:i, precoNeg:(m.tabela||0)*(1-(m.desc_pct||0)/100)}));
+
+  // Participação + ABC
+  const porInd = {};
+  noPer.forEach(p => { const k=p.industria||'—'; const o = porInd[k] || (porInd[k] = {v:0,aa:0,n:0}); o.v += _anaValorPed(p); o.n++; });
+  noAA.forEach(p => { const k=p.industria||'—'; const o = porInd[k] || (porInd[k] = {v:0,aa:0,n:0}); o.aa += _anaValorPed(p); });
+  const listaInd = Object.entries(porInd).map(([ind,o])=>({ind,...o,pct: fat?o.v/fat*100:0, var: o.aa? (o.v/o.aa-1)*100 : null})).sort((a,b)=>b.v-a.v);
+  const abcArr = Object.values(itensCliPer).sort((a,b)=>b.valor-a.valor);
+  const totItens = abcArr.reduce((s,r)=>s+r.valor,0); let acum = 0;
+  const abc = {A:{n:0,v:0},B:{n:0,v:0},C:{n:0,v:0}};
+  abcArr.forEach(r => { const antes = totItens? acum/totItens*100:0; acum += r.valor; const c = antes < 80 ? 'A' : antes < 95 ? 'B' : 'C'; r.curva=c; abc[c].n++; abc[c].v+=r.valor; });
+
+  // Evolução
+  const meses12 = _anaMeses12();
+  const porMes = {}; doCli.forEach(p => { const ym=_anaDataPed(p).slice(0,7); porMes[ym]=(porMes[ym]||0)+_anaValorPed(p); });
+
+  // Alertas
+  const alertas = [];
+  [...indsHist].forEach(ind => {
+    const ds = [...new Set(doCli.filter(p=>p.industria===ind).map(_anaDataPed))].sort();
+    if(ds.length < 3) return;
+    const f = dataDiff(ds[0], ds[ds.length-1])/(ds.length-1); const sem = dataDiff(ds[ds.length-1], hojeISO);
+    if(f > 0 && sem > 2*f) alertas.push({tipo:'freq', ind, txt:`<b>${esc(ind)}</b>: está há <b>${sem} dias</b> sem pedir. Normalmente compra a cada ${Math.round(f)} dias.`});
+  });
+  { const iniT = _anaDiasAtras(90), iniTA = _anaDiasAtras(180);
+    const porIndT = {}; doCli.forEach(p => { const d=_anaDataPed(p); const k=p.industria||'—'; const o = porIndT[k] || (porIndT[k] = {a:0,b:0}); if(d>=iniT) o.a+=_anaValorPed(p); else if(d>=iniTA) o.b+=_anaValorPed(p); });
+    Object.entries(porIndT).forEach(([ind,o]) => { if(o.b>0 && o.a < o.b*0.75) alertas.push({tipo:'queda', ind, txt:`<b>${esc(ind)}</b>: comprou <b>${_anaPct((1-o.a/o.b)*100,0)} menos</b> nos últimos 3 meses que nos 3 meses anteriores (${fmt(o.a)} contra ${fmt(o.b)}).`}); }); }
+  if(nfBruto>0 && brutoSeg>0 && descCli - descSeg > 2) alertas.push({tipo:'desc', ind:indF, txt:`Está recebendo <b>${_anaPct(descCli)}</b> de desconto, ${(descCli-descSeg).toFixed(1).replace('.',',')} pontos acima dos clientes parecidos (${_anaPct(descSeg)}).`});
+  if(parados.length) alertas.push({tipo:'parado', ind:indF, txt:`Parou de pedir <b>${parados.length} ${_anaPl(parados.length,'produto')}</b> que comprava com frequência. São <b>${fmt(receitaRisco)}/mês</b> que deixaram de entrar.`, aba:'parados'});
+
+  _anaUltimo = {visao:'cli', sel, nome:nomeSel, indF, per, diasP, comp, seg, nPeers, semItens: doCli.length && !doCli.some(p => (p.itens||[]).length),
+    kpis:{fat,fatAA,fonteAA,cresc,nPed:noPer.length,inds:indsAtivas.size,indsHist:indsHist.size,ticket,ticketSeg,temPeers:pv.length>0,freq,ultima,diasSem,descCli,descSeg,brutoSeg,nfBruto,pctBon,bonifV,cobertura,mixTot:mixCli.length,mixComp:mixComprados.length,receitaRisco,potencial},
+    parados, possiveis, mixNunca, listaInd, abcArr, abc, totItens, alertas, porMes, meses12, nomesCli, redeSel};
+}
+
+/* ═════════════ CÁLCULO — INDÚSTRIA ═════════════ */
+function _anaCalcIndustria() {
+  const ind   = el('ana-ind').value;
+  const selC  = el('ana-cli').value;
+  const per   = +(el('ana-periodo').value || 90);
+  const diasP = Math.max(15, +(el('ana-dias').value || 60));
+  const hojeISO = hoje(), ini = _anaDiasAtras(per), lim = _anaDiasAtras(diasP);
+  const isCli = _anaCliMatcher(selC);
+  const peds = _anaPedsVenda().filter(p => p.industria === ind && isCli(p.cliente));
+  const noPer = peds.filter(p => _anaDataPed(p) >= ini);
+
+  const porCli = {};
+  peds.forEach(p => { const d=_anaDataPed(p); const o = porCli[p.cliente] || (porCli[p.cliente] = {cliente:p.cliente, ult:'', v6:0, vPer:0, n:0});
+    if(d>o.ult) o.ult=d; if(d >= _anaDiasAtras(diasP+180) && d < lim) o.v6 += _anaValorPed(p); if(d>=ini){o.vPer+=_anaValorPed(p); o.n++;} });
+  const listaCli = Object.values(porCli);
+  const ativos = listaCli.filter(o => o.vPer > 0).sort((a,b)=>b.vPer-a.vPer);
+  const pararam = listaCli.filter(o => o.ult < lim).map(o => ({...o, dias:dataDiff(o.ult,hojeISO), mediaMes:o.v6/6})).sort((a,b)=>b.mediaMes-a.mediaMes);
+  pararam.forEach((o,i)=>o._i=i);
+  const emRisco = pararam.reduce((s,o)=>s+o.mediaMes,0);
+  const cadAtivos = clientes.filter(c => (!c.status || c.status==='Ativo') && isCli(c.nome));
+  const nunca = cadAtivos.filter(c => !porCli[c.nome]).map((c,i)=>({...c, _i:i}));
+  const baseCli = new Set([...cadAtivos.map(c=>c.nome), ...listaCli.map(o=>o.cliente)]).size;
+  const positiv = baseCli ? ativos.length/baseCli*100 : 0;
+  const fat = noPer.reduce((s,p)=>s+_anaValorPed(p),0);
+  const bruto = noPer.reduce((s,p)=>s+(p.nf?.valorNF||0),0);
+  const pctDesc = bruto ? noPer.reduce((s,p)=>s+_anaDescPed(p),0)/bruto*100 : 0;
+
+  const now = new Date(); const mesMeta = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][now.getMonth()]+'/'+String(now.getFullYear()).slice(2);
+  const meta = (metasData||[]).find(m => m.industria === ind && m.mes === mesMeta && (!m.tipo || m.tipo === 'faturamento'));
+  const ymAtual = hojeISO.slice(0,7);
+  const realMes = _anaPedsVenda().filter(p => p.industria===ind && _anaDataPed(p).startsWith(ymAtual)).reduce((s,p)=>s+_anaValorPed(p),0);
+  const pctMeta = meta?.valor ? realMes/meta.valor*100 : null;
+  const diaMes = now.getDate(), diasNoMes = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const pctEsperado = diaMes/diasNoMes*100;
+
+  const nAtivos = ativos.length;
+  const porProd = {};
+  noPer.forEach(p => (p.itens||[]).forEach(it => { const k=_anaItemKey(it); if(!k) return;
+    const r = porProd[k] || (porProd[k] = {cod:it.cod||'', desc:it.desc||it.cod||'', clis:new Set(), valor:0}); r.clis.add(p.cliente); r.valor += parseFloat(it.total)||0; }));
+  const prods = Object.values(porProd).map(r => { const n=r.clis.size; const pct = nAtivos? n/nAtivos*100:0;
+    return {...r, nClis:n, pct, potencial: (r.valor/n) * (nAtivos-n) / Math.max(1, per/30)}; }).sort((a,b)=>a.pct-b.pct || b.potencial-a.potencial);
+  const baixa = prods.filter(r => r.pct < 50);
+  const potBaixa = baixa.reduce((s,r)=>s+r.potencial,0);
+
+  const meses12 = _anaMeses12();
+  const porMes = {}; peds.forEach(p => { const ym=_anaDataPed(p).slice(0,7); porMes[ym]=(porMes[ym]||0)+_anaValorPed(p); });
+
+  _anaUltimo = {visao:'ind', ind, per, diasP, semItens: peds.length && !peds.some(p => (p.itens||[]).length),
+    kpis:{fat, nPed:noPer.length, ativos:ativos.length, baseCli, positiv, emRisco, nunca:nunca.length, pctDesc, meta:meta?.valor||0, realMes, pctMeta, pctEsperado, mesMeta, potBaixa},
+    ativosLista: ativos, pararam, nunca, prods, baixa, meses12, porMes};
+}
+
+/* ═════════════ TELA (resumo + KPIs + abas) ═════════════ */
+function _anaRenderTela(box) {
+  const u = _anaUltimo;
+  const abas = _anaAbas();
+  if(!abas.some(a=>a.k===_anaTab)) _anaTab = 'resumo';
+  box.innerHTML = `${_anaAjuda(u.visao)}
+    ${u.semItens ? `<div class="alert alert-warning" style="margin-bottom:12px">⚠️ Os pedidos não têm itens lançados, então a análise por produto fica limitada. Lance os itens nos pedidos para ver produtos parados e vendas possíveis.</div>`:''}
+    ${u.visao==='cli' ? _anaResumoCli() : _anaResumoInd()}
+    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(175px,1fr));margin-bottom:16px">${u.visao==='cli' ? _anaKpisCli() : _anaKpisInd()}</div>
+    <div class="ana-tabs">${abas.map(t=>`<button class="ana-tab ${_anaTab===t.k?'on':''}" data-k="${t.k}" onclick="anaIrAba('${t.k}')">${t.l}${t.n!=null?`<span class="ana-tab-n ${t.cls||''}">${t.n}</span>`:''}</button>`).join('')}</div>
+    <div id="ana-aba"></div>`;
+  _anaRenderAba();
+}
+function _anaAbas() {
+  const u = _anaUltimo;
+  if(u.visao === 'cli') return [
+    {k:'resumo',   l:'🎯 O que fazer'},
+    {k:'parados',  l:'⏸️ Parou de comprar', n:u.parados.length, cls:u.parados.length?'alerta':'bom'},
+    {k:'possiveis',l:'💡 Vendas possíveis', n:u.possiveis.length},
+    {k:'mix',      l:'🧩 Mix nunca comprado', n:u.mixNunca.length},
+    {k:'industrias',l:'🏭 Indústrias e ABC'},
+    {k:'evolucao', l:'📊 Evolução'}
+  ];
+  return [
+    {k:'resumo',   l:'🎯 O que fazer'},
+    {k:'pararam',  l:'⏸️ Clientes parados', n:u.pararam.length, cls:u.pararam.length?'alerta':'bom'},
+    {k:'ativos',   l:'✅ Clientes ativos', n:u.ativosLista.length},
+    {k:'baixa',    l:'📉 Baixa positivação', n:u.baixa.length},
+    {k:'nunca',    l:'🆕 Nunca compraram', n:u.nunca.length},
+    {k:'evolucao', l:'📊 Evolução'}
+  ];
+}
+function anaIrAba(k) {
+  if(!_anaUltimo) return;
+  _anaTab = k;
+  document.querySelectorAll('#panel-analise .ana-tab').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  _anaRenderAba();
+  const t = document.querySelector('#panel-analise .ana-tabs');
+  if(t && t.getBoundingClientRect().top < 0) t.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function _anaRenderAba() {
+  const box = el('ana-aba'); const u = _anaUltimo; if(!box || !u) return;
+  box.innerHTML = u.visao === 'cli' ? _anaAbaCli(_anaTab) : _anaAbaInd(_anaTab);
+}
+
+/* ───────── cliente: resumo em frases ───────── */
+function _anaResumoCli() {
+  const u = _anaUltimo, k = u.kpis;
+  const quem = u.sel[0]==='r' ? `a rede <b>${esc(u.nome)}</b>` : `<b>${esc(u.nome)}</b>`;
+  const linhas = [];
+  linhas.push(`💰 ${quem} comprou <b>${fmt(k.fat)}</b> ${_anaPeriodoTxt(u.per)}${u.indF?` de <b>${esc(u.indF)}</b>`:''}, em ${k.nPed} ${_anaPl(k.nPed,'pedido')}.` +
+    (k.cresc===null ? ' <span style="color:#888">Não há dados do ano passado para comparar.</span>'
+      : ` Isso é <b style="color:${k.cresc>=0?'var(--verde)':'var(--vermelho)'}">${_anaPct(Math.abs(k.cresc),0)} ${k.cresc>=0?'a mais':'a menos'}</b> que no mesmo período do ano passado.`));
+  if(k.freq && k.diasSem!==null) {
+    const st = k.diasSem > 2*k.freq ? `<b style="color:var(--vermelho)">está atrasado</b>` : k.diasSem > k.freq ? `<b style="color:#9a7400">fique de olho</b>` : `<b style="color:var(--verde)">dentro do normal</b>`;
+    linhas.push(`🗓️ Costuma comprar a cada <b>${Math.round(k.freq)} dias</b>. A última compra foi há <b>${k.diasSem} dias</b>: ${st}.`);
+  } else if(k.ultima) linhas.push(`🗓️ Última compra em <b>${fmtData(k.ultima)}</b>.`);
+  linhas.push(u.parados.length
+    ? `⏸️ Parou de pedir <b>${u.parados.length} ${_anaPl(u.parados.length,'produto')}</b> que comprava com frequência: <b style="color:var(--vermelho)">${fmt(k.receitaRisco)}/mês</b> deixando de entrar.`
+    : `✅ Não parou de comprar nenhum produto que pedia com frequência.`);
+  if(u.possiveis.length) linhas.push(`💡 Há <b>${u.possiveis.length} ${_anaPl(u.possiveis.length,'produto')}</b> que clientes parecidos compram e ele não${k.potencial?`, com potencial de <b style="color:var(--verde)">${fmt(k.potencial)}/mês</b>`:''}.`);
+  if(k.mixTot) linhas.push(`🧩 Do mix negociado, comprou <b>${k.mixComp} de ${k.mixTot}</b> itens no período (${_anaPct(k.cobertura,0)}).${u.mixNunca.length?` ${u.mixNunca.length} ${_anaPl(u.mixNunca.length,'item','itens')} nunca ${u.mixNunca.length===1?'foi pedido':'foram pedidos'}.`:''}`);
+  if(k.brutoSeg && k.descCli - k.descSeg > 2) linhas.push(`🏷️ Está com <b style="color:var(--vermelho)">desconto acima do normal</b>: ${_anaPct(k.descCli)}, enquanto clientes parecidos recebem ${_anaPct(k.descSeg)}.`);
+  return `<div class="ana-resumo"><h3>📌 Em resumo</h3><ul>${linhas.map(l=>`<li>${l}</li>`).join('')}</ul></div>`;
+}
+
+/* ───────── cliente: KPIs com semáforo ───────── */
+function _anaKpisCli() {
+  const u = _anaUltimo, k = u.kpis;
+  const stCresc = k.cresc===null ? 'neu' : k.cresc >= 0 ? 'bom' : k.cresc >= -10 ? 'aten' : 'crit';
+  const stCob = k.cobertura===null ? 'neu' : k.cobertura >= 70 ? 'bom' : k.cobertura >= 40 ? 'aten' : 'crit';
+  const rPos = k.indsHist ? k.inds/k.indsHist : null;
+  const stPos = rPos===null ? 'neu' : rPos >= .8 ? 'bom' : rPos >= .5 ? 'aten' : 'crit';
+  const stTic = !k.temPeers || !k.ticket ? 'neu' : k.ticket >= k.ticketSeg ? 'bom' : k.ticket >= k.ticketSeg*0.7 ? 'aten' : 'crit';
+  const stFreq = !k.freq || k.diasSem===null ? 'neu' : k.diasSem <= k.freq ? 'bom' : k.diasSem <= 2*k.freq ? 'aten' : 'crit';
+  const dDesc = k.descCli - k.descSeg;
+  const stDesc = !k.nfBruto || !k.brutoSeg ? 'neu' : dDesc <= 0.5 ? 'bom' : dDesc <= 2 ? 'aten' : 'crit';
+  const stBon = k.pctBon <= 3 ? 'bom' : k.pctBon <= 6 ? 'aten' : 'crit';
+  const stPar = !u.parados.length ? 'bom' : k.fat && k.receitaRisco > k.fat/Math.max(1,u.per/30)*0.15 ? 'crit' : 'aten';
+  const grupo = u.comp==='segmento' && u.seg ? `clientes do segmento ${esc(u.seg)}` : 'os outros clientes';
+  return [
+    _anaKpi2({label:'💰 Comprou no período', valor:fmt(k.fat), sub:`${k.nPed} ${_anaPl(k.nPed,'pedido')} · ${k.inds} ${_anaPl(k.inds,'indústria')}`, st:'neu', tab:'evolucao',
+      dica:`Soma das notas (ou dos pedidos ainda não faturados) ${_anaPeriodoTxt(u.per)}. Bonificações não entram.`}),
+    _anaKpi2({label:'📈 Comparado ao ano passado', valor:k.cresc===null?'—':(k.cresc>=0?'+':'')+_anaPct(k.cresc,0), sub:k.cresc===null?'sem dados do ano passado':`ano passado: ${fmt(k.fatAA)}`, st:stCresc, tab:'industrias',
+      dica:`Compara com o mesmo período do ano passado (fonte: ${k.fonteAA}).<br>👍 cresceu · ⚠️ caiu até 10% · 🔴 caiu mais de 10%.`}),
+    _anaKpi2({label:'⏸️ Deixando de entrar', valor:u.parados.length?fmt(k.receitaRisco):'R$ 0', sub:u.parados.length?`/mês · ${u.parados.length} ${_anaPl(u.parados.length,'produto parado','produtos parados')}`:'nenhum produto parado', st:stPar, tab:'parados',
+      dica:`Quanto ele comprava por mês dos produtos que parou de pedir (sem pedido há mais de ${u.diasP} dias).`}),
+    _anaKpi2({label:'💡 Potencial de venda', valor:fmt(k.potencial), sub:(()=>{const n=u.possiveis.filter(r=>r.nivel!=='Baixo').length; return `/mês · ${n} ${_anaPl(n,'produto')} com chance alta ou média`;})(), st:k.potencial?'bom':'neu', tab:'possiveis',
+      dica:`Soma do gasto médio mensal dos produtos que ${grupo} compram e ele nunca comprou (só chance Alta e Média).`}),
+    _anaKpi2({label:'🧩 Mix comprado', valor:k.cobertura===null?'—':_anaPct(k.cobertura,0), sub:k.mixTot?`${k.mixComp} de ${k.mixTot} itens do mix`:'sem mix cadastrado', st:stCob, tab:'mix',
+      dica:`Dos itens do mix negociado com este cliente/rede, quantos ele comprou no período.<br>👍 70% ou mais · ⚠️ 40 a 69% · 🔴 menos de 40%.`}),
+    _anaKpi2({label:'⏱️ Ritmo de compra', valor:k.freq?`${Math.round(k.freq)} dias`:'—', sub:k.ultima?`última há ${k.diasSem} dias (${fmtData(k.ultima)})`:'sem compras', st:stFreq, tab:'evolucao',
+      dica:`Intervalo médio entre um pedido e outro.<br>👍 comprou dentro do prazo normal · ⚠️ passou do prazo · 🔴 passou do dobro do prazo.`}),
+    _anaKpi2({label:'🏭 Indústrias ativas', valor:`${k.inds} de ${k.indsHist}`, sub:'compraram no período / já compraram', st:stPos, tab:'industrias',
+      dica:'Quantas das indústrias que ele já comprou alguma vez foram compradas no período.<br>👍 80% ou mais · ⚠️ 50 a 79% · 🔴 menos de 50%.'}),
+    _anaKpi2({label:'🎫 Ticket médio', valor:fmt(k.ticket), sub:k.temPeers?`clientes parecidos: ${fmt(k.ticketSeg)}`:'sem clientes para comparar', st:stTic,
+      dica:`Valor médio de cada pedido, comparado com ${grupo}.<br>👍 igual ou acima · ⚠️ até 30% abaixo · 🔴 mais de 30% abaixo.`}),
+    _anaKpi2({label:'🏷️ Desconto médio', valor:_anaPct(k.descCli), sub:k.brutoSeg?`clientes parecidos: ${_anaPct(k.descSeg)}`:'abatimentos + desc. financeiro', st:stDesc,
+      dica:'(Abatimentos + desconto financeiro) ÷ valor das notas. Quanto menor, melhor.<br>👍 igual ou abaixo dos parecidos · ⚠️ até 2 pontos acima · 🔴 mais de 2 pontos acima.'}),
+    _anaKpi2({label:'🎁 Bonificação', valor:_anaPct(k.pctBon), sub:`${fmt(k.bonifV)} bonificado`, st:k.bonifV?stBon:'neu',
+      dica:'Quanto do total recebido foi bonificação.<br>👍 até 3% · ⚠️ 3 a 6% · 🔴 acima de 6%.'})
+  ].join('');
+}
+
+/* ───────── cliente: abas ───────── */
+function _anaBtnTarefa(lista, i, tipo) { return `<button class="btn btn-outline btn-sm" onclick="anaGerarTarefa('${lista}',${i},'${tipo}')" title="Criar tarefa para acompanhar">✅ Tarefa</button>`; }
+function _anaAbaCli(tab) {
+  const u = _anaUltimo, k = u.kpis;
+  const grupoTxt = u.comp==='segmento' && u.seg ? `clientes do segmento <b>${esc(u.seg)}</b>` : 'outros clientes';
+
+  if(tab === 'resumo') {
+    const acoes = [];
+    u.parados.slice(0,3).forEach(r => acoes.push({v:r.mediaMes, html:`<b>Retomar</b> ${esc(r.desc)} <span class="tag">${esc(r.ind||'—')}</span>: parado há ${r.dias} dias, vendia ${fmt(r.mediaMes)}/mês`, btn:_anaBtnTarefa('parados',r._i,'parado')}));
+    u.possiveis.filter(r=>r.nivel==='Alto').slice(0,3).forEach(r => acoes.push({v:r.gastoMes, html:`<b>Oferecer</b> ${esc(r.desc)} <span class="tag">${esc(r.ind||'—')}</span>: ${_anaPct(r.pct,0)} dos clientes parecidos compram`, btn:_anaBtnTarefa('possiveis',r._i,'possivel')}));
+    if(u.mixNunca.length) acoes.push({v:u.mixNunca.reduce((s,m)=>s+m.precoNeg,0), html:`<b>Incluir no próximo pedido</b> ${u.mixNunca.length} ${_anaPl(u.mixNunca.length,'item','itens')} do mix que nunca ${u.mixNunca.length===1?'foi pedido':'foram pedidos'} (preço já negociado)`, btn:`<button class="btn btn-info btn-sm" onclick="anaAbrirOrcamentoSugestoes()">📝 Montar orçamento</button>`});
+    acoes.sort((a,b)=>b.v-a.v);
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px">
+      ${_anaCard('🎯 Próximos passos sugeridos', '', `<div style="padding:4px 16px 10px">${acoes.length ? acoes.slice(0,6).map((a,i)=>`<div class="ana-acao"><span class="ana-acao-n">${i+1}</span><div style="flex:1">${a.html}</div>${a.btn}</div>`).join('') : '<div style="padding:16px 0;color:#888;text-align:center">Nada urgente por aqui 👍</div>'}</div>`, 'Ordenado pelo valor envolvido')}
+      ${_anaCard(`🚨 Alertas (${u.alertas.length})`, u.alertas.length?`<button class="btn btn-outline btn-sm" onclick="anaGerarTarefasAlertas()">✅ Criar tarefas de todos</button>`:'', `<div style="padding:4px 16px 10px">${u.alertas.length ? u.alertas.map((a,i)=>`<div class="ana-acao"><span style="font-size:16px">${a.tipo==='queda'?'📉':a.tipo==='freq'?'⏰':a.tipo==='desc'?'🏷️':'⏸️'}</span><div style="flex:1">${a.txt}${a.aba?` <span class="ana-link" onclick="anaIrAba('${a.aba}')">ver lista</span>`:''}</div><button class="btn btn-outline btn-sm" onclick="anaTarefaAlerta(${i})">✅ Tarefa</button></div>`).join('') : '<div style="padding:16px 0;color:#888;text-align:center">✅ Nenhum alerta</div>'}</div>`)}
+    </div>`;
+  }
+
+  if(tab === 'parados') return _anaCard(`⏸️ Parou de comprar (${u.parados.length})`, `<span class="badge badge-vermelho">${fmt(k.receitaRisco)}/mês deixando de entrar</span>`,
+    _anaExplica(`São produtos que o cliente <b>pedia com frequência</b> (em pelo menos 2 pedidos nos 6 meses anteriores) e que <b>não pede há mais de ${u.diasP} dias</b>. A coluna "Vendia por mês" é quanto ele costumava comprar do item, ou seja, o dinheiro que está deixando de entrar. Vale ligar para entender o motivo (ruptura, preço, concorrência).`) +
+    _anaTabela('parados', [
+      {h:'Produto', v:r=>r.desc, f:r=>`<b>${esc(r.desc)}</b><div class="mono" style="font-size:11px;color:#888">${esc(r.cod)}</div>`},
+      {h:'Indústria', v:r=>r.ind, f:r=>_anaTag(r.ind)},
+      {h:'Pedidos antes', v:r=>r.nPeds, f:r=>`${r.nPeds}×`},
+      {h:'Última compra', v:r=>r.ult, f:r=>fmtData(r.ult)},
+      {h:'Parado há', v:r=>r.dias, f:r=>_anaDiasBadge(r.dias, u.diasP)},
+      {h:'Vendia por mês', v:r=>r.mediaMes, f:r=>`<b>${fmt(r.mediaMes)}</b>`},
+      {h:'', f:r=>_anaBtnTarefa('parados', r._i, 'parado')}
+    ], u.parados, 'Nenhum produto parado 👍'));
+
+  if(tab === 'possiveis') return _anaCard(`💡 Vendas possíveis (${u.possiveis.length})`, `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="badge badge-verde">potencial ${fmt(k.potencial)}/mês</span><button class="btn btn-info btn-sm" onclick="anaAbrirOrcamentoSugestoes()">📝 Montar orçamento com sugestões</button></div>`,
+    _anaExplica(`Produtos que ${grupoTxt} compraram nos últimos 12 meses e <b>este cliente nunca comprou</b>. A barra mostra quantos desses clientes compram o item. Exemplo: <b>80%</b> quer dizer que 8 de cada 10 clientes parecidos compram, então a chance de venda é <b>Alta</b>. Chance Alta = 70% ou mais · Média = 40 a 69% · Baixa = menos de 40%.`) +
+    _anaTabela('possiveis', [
+      {h:'Produto', v:r=>r.desc, f:r=>`<b>${esc(r.desc)}</b><div class="mono" style="font-size:11px;color:#888">${esc(r.cod)}</div>`},
+      {h:'Indústria', v:r=>r.ind, f:r=>_anaTag(r.ind)},
+      {h:'Quantos parecidos compram', v:r=>r.pct, f:r=>`<div style="min-width:150px">${_anaBar(r.pct, r.nivel==='Alto'?'var(--verde)':r.nivel==='Médio'?'var(--amarelo)':'#bbb')}<div style="font-size:10px;color:#888">${r.nClis} de ${u.nPeers} clientes</div></div>`},
+      {h:'Gasto médio/mês', v:r=>r.gastoMes, f:r=>fmt(r.gastoMes)},
+      {h:'Chance', v:r=>r.pct, f:r=>`<span class="badge ${r.nivel==='Alto'?'badge-verde':r.nivel==='Médio'?'badge-amarelo':'badge-cinza'}">${r.nivel}</span>`},
+      {h:'', f:r=>_anaBtnTarefa('possiveis', r._i, 'possivel')}
+    ], u.possiveis, u.nPeers ? 'Nenhuma sugestão: o cliente já compra o que os parecidos compram 👍' : 'Sem clientes parecidos com itens lançados para comparar.'));
+
+  if(tab === 'mix') return _anaCard(`🧩 Itens do mix nunca comprados (${u.mixNunca.length})`, u.mixNunca.length?`<button class="btn btn-info btn-sm" onclick="anaAbrirOrcamentoSugestoes()">📝 Montar orçamento</button>`:'',
+    _anaExplica(`Produtos que estão no <b>mix negociado</b> ${u.redeSel?`da rede <b>${esc(u.redeSel)}</b> ou `:''}do cliente, com <b>preço já acertado</b>, e que ele <b>nunca pediu</b>. Costuma ser a venda mais fácil: o produto já foi aprovado, falta só entrar no pedido.`) +
+    _anaTabela('mix', [
+      {h:'Produto', v:r=>r.desc, f:r=>`<b>${esc(r.desc||'')}</b><div class="mono" style="font-size:11px;color:#888">${esc(r.cod)}</div>`},
+      {h:'Indústria', v:r=>r.ind, f:r=>_anaTag(r.ind)},
+      {h:'Curva', v:r=>r.curva||'', f:r=>esc(r.curva||'—')},
+      {h:'Preço tabela', v:r=>r.tabela||0, f:r=>fmt(r.tabela)},
+      {h:'Desc. negociado', v:r=>r.desc_pct||0, f:r=>`${r.desc_pct||0}%`},
+      {h:'Preço final', v:r=>r.precoNeg, f:r=>`<b>${fmt(r.precoNeg)}</b>`}
+    ], u.mixNunca, k.mixTot ? 'Todos os itens do mix já foram comprados 👍' : 'Nenhum mix cadastrado para este cliente/rede.'));
+
+  if(tab === 'industrias') return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px">
+    ${_anaCard('🏭 Quanto cada indústria representa', '',
+      _anaExplica('Fatia de cada indústria nas compras do cliente no período e se ela <b>cresceu ou caiu</b> em relação ao mesmo período do ano passado. Clique no nome para filtrar a análise só por aquela indústria.') +
+      _anaTabela('inds', [
+        {h:'Indústria', v:r=>r.ind, f:r=>`<span class="ana-link" onclick="anaFiltrarIndIdx(${_anaReg(r.ind)})">${esc(r.ind)}</span>`},
+        {h:'Comprou', v:r=>r.v, f:r=>fmt(r.v)},
+        {h:'Fatia', v:r=>r.pct, f:r=>`<div style="min-width:110px">${_anaBar(r.pct)}</div>`},
+        {h:'vs ano passado', v:r=>r.var===null?-1e9:r.var, f:r=>r.var===null?'<span style="color:#aaa">—</span>':`<b style="color:${r.var<0?'var(--vermelho)':'var(--verde)'}">${r.var>=0?'▲ +':'▼ '}${_anaPct(r.var,0)}</b>`}
+      ], u.listaInd, 'Sem compras no período'))}
+    ${_anaCard('🔤 Curva ABC dos produtos', '',
+      _anaExplica('Separa os produtos pela importância. <b>A</b> = os poucos produtos que somam 80% do valor comprado (não podem faltar!) · <b>B</b> = os próximos 15% · <b>C</b> = os últimos 5%.') +
+      `<table><thead><tr><th>Curva</th><th>Produtos</th><th>Valor</th><th>% do total</th></tr></thead><tbody>
+      ${['A','B','C'].map(c=>`<tr><td><span class="badge ${c==='A'?'badge-verde':c==='B'?'badge-amarelo':'badge-cinza'}">${c}</span></td><td>${u.abc[c].n}</td><td>${fmt(u.abc[c].v)}</td><td style="min-width:110px">${_anaBar(u.totItens?u.abc[c].v/u.totItens*100:0, c==='A'?'var(--verde)':c==='B'?'var(--amarelo)':'#bbb')}</td></tr>`).join('')}
+      </tbody></table>
+      ${u.abcArr.filter(r=>r.curva==='A').length?`<div style="padding:10px 16px;font-size:12px"><b>Produtos curva A:</b> ${u.abcArr.filter(r=>r.curva==='A').slice(0,12).map(r=>esc(r.desc)).join(' · ')}</div>`:''}`)}
+  </div>`;
+
+  if(tab === 'evolucao') return _anaCard('📊 Quanto comprou em cada mês (últimos 12 meses)', '',
+    _anaExplica('Cada barra é um mês. A <b>linha tracejada</b> é a média dos meses com compra. Barras em <b style="color:#c0392b">vermelho claro</b> são meses fracos (30% abaixo da média). Passe o mouse em uma barra para ver o valor exato.') +
+    _anaGrafico(u.meses12, u.porMes));
+  return '';
+}
+function anaFiltrarInd(ind) { if(el('ana-ind')) el('ana-ind').value = ind; _anaTab = 'resumo'; renderAnalise(); }
+
+/* ───────── indústria: resumo / KPIs / abas ───────── */
+function _anaResumoInd() {
+  const u = _anaUltimo, k = u.kpis;
+  const l = [];
+  l.push(`💰 <b>${esc(u.ind)}</b> vendeu <b>${fmt(k.fat)}</b> ${_anaPeriodoTxt(u.per)}, em ${k.nPed} ${_anaPl(k.nPed,'pedido')}.`);
+  l.push(`👥 <b>${k.ativos} de ${k.baseCli}</b> clientes compraram no período (positivação de <b>${_anaPct(k.positiv,0)}</b>).`);
+  l.push(u.pararam.length ? `⏸️ <b>${u.pararam.length} ${_anaPl(u.pararam.length,'cliente parou','clientes pararam')}</b> de comprar (mais de ${u.diasP} dias sem pedido): <b style="color:var(--vermelho)">${fmt(k.emRisco)}/mês</b> deixando de entrar.` : `✅ Nenhum cliente parado.`);
+  if(k.nunca) l.push(`🆕 <b>${k.nunca} ${_anaPl(k.nunca,'cliente ativo nunca comprou','clientes ativos nunca compraram')}</b> esta indústria.`);
+  if(k.meta) l.push(`🎯 Meta de ${k.mesMeta}: <b>${_anaPct(k.pctMeta,0)}</b> atingida (${fmt(k.realMes)} de ${fmt(k.meta)}). Pelo dia do mês, o esperado seria ~${_anaPct(k.pctEsperado,0)}: ${k.pctMeta >= k.pctEsperado ? '<b style="color:var(--verde)">no ritmo</b>' : '<b style="color:var(--vermelho)">abaixo do ritmo</b>'}.`);
+  if(u.baixa.length) l.push(`📉 <b>${u.baixa.length} ${_anaPl(u.baixa.length,'produto')}</b> ${u.baixa.length===1?'vende':'vendem'} para menos da metade dos clientes ativos: potencial de <b style="color:var(--verde)">${fmt(k.potBaixa)}/mês</b>.`);
+  return `<div class="ana-resumo"><h3>📌 Em resumo</h3><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+}
+function _anaKpisInd() {
+  const u = _anaUltimo, k = u.kpis;
+  const stPos = k.positiv >= 50 ? 'bom' : k.positiv >= 25 ? 'aten' : 'crit';
+  const stPar = !u.pararam.length ? 'bom' : u.pararam.length/Math.max(1,k.baseCli) > .2 ? 'crit' : 'aten';
+  const stMeta = k.pctMeta===null ? 'neu' : k.pctMeta >= k.pctEsperado ? 'bom' : k.pctMeta >= k.pctEsperado*0.8 ? 'aten' : 'crit';
+  return [
+    _anaKpi2({label:'💰 Vendido no período', valor:fmt(k.fat), sub:`${k.nPed} ${_anaPl(k.nPed,'pedido')}`, tab:'evolucao', dica:`Soma das notas (ou pedidos não faturados) da indústria ${_anaPeriodoTxt(u.per)}.`}),
+    _anaKpi2({label:'👥 Positivação', valor:_anaPct(k.positiv,0), sub:`${k.ativos} de ${k.baseCli} clientes compraram`, st:stPos, tab:'ativos', dica:'% dos clientes que compraram a indústria no período.<br>👍 50% ou mais · ⚠️ 25 a 49% · 🔴 menos de 25%.'}),
+    _anaKpi2({label:'⏸️ Clientes parados', valor:String(u.pararam.length), sub:`${fmt(k.emRisco)}/mês deixando de entrar`, st:stPar, tab:'pararam', dica:`Clientes que já compraram a indústria e estão há mais de ${u.diasP} dias sem pedir.`}),
+    _anaKpi2({label:'🆕 Nunca compraram', valor:String(k.nunca), sub:'clientes ativos do cadastro', st:k.nunca?'aten':'bom', tab:'nunca', dica:'Clientes ativos no cadastro que nunca fizeram pedido desta indústria: oportunidade de abrir conta.'}),
+    _anaKpi2({label:'🎯 Meta do mês', valor:k.meta?_anaPct(k.pctMeta,0):'—', sub:k.meta?`${fmt(k.realMes)} de ${fmt(k.meta)}`:`sem meta para ${k.mesMeta}`, st:stMeta, dica:`Quanto da meta de ${k.mesMeta} já foi vendido. Compara com o esperado pelo dia do mês (~${_anaPct(k.pctEsperado,0)}).<br>👍 no ritmo · ⚠️ um pouco abaixo · 🔴 bem abaixo.`}),
+    _anaKpi2({label:'🏷️ Desconto médio', valor:_anaPct(k.pctDesc), sub:'abatimentos + desc. financeiro', st:k.pctDesc>10?'crit':k.pctDesc>5?'aten':'bom', dica:'(Abatimentos + desconto financeiro) ÷ valor das notas.<br>👍 até 5% · ⚠️ 5 a 10% · 🔴 acima de 10%.'})
+  ].join('');
+}
+let _anaNomes = [];
+function _anaReg(v) { let i = _anaNomes.indexOf(v); if(i < 0) { i = _anaNomes.length; _anaNomes.push(v); } return i; }
+function anaAbrirClienteIdx(i, comInd) { anaAbrirCliente(_anaNomes[i], comInd ? (_anaUltimo?.ind||'') : ''); }
+function anaFiltrarIndIdx(i) { anaFiltrarInd(_anaNomes[i]); }
+function _anaCliLink(nome) { return `<span class="ana-link" onclick="anaAbrirClienteIdx(${_anaReg(nome)},1)" title="Abrir análise do cliente">${esc(nome)}</span>`; }
+function _anaAbaInd(tab) {
+  const u = _anaUltimo, k = u.kpis;
+  if(tab === 'resumo') {
+    const acoes = [];
+    u.pararam.slice(0,4).forEach(o => acoes.push({v:o.mediaMes, html:`<b>Ligar para</b> ${_anaCliLink(o.cliente)}: sem pedir há ${o.dias} dias, comprava ${fmt(o.mediaMes)}/mês`, btn:`<button class="btn btn-outline btn-sm" onclick="anaTarefaInd('pararam',${o._i})">✅ Tarefa</button>`}));
+    u.baixa.slice().sort((a,b)=>b.potencial-a.potencial).slice(0,3).forEach(r => acoes.push({v:r.potencial, html:`<b>Ampliar</b> ${esc(r.desc)}: só ${r.nClis} de ${k.ativos} clientes compram (potencial ${fmt(r.potencial)}/mês)`, btn:''}));
+    if(u.nunca.length) acoes.push({v:0, html:`<b>Apresentar a linha</b> para ${u.nunca.length} ${_anaPl(u.nunca.length,'cliente que nunca comprou','clientes que nunca compraram')}`, btn:`<button class="btn btn-outline btn-sm" onclick="anaIrAba('nunca')">Ver lista</button>`});
+    acoes.sort((a,b)=>b.v-a.v);
+    return _anaCard('🎯 Próximos passos sugeridos', u.pararam.length?`<button class="btn btn-outline btn-sm" onclick="anaGerarTarefasAlertas()">✅ Criar tarefas para todos os parados</button>`:'',
+      `<div style="padding:4px 16px 10px">${acoes.length ? acoes.slice(0,7).map((a,i)=>`<div class="ana-acao"><span class="ana-acao-n">${i+1}</span><div style="flex:1">${a.html}</div>${a.btn}</div>`).join('') : '<div style="padding:16px 0;color:#888;text-align:center">Nada urgente por aqui 👍</div>'}</div>`, 'Ordenado pelo valor envolvido');
+  }
+  if(tab === 'pararam') return _anaCard(`⏸️ Clientes que pararam de comprar ${esc(u.ind)} (${u.pararam.length})`, `<span class="badge badge-vermelho">${fmt(k.emRisco)}/mês deixando de entrar</span>`,
+    _anaExplica(`Clientes que já compraram <b>${esc(u.ind)}</b> e estão <b>há mais de ${u.diasP} dias sem pedir</b>. "Comprava por mês" é a média dos 6 meses antes de parar. Clique no nome para ver a análise completa do cliente.`) +
+    _anaTabela('pararam', [
+      {h:'Cliente', v:o=>o.cliente, f:o=>_anaCliLink(o.cliente)},
+      {h:'Rede', v:o=>clientes.find(c=>c.nome===o.cliente)?.rede||'', f:o=>esc(clientes.find(c=>c.nome===o.cliente)?.rede||'—')},
+      {h:'Última compra', v:o=>o.ult, f:o=>fmtData(o.ult)},
+      {h:'Parado há', v:o=>o.dias, f:o=>_anaDiasBadge(o.dias, u.diasP)},
+      {h:'Comprava por mês', v:o=>o.mediaMes, f:o=>`<b>${fmt(o.mediaMes)}</b>`},
+      {h:'', f:o=>`<button class="btn btn-outline btn-sm" onclick="anaTarefaInd('pararam',${o._i})">✅ Tarefa</button>`}
+    ], u.pararam, 'Nenhum cliente parado 👍'));
+  if(tab === 'ativos') return _anaCard(`✅ Clientes que compraram no período (${u.ativosLista.length})`, '',
+    _anaExplica(`Clientes com pedido de <b>${esc(u.ind)}</b> ${_anaPeriodoTxt(u.per)}, do que mais comprou para o que menos comprou.`) +
+    _anaTabela('ativos', [
+      {h:'Cliente', v:o=>o.cliente, f:o=>_anaCliLink(o.cliente)},
+      {h:'Pedidos', v:o=>o.n, f:o=>o.n},
+      {h:'Comprou', v:o=>o.vPer, f:o=>`<b>${fmt(o.vPer)}</b>`},
+      {h:'Fatia', v:o=>o.vPer, f:o=>`<div style="min-width:110px">${_anaBar(k.fat?o.vPer/k.fat*100:0)}</div>`},
+      {h:'Última compra', v:o=>o.ult, f:o=>fmtData(o.ult)}
+    ], u.ativosLista, 'Nenhum cliente comprou no período.'));
+  if(tab === 'baixa') return _anaCard(`📉 Produtos com baixa positivação (${u.baixa.length})`, `<span class="badge badge-verde">potencial ${fmt(k.potBaixa)}/mês</span>`,
+    _anaExplica(`Produtos que <b>menos da metade</b> dos clientes ativos da indústria compram. Exemplo: 20% = só 2 de cada 10 clientes levam esse produto. O <b>potencial</b> estima quanto venderia por mês se os outros clientes comprassem no mesmo ritmo.`) +
+    _anaTabela('baixa', [
+      {h:'Produto', v:r=>r.desc, f:r=>`<b>${esc(r.desc)}</b><div class="mono" style="font-size:11px;color:#888">${esc(r.cod)}</div>`},
+      {h:'Quantos clientes compram', v:r=>r.pct, f:r=>`<div style="min-width:150px">${_anaBar(r.pct, r.pct<25?'var(--vermelho)':'var(--amarelo)')}<div style="font-size:10px;color:#888">${r.nClis} de ${k.ativos} clientes</div></div>`},
+      {h:'Vendido', v:r=>r.valor, f:r=>fmt(r.valor)},
+      {h:'Potencial/mês', v:r=>r.potencial, f:r=>`<b style="color:var(--verde)">${fmt(r.potencial)}</b>`}
+    ], u.baixa, u.prods.length ? 'Todos os produtos vendem para mais da metade dos clientes 👍' : 'Sem itens lançados nos pedidos do período.'));
+  if(tab === 'nunca') return _anaCard(`🆕 Clientes que nunca compraram ${esc(u.ind)} (${u.nunca.length})`, '',
+    _anaExplica('Clientes <b>ativos no cadastro</b> que nunca fizeram pedido desta indústria. Boa lista para apresentar a linha.') +
+    _anaTabela('nunca', [
+      {h:'Cliente', v:c=>c.nome, f:c=>_anaCliLink(c.nome)},
+      {h:'Rede', v:c=>c.rede||'', f:c=>esc(c.rede||'—')},
+      {h:'Segmento', v:c=>c.segmento||'', f:c=>esc(c.segmento||'—')},
+      {h:'Cidade', v:c=>c.cidade||'', f:c=>esc(c.cidade||'—')},
+      {h:'', f:c=>`<button class="btn btn-outline btn-sm" onclick="anaTarefaInd('nunca',${c._i})">✅ Tarefa</button>`}
+    ], u.nunca, 'Todos os clientes ativos já compraram desta indústria 👍'));
+  if(tab === 'evolucao') return _anaCard(`📊 Vendas de ${esc(u.ind)} por mês (últimos 12 meses)`, '',
+    _anaExplica('Cada barra é um mês. A <b>linha tracejada</b> é a média. Barras em <b style="color:#c0392b">vermelho claro</b> são meses fracos (30% abaixo da média).') +
+    _anaGrafico(u.meses12, u.porMes));
+  return '';
+}
+
+/* ═════════════ AÇÕES ═════════════ */
+function _anaAbrirTarefa(titulo, desc, cliente, industria) {
+  novaTarefa();
+  el('tar-titulo').value = titulo;
+  el('tar-desc').value = desc;
+  const sc = el('tar-cliente');
+  if(sc && cliente) { if(![...sc.options].some(o=>o.value===cliente)) { const o=document.createElement('option'); o.value=cliente; o.textContent=cliente; sc.appendChild(o); } sc.value = cliente; }
+  const si = el('tar-industria');
+  if(si && industria) { if(![...si.options].some(o=>o.value===industria)) { const o=document.createElement('option'); o.value=industria; o.textContent=industria; si.appendChild(o); } si.value = industria; }
+  const pz = new Date(); pz.setDate(pz.getDate()+7); el('tar-prazo').value = pz.toISOString().slice(0,10);
+}
+function _anaClienteAlvo() {
+  const u = _anaUltimo; if(!u) return '';
+  return u.sel && u.sel[0]==='c' ? u.nome : (u.nomesCli?.[0] || '');
+}
+function anaGerarTarefa(lista, i, tipo) {
+  const u = _anaUltimo; if(!u || u.visao !== 'cli') return;
+  const r = (u[lista]||[])[i]; if(!r) return;
+  const quem = u.sel[0]==='r' ? 'rede '+u.nome : u.nome;
+  if(tipo === 'possivel')
+    _anaAbrirTarefa(`Oferecer ${r.desc} para ${quem}`, `Venda possível (Análise Cliente × Indústria): ${r.cod} - ${r.desc}${r.ind?' ('+r.ind+')':''}. ${_anaPct(r.pct,0)} dos clientes parecidos compram e ${quem} nunca comprou. Gasto médio ${fmt(r.gastoMes)}/mês.`, _anaClienteAlvo(), r.ind);
+  else
+    _anaAbrirTarefa(`Retomar ${r.desc} - ${quem}`, `Produto parado (Análise Cliente × Indústria): ${r.cod} - ${r.desc}${r.ind?' ('+r.ind+')':''}. Sem pedido há ${r.dias} dias; vendia ${fmt(r.mediaMes)}/mês. Verificar motivo e repor.`, _anaClienteAlvo(), r.ind);
+}
+function anaTarefaAlerta(i) {
+  const u = _anaUltimo; if(!u || u.visao !== 'cli') return;
+  const a = u.alertas[i]; if(!a) return;
+  const quem = u.sel[0]==='r' ? 'rede '+u.nome : u.nome;
+  _anaAbrirTarefa(`Alerta: ${quem}${a.ind?' / '+a.ind:''}`, a.txt.replace(/<[^>]+>/g,''), _anaClienteAlvo(), a.ind||'');
+}
+function anaTarefaInd(lista, i) {
+  const u = _anaUltimo; if(!u || u.visao !== 'ind') return;
+  if(lista === 'pararam') { const o = u.pararam[i]; if(!o) return;
+    _anaAbrirTarefa(`Retomar compras de ${u.ind} - ${o.cliente}`, `Cliente sem pedido de ${u.ind} há ${o.dias} dias (comprava ${fmt(o.mediaMes)}/mês). Verificar motivo.`, o.cliente, u.ind); }
+  else { const c = u.nunca[i]; if(!c) return;
+    _anaAbrirTarefa(`Positivar ${u.ind} em ${c.nome}`, `Cliente nunca comprou ${u.ind}. Apresentar a linha.`, c.nome, u.ind); }
+}
+function anaGerarTarefaCliente(cliente) { // compatibilidade
+  const u = _anaUltimo; if(!u || u.visao !== 'ind') return;
+  const i = u.pararam.findIndex(o=>o.cliente===cliente);
+  if(i >= 0) return anaTarefaInd('pararam', i);
+  const j = u.nunca.findIndex(c=>c.nome===cliente);
+  if(j >= 0) return anaTarefaInd('nunca', j);
+}
+
+function anaGerarTarefasAlertas() {
+  const u = _anaUltimo;
+  if(!u) { toast('Escolha um cliente ou indústria primeiro.','error'); return; }
+  const resp = usuarioLogado?.nome || '';
+  if(!resp) { toast('Usuário não identificado.','error'); return; }
+  let itens = [];
+  if(u.visao === 'cli') {
+    const quem = u.sel[0]==='r' ? 'rede '+u.nome : u.nome;
+    itens = u.alertas.map(a => ({titulo:`Alerta: ${quem}${a.ind?' / '+a.ind:''}`, desc:a.txt.replace(/<[^>]+>/g,''), cliente:_anaClienteAlvo(), industria:a.ind||''}));
+  } else {
+    itens = u.pararam.map(o => ({titulo:`Retomar compras de ${u.ind} - ${o.cliente}`, desc:`Sem pedido há ${o.dias} dias (comprava ${fmt(o.mediaMes)}/mês).`, cliente:o.cliente, industria:u.ind}));
+  }
+  if(!itens.length) { toast('Nenhum alerta para gerar tarefas.'); return; }
+  if(!confirm(`Criar ${itens.length} ${_anaPl(itens.length,'tarefa')} para ${resp}, com prazo de 7 dias?`)) return;
+  const pz = new Date(); pz.setDate(pz.getDate()+7); const prazo = pz.toISOString().slice(0,10);
+  itens.forEach(i => {
+    tarefasData.push({ id:_proximoIdTarefa(), titulo:i.titulo, descricao:i.desc, responsavel:resp, prazo, lembrete:'', prioridade:'Média', status:'Pendente',
+      cliente:i.cliente, industria:i.industria, notas:[], comentarios:[], historico:[], anexos:[], criadoPor:resp, criadoEm:hoje(), atualizadoEm:hoje() });
+  });
+  syncAutoSaveHook();
+  if(typeof atualizarBadgeTarefas === 'function') atualizarBadgeTarefas();
+  toast(`${itens.length} ${_anaPl(itens.length,'tarefa criada','tarefas criadas')}!`);
+}
+
+function anaAbrirOrcamentoSugestoes() {
+  const u = _anaUltimo;
+  if(!u || u.visao !== 'cli') { toast('Escolha um cliente na visão por cliente.','error'); return; }
+  const cli = _anaClienteAlvo();
+  if(!cli) { toast('Nenhum cliente encontrado para a rede escolhida.','error'); return; }
+  const sug = [...u.possiveis.filter(r=>r.nivel!=='Baixo'), ...u.mixNunca.map(m=>({cod:m.cod, desc:m.desc, ind:m.ind}))];
+  const vistos = new Set(); const lista = sug.filter(r => { const k=String(r.cod||r.desc).toUpperCase(); if(!r.cod || vistos.has(k)) return false; vistos.add(k); return true; });
+  if(!lista.length) { toast('Nenhuma sugestão com código de produto para incluir.','error'); return; }
+  novoOrcamento();
+  const sc = el('orc-cli');
+  if(sc) { if(![...sc.options].some(o=>o.value===cli)) { const o=document.createElement('option'); o.value=cli; o.textContent=cli; sc.appendChild(o); } sc.value = cli; }
+  const inds = [...new Set(lista.map(r=>r.ind).filter(Boolean))];
+  if(inds.length === 1 && el('orc-ind')) el('orc-ind').value = inds[0];
+  lista.forEach(r => {
+    const pm = _getPrecoMix(cli, r.cod);
+    const precoUnit = pm.precoTab * (1 - (pm.descPct||0)/100);
+    orcItens.push({cod:String(r.cod).toUpperCase(), desc:r.desc, ind:r.ind||'', precoTab:pm.precoTab, qtd:1, descPct:pm.descPct||0, precoUnit, total:precoUnit});
+  });
+  el('orc-obs').value = 'Sugestões geradas pela Análise Cliente × Indústria (vendas possíveis e itens do mix nunca comprados). Ajuste as quantidades.';
+  renderOrcItens();
+  toast(`${lista.length} ${lista.length!==1?'itens sugeridos':'item sugerido'} no orçamento.`);
+}
+
+function exportarAnalise() {
+  const u = _anaUltimo;
+  if(!u) { toast('Escolha um cliente ou indústria primeiro.','error'); return; }
+  const wb = XLSX.utils.book_new();
+  const add = (rows, nome) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), nome);
+  const txt = h => String(h).replace(/<[^>]+>/g,'');
+  if(u.visao === 'cli') {
+    const k = u.kpis;
+    add([['Análise Cliente × Indústria'],['Cliente/Rede', u.nome],['Indústria', u.indF||'Todas'],['Período (dias)', u.per],[],
+      ['Faturado no período', _r2(k.fat)],['Mesmo período ano anterior', _r2(k.fatAA)],['Crescimento %', k.cresc===null?'':_r2(k.cresc)],
+      ['Pedidos', k.nPed],['Indústrias ativas / histórico', `${k.inds}/${k.indsHist}`],['Ticket médio', _r2(k.ticket)],['Ticket médio grupo', _r2(k.ticketSeg)],
+      ['Frequência média (dias)', k.freq?Math.round(k.freq):''],['Última compra', k.ultima?fmtData(k.ultima):''],
+      ['% Desconto', _r2(k.descCli)],['% Desconto grupo', _r2(k.descSeg)],['% Bonificação', _r2(k.pctBon)],
+      ['Cobertura do mix %', k.cobertura===null?'':_r2(k.cobertura)],['Itens do mix comprados', `${k.mixComp}/${k.mixTot}`],
+      ['Deixando de entrar (R$/mês)', _r2(k.receitaRisco)],['Potencial de venda (R$/mês)', _r2(k.potencial)],[],
+      ['Alertas'], ...u.alertas.map(a=>[txt(a.txt)])], 'Resumo');
+    add([['Código','Produto','Indústria','Pedidos (6m)','Última compra','Dias parado','Vendia por mês'], ...u.parados.map(r=>[r.cod,r.desc,r.ind,r.nPeds,fmtData(r.ult),r.dias,_r2(r.mediaMes)])], 'Parou de comprar');
+    add([['Código','Produto','Indústria','Clientes que compram','% do grupo','Gasto médio/mês','Chance'], ...u.possiveis.map(r=>[r.cod,r.desc,r.ind,r.nClis,_r2(r.pct),_r2(r.gastoMes),r.nivel])], 'Vendas possíveis');
+    add([['Código','Produto','Indústria','Curva','Preço tabela','Desc. %','Preço final'], ...u.mixNunca.map(m=>[m.cod,m.desc,m.ind,m.curva||'',_r2(m.tabela||0),m.desc_pct||0,_r2(m.precoNeg)])], 'Mix nunca comprado');
+    add([['Indústria','Faturado','Participação %','Var. a.a. %'], ...u.listaInd.map(r=>[r.ind,_r2(r.v),_r2(r.pct),r.var===null?'':_r2(r.var)])], 'Por indústria');
+    add([['Código','Produto','Indústria','Faturado','Curva'], ...u.abcArr.map(r=>[r.cod,r.desc,r.ind,_r2(r.valor),r.curva])], 'Curva ABC');
+    add([['Mês','Faturado'], ...u.meses12.map(m=>[_anaMesLbl(m), _r2(u.porMes[m]||0)])], 'Evolução mensal');
+  } else {
+    const k = u.kpis;
+    add([['Análise por Indústria'],['Indústria', u.ind],['Período (dias)', u.per],[],['Faturado no período',_r2(k.fat)],['Clientes ativos',`${k.ativos}/${k.baseCli}`],
+      ['Positivação %',_r2(k.positiv)],['Deixando de entrar (R$/mês)',_r2(k.emRisco)],['Nunca compraram',k.nunca],['% Desconto',_r2(k.pctDesc)],
+      ['Meta do mês',_r2(k.meta)],['Realizado no mês',_r2(k.realMes)],['% Meta',k.pctMeta===null?'':_r2(k.pctMeta)]], 'Resumo');
+    add([['Cliente','Última compra','Dias parado','Comprava por mês'], ...u.pararam.map(o=>[o.cliente,fmtData(o.ult),o.dias,_r2(o.mediaMes)])], 'Pararam de comprar');
+    add([['Cliente','Pedidos','Comprou','Última compra'], ...u.ativosLista.map(o=>[o.cliente,o.n,_r2(o.vPer),fmtData(o.ult)])], 'Clientes ativos');
+    add([['Código','Produto','Clientes','Positivação %','Faturado','Potencial/mês'], ...u.prods.map(r=>[r.cod,r.desc,r.nClis,_r2(r.pct),_r2(r.valor),_r2(r.potencial)])], 'Positivação produtos');
+    add([['Cliente','Rede','Segmento','Cidade'], ...u.nunca.map(c=>[c.nome,c.rede||'',c.segmento||'',c.cidade||''])], 'Nunca compraram');
+    add([['Mês','Faturado'], ...u.meses12.map(m=>[_anaMesLbl(m), _r2(u.porMes[m]||0)])], 'Evolução mensal');
+  }
+  const nome = (u.visao==='cli'?u.nome:u.ind).replace(/[^\w\-]+/g,'_').slice(0,40);
+  XLSX.writeFile(wb, `Analise_${nome}_${hoje()}.xlsx`);
+}
+
+
 console.info('[GestCom v6.4] ✅ Auto-save para TODOS os usuários · polling 15s · orçamento: baixar modelo + importar + botão →Pedido em todos os status · comissão tipoCom recalculada ao editar indústria · logística sem reset · relatórios top 10 + filtro mês completo · bonificações nos KPIs.');
 
 </script>
@@ -19759,6 +20741,7 @@ function gcOpenMenuSheet() {
     ]},
     { group:'Análises',    items:[
       {panel:'relatorios',  icon:'📈', label:'Relatórios / KPIs'},
+      {panel:'analise',     icon:'🔎', label:'Análise Cliente × Indústria'},
       {panel:'importexport',icon:'🗂️', label:'Import / Export'},
     ]},
     { group:'Sistema',     items:[
@@ -20033,6 +21016,9 @@ const LAUNCHER_MODULOS = [
   { key:'relatorios',      label:'Relatorios',       icon:'📊', grupo:'relatorios',
     chaveMestra:'relatorios',
     subModulos:['relatorios'] },
+  { key:'analise',         label:'Analise Clientes',  icon:'🔎', grupo:'analise',
+    chaveMestra:'analise',
+    subModulos:['analise'] },
   { key:'administracao',   label:'Administracao',    icon:'⚙️', grupo:'administracao',
     // Só entra quem administra de verdade — 'mix' NÃO abre mais este card.
     chavesQualquer:['usuarios','configuracoes','sync','regras'],
@@ -20054,6 +21040,7 @@ const LAUNCHER_PAINEL_DESTINO = {
   crm:             'crm',
   'conta-corrente':'conta-corrente',
   relatorios:      'relatorios',
+  analise:         'analise',
   administracao:   'configuracoes',
 };
 
