@@ -4355,12 +4355,33 @@ try {
 // Remove da lista de orçamentos qualquer ID que esteja marcado como excluído.
 // Retorna true se removeu algo (para sabermos se precisa re-render/re-save).
 function purgarOrcamentosExcluidos() {
+  try { purgarTarefasExcluidas(); } catch(e) {}
   if(!Array.isArray(orcamentosExcluidos) || !orcamentosExcluidos.length) return false;
   if(!Array.isArray(orcamentos)) return false;
   const antes = orcamentos.length;
   const banidos = new Set(orcamentosExcluidos);
   orcamentos = orcamentos.filter(o => o && !banidos.has(o.id));
   return orcamentos.length !== antes;
+}
+
+/* v48 — EXCLUSÃO PERMANENTE DE TAREFAS
+   Assinatura = id|título|criadoEm (o id sozinho pode ser reaproveitado).
+   Nenhuma cópia da nuvem ou de outro aparelho pode ressuscitar a tarefa. */
+let tarefasExcluidas = [];
+try { const _te = localStorage.getItem('gestcom_tar_excluidas'); if(_te) tarefasExcluidas = JSON.parse(_te) || []; } catch(e) { tarefasExcluidas = []; }
+function _assinTarefa(t){ return String((t&&t.id)||'')+'|'+String((t&&t.titulo)||'')+'|'+String((t&&t.criadoEm)||''); }
+function _salvarTarefasExcluidas(){ try { localStorage.setItem('gestcom_tar_excluidas', JSON.stringify(tarefasExcluidas)); } catch(e) {} }
+function _unirTarefasExcluidas(lista){
+  if(!Array.isArray(lista)) return;
+  var mudou=false;
+  lista.forEach(function(a){ if(a && tarefasExcluidas.indexOf(a)<0){ tarefasExcluidas.push(a); mudou=true; } });
+  if(mudou) _salvarTarefasExcluidas();
+}
+function purgarTarefasExcluidas(){
+  if(!tarefasExcluidas.length || typeof tarefasData==='undefined' || !Array.isArray(tarefasData)) return false;
+  var ban = new Set(tarefasExcluidas), antes = tarefasData.length;
+  tarefasData = tarefasData.filter(function(t){ return t && !ban.has(_assinTarefa(t)); });
+  return tarefasData.length !== antes;
 }
 
 function _salvarOrcamentosExcluidos() {
@@ -4964,7 +4985,12 @@ function _mesclarTombs(tombRemoto){
 /* Combina a lista local com a da nuvem, registro a registro. */
 function _mesclarColecao(col, loc, rem, tombRemoto){
   if(!Array.isArray(rem)) return loc;
-  if(!Array.isArray(loc) || loc.length===0) return rem;
+  if(!Array.isArray(loc) || loc.length===0){
+    /* v48 — lista local vazia (ex.: a única tarefa foi excluída) NÃO pode
+       devolver a lista da nuvem inteira: respeita as lápides locais. */
+    var tl0 = (window._tomb && window._tomb[col]) || {};
+    return rem.filter(function(r){ var k=_chaveReg(col,r); return !k || !((tl0[k]||0) > ((r&&r._upd)||0)); });
+  }
   var tl = (window._tomb && window._tomb[col]) || {};
   var tr = (tombRemoto && tombRemoto[col]) || {};
   var mapL={}, mapR={}, ordem=[], seguro=true;
@@ -4985,6 +5011,7 @@ function _mesclarColecao(col, loc, rem, tombRemoto){
 /* Aplica a mesclagem em todas as coleções de uma vez. */
 function _mesclarBaseDaNuvem(dados){
   _mesclarTombs(dados._tomb);
+  try { _unirTarefasExcluidas(dados.tarefasExcluidas); } catch(e) {}
   _COLECOES_MESCLAVEIS.forEach(function(col){
     if(!Array.isArray(dados[col])) return;
     var loc = _colGet(col);
@@ -5050,7 +5077,7 @@ function _salvarLocal() {
   try { _marcarAlteracoes(); } catch(e) { console.warn('[GestCom] marcação de alterações:', e.message); }
   try {
     payload = JSON.stringify({
-      pedidos, orcamentos, orcamentosExcluidos, clientes, industrias, redes, comissoes_data,
+      pedidos, orcamentos, orcamentosExcluidos, tarefasExcluidas, clientes, industrias, redes, comissoes_data,
       comissoesExtras,
       logisticaData, sellOutData, sellInHist, metasData, regrasComerciais, tratativas,
       PRODUTOS_CAT, mixProdutos: _mixComprimir(mixProdutos), bonificacoesData, usuarios, userPerms,
@@ -5123,6 +5150,7 @@ function _carregarLocal() {
       d.orcamentosExcluidos.forEach(id => { if(!orcamentosExcluidos.includes(id)) orcamentosExcluidos.push(id); });
       _salvarOrcamentosExcluidos();
     }
+    try { _unirTarefasExcluidas(d.tarefasExcluidas); } catch(e) {}
     purgarOrcamentosExcluidos(); // remove orçamentos excluídos que ainda estejam no cache local
     if(Array.isArray(d.clientes))         clientes         = d.clientes;
     if(Array.isArray(d.industrias))       industrias       = d.industrias;
@@ -17422,6 +17450,7 @@ function coletarDadosParaSync() {
     pedidos:        JSON.parse(JSON.stringify(pedidos)),
     orcamentos:     JSON.parse(JSON.stringify(orcamentos)),
     orcamentosExcluidos: JSON.parse(JSON.stringify(orcamentosExcluidos||[])),
+    tarefasExcluidas: JSON.parse(JSON.stringify(tarefasExcluidas||[])),
     clientes:       JSON.parse(JSON.stringify(clientes)),
     industrias:     JSON.parse(JSON.stringify(industrias)),
     redes:          JSON.parse(JSON.stringify(redes)),
@@ -17502,6 +17531,7 @@ function aplicarDadosDaNuvem(dados, silencioso=false, forcado=false) {
   if(Array.isArray(dados.bonificacoesData)) bonificacoesData = dados.bonificacoesData;
   // ─── Módulos novos: Tarefas, Atas, CRM, Conta Corrente, Financeiro ───
   if(Array.isArray(dados.tarefasData)) tarefasData = dados.tarefasData;
+  try { purgarTarefasExcluidas(); } catch(e) {}
   if(Array.isArray(dados.atasData)) atasData = dados.atasData;
   if(dados.setoresCustom && typeof dados.setoresCustom==='object'){
     setoresCustom = {
@@ -17677,6 +17707,7 @@ try{popularSelectsDinamicos();}catch(e){}
               dados.orcamentosExcluidos.forEach(id => { if(!orcamentosExcluidos.includes(id)) orcamentosExcluidos.push(id); });
               _salvarOrcamentosExcluidos();
             }
+            try { _unirTarefasExcluidas(dados.tarefasExcluidas); } catch(e) {}
             purgarOrcamentosExcluidos();
             _rtdbLastTs = tsLocal;
             try { renderOrcamentos(); renderDashboard(); renderPedidos(); } catch(e) {}
@@ -22046,8 +22077,9 @@ function excluirTarefa(id) {
   }
   if(!confirm('Excluir esta tarefa?\n\n"' + (t.titulo||'') + '"\nResponsável: ' + (t.responsavel||'—') + (t.prazo ? '\nPrazo: ' + fmtData(t.prazo) : '') + '\n\nEsta ação não pode ser desfeita.')) return;
   tarefasData = tarefasData.filter(function(x){ return x.id!==id; });
+  _unirTarefasExcluidas([_assinTarefa(t)]);
   try { addAudit((usuarioLogado||{}).login||'?', 'Excluiu tarefa: ' + (t.titulo||''), '🗑️'); } catch(e) {}
-  syncAutoSaveHook();
+  salvarExclusaoImediata();
   renderTarefas();
   atualizarBadgeTarefas();
   toast('Tarefa excluída.');
@@ -22359,6 +22391,7 @@ function _vinculoLabel(o) {
 function _proximoIdTarefa() {
   let max = 0;
   tarefasData.forEach(t => { const n = parseInt(String(t.id||'').replace(/\D/g,''),10); if(n>max) max=n; });
+  (tarefasExcluidas||[]).forEach(a => { const n = parseInt(String(a).split('|')[0].replace(/\D/g,''),10); if(n>max) max=n; });
   return 'TAR-' + String(max+1).padStart(4,'0');
 }
 function _proximoIdAta() {
@@ -22998,7 +23031,7 @@ function excluirAta(id) {
   if(!confirm('Excluir esta ata?\n\n"' + (a.titulo||'') + '"\nData: ' + (a.data ? fmtData(a.data) : '—') + aviso + '\n\nEsta ação não pode ser desfeita.')) return;
   atasData = atasData.filter(function(x){ return x.id!==id; });
   try { addAudit((usuarioLogado||{}).login||'?', 'Excluiu ata: ' + (a.titulo||''), '🗑️'); } catch(e) {}
-  syncAutoSaveHook();
+  salvarExclusaoImediata();
   renderAtas();
   if (typeof _atualizarBadgeModuloAtas === 'function') _atualizarBadgeModuloAtas();
   toast('Ata excluída.');
@@ -23659,7 +23692,7 @@ function ccExcluirConta(cli, ind) {
   });
   ccContas = ccContas.filter(function(c){ return !(c.cliente === cli && c.industria === ind); });
   try { addAudit((usuarioLogado||{}).login||'?', 'Excluiu conta corrente: ' + cli + ' × ' + ind + ' (' + movs.length + ' lanç.)', '🗑️'); } catch(e) {}
-  try { _salvarLocal(); } catch(e) {}
+  salvarExclusaoImediata();
   ccRenderLista();
   toast('Conta excluída.');
 }
@@ -24097,7 +24130,7 @@ function excluirLancamentoCC(id) {
   if (!confirm('Excluir este lançamento?\n\n' + desc + '\nValor: ' + fmt(m.valor||0) + (m.mesRef ? '\nMês ref.: ' + m.mesRef : '') + '\n\nEsta ação não pode ser desfeita.')) return;
   contaCorrenteData = contaCorrenteData.filter(x => x.id !== id);
   try { addAudit((usuarioLogado||{}).login||'?', 'Excluiu lançamento CC: ' + (m.cliente||'') + ' × ' + (m.industria||'') + ' — ' + fmt(m.valor||0), '🗑️'); } catch(e) {}
-  syncAutoSaveHook();
+  salvarExclusaoImediata();
   if (typeof ccContaSel !== "undefined" && ccContaSel) ccRenderExtrato(); else ccRenderLista();
   toast('Lançamento excluído.');
 }
